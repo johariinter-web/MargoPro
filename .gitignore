@@ -1,0 +1,25 @@
+# Dependencies
+frontend/node_modules/
+frontend/.next/
+frontend/.swc/
+
+# Env files
+.env
+.env.local
+.env*.local
+
+# PWA generated files
+frontend/public/sw.js
+frontend/public/workbox-*.js
+frontend/public/worker-*.js
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Superpowers brainstorm
+.superpowers/
