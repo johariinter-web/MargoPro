@@ -73,6 +73,7 @@ export default function StockPage() {
             { key: 'quantite', label: 'Quantité', placeholder: '0', type: 'number' },
             { key: 'prixAchat', label: `Prix d'achat (${symbole})`, placeholder: '0', type: 'number' },
             { key: 'prixVente', label: `Prix de vente (${symbole})`, placeholder: '0', type: 'number' },
+            { key: 'seuilAlerte', label: 'Seuil d\'alerte stock bas', placeholder: '5', type: 'number' },
           ].map(({ key, label, placeholder, type }) => (
             <div key={key}>
               <label className="block text-sm font-semibold text-stone-700 dark:text-stone-300 mb-1">{label}</label>

@@ -26,7 +26,8 @@ export default function AuthPage() {
   const formulaireValide =
     email.trim() !== '' &&
     password.length >= 6 &&
-    (mode === 'connexion' || (confirmPassword === password && cguAccepte));
+    cguAccepte &&
+    (mode === 'connexion' || confirmPassword === password);
 
   async function soumettre(e: React.FormEvent) {
     e.preventDefault();
@@ -150,6 +151,29 @@ export default function AuthPage() {
                 </span>
               </label>
             </>
+          )}
+
+          {mode === 'connexion' && (
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={cguAccepte}
+                onChange={(e) => setCguAccepte(e.target.checked)}
+                className="mt-0.5 w-5 h-5 accent-emerald flex-shrink-0"
+              />
+              <span className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
+                J&apos;ai lu et j&apos;accepte les{' '}
+                <a
+                  href="https://eidma.co/cgu"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald underline"
+                >
+                  Conditions Générales d&apos;Utilisation
+                </a>{' '}
+                de MargoPro.
+              </span>
+            </label>
           )}
 
           {erreur && (

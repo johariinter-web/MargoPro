@@ -58,8 +58,8 @@ export default function Dashboard() {
         </h1>
         {alertes.length > 0 && (
           <button
-            onClick={() => router.push('/stock')}
-            className="mt-3 inline-flex items-center gap-2 bg-white/20 text-white text-sm font-semibold px-4 py-2 rounded-full"
+            onClick={() => router.push('/alertes')}
+            className="mt-3 inline-flex items-center gap-2 bg-orange-alert text-white text-sm font-semibold px-4 py-2 rounded-full shadow-md"
           >
             ⚠️ {alertes.length} alerte{alertes.length > 1 ? 's' : ''} stock bas
           </button>
