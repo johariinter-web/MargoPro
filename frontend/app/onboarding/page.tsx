@@ -20,6 +20,7 @@ export default function OnboardingPage() {
   const [etape, setEtape] = useState(1);
   const [nomCommerce, setNomCommerce] = useState('');
   const [deviseCode, setDeviseCode] = useState('');
+  const [cguAccepte, setCguAccepte] = useState(false);
 
   async function terminer() {
     const devise = DEVISES.find(d => d.code === deviseCode)!;
@@ -145,12 +146,41 @@ export default function OnboardingPage() {
                 <li>📴 Fonctionne sans internet</li>
               </ul>
             </div>
-            <button
-              onClick={terminer}
-              className="w-full bg-emerald text-white rounded-xl py-4 text-xl font-bold min-h-[56px]"
-            >
-              Commencer maintenant 🎉
-            </button>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={cguAccepte}
+                onChange={(e) => setCguAccepte(e.target.checked)}
+                className="mt-1 w-5 h-5 accent-emerald flex-shrink-0"
+              />
+              <span className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
+                J&apos;ai lu et j&apos;accepte les{' '}
+                <a
+                  href="https://eidma.co/cgu"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald underline"
+                >
+                  Conditions Générales d&apos;Utilisation
+                </a>{' '}
+                de MargoPro.
+              </span>
+            </label>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setEtape(2)}
+                className="flex-1 border-2 border-stone-200 dark:border-stone-600 text-stone-800 dark:text-stone-100 rounded-xl py-4 text-lg font-semibold min-h-[56px]"
+              >
+                ← Retour
+              </button>
+              <button
+                onClick={terminer}
+                disabled={!cguAccepte}
+                className="flex-[2] bg-emerald text-white rounded-xl py-4 text-xl font-bold min-h-[56px] disabled:opacity-40 transition-opacity"
+              >
+                Commencer maintenant 🎉
+              </button>
+            </div>
           </div>
         )}
 
