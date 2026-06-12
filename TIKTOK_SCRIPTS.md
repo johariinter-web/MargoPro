@@ -140,11 +140,11 @@ Je vais te montrer comment gérer toute ta boutique en moins de 2 minutes.
 [PAUSE COURTE]
 
 [RYTHMÉ, COMPTER SUR LES DOIGTS]
-Étape 1 — Tu ajoutes ton produit. Tu mets le nom, la quantité, le prix d'achat. Et tu choisis ta marge. MargoPro calcule le prix de vente pour toi. Tu enregistres.
+Étape 1 — Tu ne sais pas à quel prix vendre ? Tu vas dans l'onglet Calculateur. Tu mets ton prix d'achat, tu choisis ta marge, et MargoPro te donne le prix de vente exact. Si tu connais déjà tes prix — tu vas directement dans l'onglet Stock et tu enregistres ton produit.
 
-Étape 2 — Un client achète ? Tu enregistres la vente en un clic. Le stock se met à jour automatiquement.
+Étape 2 — Un client achète ? Tu enregistres la vente en un clic. Le stock se met à jour tout seul.
 
-Étape 3 — Et à tout moment, tu génères ton rapport. Journalier, hebdomadaire ou mensuel. Tu l'imprimes ou tu le transfères.
+Étape 3 — Tu veux voir tes résultats ? Tu génères ton rapport — par jour, par semaine ou par mois. Tu l'imprimes ou tu le transfères.
 
 [PAUSE]
 
@@ -164,9 +164,10 @@ Commente **MARGO** et je t'envoie le lien en DM. 1er mois offert. Commence maint
 | Timing | Texte overlay |
 |--------|--------------|
 | 0–3 sec | **"Ta boutique gérée en 2 minutes ⏱️"** |
-| 6–12 sec | **"① Produit + marge → prix de vente calculé auto"** |
-| 13–20 sec | **"② Vente enregistrée → stock mis à jour 🔄"** |
-| 21–30 sec | **"③ Rapport jour / semaine / mois → imprimer ou transférer"** |
+| 6–12 sec | **"① Onglet Calculateur → prix d'achat + marge = prix de vente"** |
+| 13–14 sec | **"Ou directement onglet Stock si tu connais déjà tes prix"** |
+| 15–22 sec | **"② Vente enregistrée → stock mis à jour 🔄"** |
+| 23–32 sec | **"③ Rapport jour / semaine / mois → imprimer ou transférer"** |
 | 32–38 sec | **"Bénéfices, stock, meilleures ventes — EN CLAIR ✅"** |
 | 40–45 sec | **"1er MOIS OFFERT | HORS CONNEXION | FRANÇAIS 🇫🇷"** |
 
