@@ -140,9 +140,9 @@ Je vais te montrer comment gérer toute ta boutique en moins de 2 minutes.
 [PAUSE COURTE]
 
 [RYTHMÉ, COMPTER SUR LES DOIGTS]
-Étape 1 — Tu ouvres MargoPro. Pas de compte, pas de mot de passe. Premier mois offert.
+Étape 1 — Tu télécharges MargoPro, tu crées ton compte en 30 secondes, et tu te connectes.
 
-Étape 2 — Tu ajoutes tes produits. Nom, quantité, prix d'achat, prix de vente. Fait en 30 secondes.
+Étape 2 — Tu es dans ton tableau de bord. Tu ajoutes tes produits : nom, quantité, prix d'achat, prix de vente.
 
 Étape 3 — Tu enregistres une vente. Un clic. L'application calcule ton bénéfice instantanément.
 
@@ -164,8 +164,8 @@ MargoPro. 1er mois offert. Lien en bio. Commence maintenant.
 | Timing | Texte overlay |
 |--------|--------------|
 | 0–3 sec | **"Ta boutique gérée en 2 minutes ⏱️"** |
-| 6–10 sec | **"① Ouvre l'app — 0 compte requis"** |
-| 12–16 sec | **"② Ajoute tes produits — 30 secondes"** |
+| 6–10 sec | **"① Crée ton compte — 30 secondes"** |
+| 12–16 sec | **"② Tableau de bord → Ajoute tes produits"** |
 | 18–22 sec | **"③ Enregistre une vente — 1 clic"** |
 | 25–29 sec | **"Bénéfice calculé AUTOMATIQUEMENT ✅"** |
 | 31–35 sec | **"1er MOIS OFFERT | HORS CONNEXION | FRANÇAIS 🇫🇷"** |
