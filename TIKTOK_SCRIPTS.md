@@ -126,7 +126,7 @@ Commente **MARGO** et je t'envoie le lien en DM. Le premier mois est offert.
 ## SCRIPT 3 — "Démo rapide"
 **Angle : Voici comment ça marche en 30 secondes**
 
-- **Durée estimée :** 35 secondes
+- **Durée estimée :** 45 secondes
 - **Énergie avatar :** Dynamique, rythmée, efficace
 
 ### Accroche (0–3 sec)
@@ -140,19 +140,19 @@ Je vais te montrer comment gérer toute ta boutique en moins de 2 minutes.
 [PAUSE COURTE]
 
 [RYTHMÉ, COMPTER SUR LES DOIGTS]
-Étape 1 — Tu reçois le lien en DM, tu l'ouvres, tu l'ajoutes sur ton écran d'accueil comme une application, tu crées ton compte et tu te connectes.
+Étape 1 — Tu ajoutes ton produit. Tu mets le nom, la quantité, le prix d'achat. Et tu choisis ta marge. MargoPro calcule le prix de vente pour toi. Tu enregistres.
 
-Étape 2 — Tu es dans ton tableau de bord. Tu ajoutes tes produits : nom, quantité, prix d'achat, prix de vente.
+Étape 2 — Un client achète ? Tu enregistres la vente en un clic. Le stock se met à jour automatiquement.
 
-Étape 3 — Tu enregistres une vente. Un clic. L'application calcule ton bénéfice instantanément.
+Étape 3 — Et à tout moment, tu génères ton rapport. Journalier, hebdomadaire ou mensuel. Tu l'imprimes ou tu le transfères.
 
 [PAUSE]
 
 [VOIX IMPRESSIONNÉE]
-Et voilà. Ton stock est à jour. Ton bénéfice du jour s'affiche. Tu sais exactement quel produit marche le mieux.
+C'est tout. Tes bénéfices, ton stock, tes meilleures ventes — tout est là, en clair.
 
 [DIRECT]
-Tout ça — sans internet. Depuis ton téléphone.
+Sans internet. Depuis ton téléphone.
 
 [FORT, FINAL]
 Commente **MARGO** et je t'envoie le lien en DM. 1er mois offert. Commence maintenant.
@@ -164,11 +164,11 @@ Commente **MARGO** et je t'envoie le lien en DM. 1er mois offert. Commence maint
 | Timing | Texte overlay |
 |--------|--------------|
 | 0–3 sec | **"Ta boutique gérée en 2 minutes ⏱️"** |
-| 6–10 sec | **"① Crée ton compte — 30 secondes"** |
-| 12–16 sec | **"② Tableau de bord → Ajoute tes produits"** |
-| 18–22 sec | **"③ Enregistre une vente — 1 clic"** |
-| 25–29 sec | **"Bénéfice calculé AUTOMATIQUEMENT ✅"** |
-| 31–35 sec | **"1er MOIS OFFERT | HORS CONNEXION | FRANÇAIS 🇫🇷"** |
+| 6–12 sec | **"① Produit + marge → prix de vente calculé auto"** |
+| 13–20 sec | **"② Vente enregistrée → stock mis à jour 🔄"** |
+| 21–30 sec | **"③ Rapport jour / semaine / mois → imprimer ou transférer"** |
+| 32–38 sec | **"Bénéfices, stock, meilleures ventes — EN CLAIR ✅"** |
+| 40–45 sec | **"1er MOIS OFFERT | HORS CONNEXION | FRANÇAIS 🇫🇷"** |
 
 ### Hashtags recommandés
 `#démonstration #app #commerçant #margopro #stock #bénéfice #simplissime #afriquefrancophone #tuto #business`
