@@ -36,7 +36,7 @@ Et à la fin... tu es à zéro. Ou pire, tu es dans le négatif.
 Mais j'ai trouvé quelque chose qui change tout ça. MargoPro. Tu mets tes produits, tes prix, et elle te dit exactement combien tu gagnes. Chaque jour. Sans connexion internet.
 
 [DIRECT, FORT]
-Télécharge MargoPro. Le premier mois est offert. Lien en bio.
+Clique sur le lien en bio, ouvre MargoPro, et ajoute-le sur ton écran d'accueil. Le premier mois est offert.
 
 ---
 
@@ -140,7 +140,7 @@ Je vais te montrer comment gérer toute ta boutique en moins de 2 minutes.
 [PAUSE COURTE]
 
 [RYTHMÉ, COMPTER SUR LES DOIGTS]
-Étape 1 — Tu télécharges MargoPro, tu crées ton compte en 30 secondes, et tu te connectes.
+Étape 1 — Tu ouvres le lien en bio, tu l'ajoutes sur ton écran d'accueil comme une application, tu crées ton compte et tu te connectes.
 
 Étape 2 — Tu es dans ton tableau de bord. Tu ajoutes tes produits : nom, quantité, prix d'achat, prix de vente.
 
@@ -213,7 +213,7 @@ Depuis que j'utilise MargoPro, c'est fini ces problèmes. Je vois tout sur mon �
 Et le truc que j'aime le plus ? Ça marche même sans connexion. Même si la 4G est coupée — ça marche quand même.
 
 [DIRECT À LA CAMÉRA]
-Si tu vends quelque chose, télécharge ça. Le premier mois est offert — essaie, tu verras par toi-même. Lien dans ma bio.
+Si tu vends quelque chose, clique sur le lien dans ma bio. Tu l'ouvres, tu l'ajoutes sur ton écran d'accueil, et c'est parti. Le premier mois est offert — essaie, tu verras par toi-même.
 
 ---
 
@@ -277,7 +277,7 @@ Tu utilises MargoPro. C'est une application faite exactement pour toi. Tu entres
 Comme un grand commerçant. Mais depuis ton téléphone. Et le premier mois est offert pour que tu puisses tester sans risque.
 
 [FORT]
-Le lien est en bio. Télécharge-le maintenant. Commence à mesurer.
+Le lien est en bio. Ouvre-le, ajoute MargoPro sur ton écran d'accueil. Commence à mesurer.
 
 ---
 
@@ -343,7 +343,7 @@ MargoPro, c'est l'outil qui te donne cette clarté. Tes gains du jour. Ton stock
 Tu as travaillé dur pour ta boutique. Maintenant laisse la technologie travailler pour toi.
 
 [FINAL, FORT MAIS BIENVEILLANT]
-Télécharge MargoPro. Lien en bio. Tu le mérites.
+Clique sur le lien en bio. Ajoute MargoPro sur ton écran d'accueil. Tu le mérites.
 
 ---
 
