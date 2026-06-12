@@ -140,7 +140,7 @@ Je vais te montrer comment gérer toute ta boutique en moins de 2 minutes.
 [PAUSE COURTE]
 
 [RYTHMÉ, COMPTER SUR LES DOIGTS]
-Étape 1 — Tu ne sais pas à quel prix vendre ? Tu vas dans l'onglet Calculateur. Tu mets ton prix d'achat, tu choisis ta marge, et MargoPro te donne le prix de vente exact. Si tu connais déjà tes prix — tu vas directement dans l'onglet Stock et tu enregistres ton produit.
+Étape 1 — Tu ne sais pas à quel prix vendre ? Tu vas dans l'onglet Marge. Tu mets ton prix d'achat, tu choisis ta marge, et MargoPro te donne le prix de vente exact. Si tu connais déjà tes prix — tu vas directement dans l'onglet Stock et tu enregistres ton produit.
 
 Étape 2 — Un client achète ? Tu enregistres la vente en un clic. Le stock se met à jour tout seul.
 
