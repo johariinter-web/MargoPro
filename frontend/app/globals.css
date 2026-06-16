@@ -1,46 +1,47 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: 'Manrope', sans-serif;
 
-  /* MargoPro brand colors */
-  --color-emerald: #059669;
-  --color-emerald-dark: #047857;
-  --color-emerald-light: #d1fae5;
-  --color-orange-alert: #F97316;
-  --color-orange-alert-light: #ffedd5;
-  --color-stone-bg: #FAFAF9;
-  --color-stone-100: #f5f5f4;
-  --color-stone-200: #e7e5e4;
-  --color-stone-600: #57534e;
-  --color-stone-800: #292524;
-  --color-red-loss: #ef4444;
-  --color-green-gain: #16a34a;
+  --color-accent: #D4601A;
+  --color-accent-light: #FEF0E6;
+  --color-accent-soft: #FFE4D0;
+  --color-emerald: #2E7D46;
+  --color-emerald-light: #EAF5EE;
+  --color-emerald-accent: #4BB868;
+  --color-red-loss: #C4341A;
+  --color-red-bg: #FDECEA;
+  --color-amber: #C47A06;
+  --color-amber-bg: #FEF3D8;
+  --color-stone-bg: #FAF7F3;
+  --color-stone-subtle: #F3EDE5;
+  --color-surface: #FFFFFF;
+  --color-border: #E6DDD3;
+  --color-text-sub: #6A5D52;
+  --color-text-muted: #9E8E84;
+  --color-orange-alert: #D4601A;
 }
 
 :root {
-  --background: #FAFAF9;
-  --foreground: #1c1917;
+  --background: #FAF7F3;
+  --foreground: #1C1811;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #1c1917;
-    --foreground: #fafaf9;
-  }
+html.dark {
+  --background: #141210;
+  --foreground: #F4EEE4;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Manrope', -apple-system, sans-serif;
   -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Prevent zoom on input focus (iOS) */
 input, select, textarea {
   font-size: 16px;
 }
+
+::-webkit-scrollbar { display: none; }

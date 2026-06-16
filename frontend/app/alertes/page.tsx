@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useStock } from '@/lib/hooks/useStock';
 import { useConfig } from '@/lib/hooks/useConfig';
+import { useColors } from '@/lib/hooks/useColors';
 
 function formatMontant(n: number, symbole: string) {
   return `${n.toLocaleString('fr-FR')} ${symbole}`;
@@ -10,6 +11,7 @@ function formatMontant(n: number, symbole: string) {
 
 export default function AlertesPage() {
   const router = useRouter();
+  const T = useColors();
   const { config } = useConfig();
   const { alertes, produits } = useStock();
   const symbole = config?.symboleDevise ?? 'FCFA';
@@ -29,12 +31,16 @@ export default function AlertesPage() {
 
       {alertes.length === 0 ? (
         <div className="text-center py-16 space-y-4">
-          <p className="text-6xl">✅</p>
+          <div style={{ width: 72, height: 72, borderRadius: 20, background: T.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+              <path d="M5 13l4 4L19 7" stroke={T.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
           <p className="text-xl font-semibold text-stone-700 dark:text-stone-300">Aucune alerte</p>
           <p className="text-stone-500 dark:text-stone-400">Tous vos stocks sont suffisants.</p>
           <button
             onClick={() => router.push('/stock')}
-            className="bg-emerald text-white rounded-xl px-6 py-3 font-bold min-h-[48px]"
+            style={{ background: T.accent, color: 'white', borderRadius: 12, padding: '12px 24px', fontWeight: 700, fontSize: 15, border: 'none', cursor: 'pointer', minHeight: 48 }}
           >
             Voir le stock
           </button>
@@ -84,7 +90,7 @@ export default function AlertesPage() {
 
           <button
             onClick={() => router.push('/stock')}
-            className="w-full bg-emerald text-white rounded-xl py-4 text-lg font-bold min-h-[56px]"
+            style={{ width: '100%', background: T.accent, color: 'white', borderRadius: 12, padding: '16px', fontSize: 17, fontWeight: 700, border: 'none', cursor: 'pointer', minHeight: 56 }}
           >
             Gérer le stock →
           </button>

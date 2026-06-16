@@ -6,6 +6,19 @@ import { createClient } from '@/lib/supabase/client';
 
 type Mode = 'connexion' | 'inscription';
 
+const T = {
+  accent: '#D4601A',
+  accentLight: '#FEF0E6',
+  bg: '#FAF7F3',
+  surface: '#FFFFFF',
+  text: '#1C1811',
+  textSub: '#6A5D52',
+  textMuted: '#9E8E84',
+  border: '#E6DDD3',
+  redBg: '#FDECEA',
+  red: '#C4341A',
+};
+
 export default function AuthPage() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>('connexion');
@@ -15,6 +28,8 @@ export default function AuthPage() {
   const [cguAccepte, setCguAccepte] = useState(false);
   const [loading, setLoading] = useState(false);
   const [erreur, setErreur] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   function basculerMode() {
     setMode(mode === 'connexion' ? 'inscription' : 'connexion');
@@ -29,7 +44,7 @@ export default function AuthPage() {
     cguAccepte &&
     (mode === 'connexion' || confirmPassword === password);
 
-  async function soumettre(e: React.FormEvent) {
+  async function soumettre(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!formulaireValide) return;
     setLoading(true);
@@ -63,28 +78,44 @@ export default function AuthPage() {
     }
   }
 
+  const inputStyle = {
+    width: '100%',
+    border: `2px solid ${T.border}`,
+    borderRadius: 14,
+    padding: '14px 16px',
+    fontSize: 16,
+    color: T.text,
+    background: T.surface,
+    outline: 'none',
+    fontFamily: 'Manrope, sans-serif',
+    boxSizing: 'border-box' as const,
+    transition: 'border-color 0.2s',
+  };
+
   return (
-    <div className="min-h-screen bg-stone-bg dark:bg-stone-800 flex flex-col justify-center px-6 py-8">
-      <div className="max-w-sm mx-auto w-full space-y-8">
+    <div style={{ minHeight: '100dvh', background: T.bg, display: 'flex', flexDirection: 'column' }}>
+
+      {/* HERO PHOTO */}
+      <div style={{ width: '100%', height: 240, flexShrink: 0, position: 'relative', overflow: 'hidden' }}>
+        <img src="/hero1.jpg" alt="MargoPro" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.45) 100%)' }} />
+        <div style={{ position: 'absolute', bottom: 16, left: 0, right: 0, textAlign: 'center' }}>
+          <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.9)', fontFamily: 'Manrope, sans-serif', fontWeight: 500 }}>Gérez votre commerce simplement</p>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, padding: '20px 24px 32px', maxWidth: 400, margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', gap: 24, boxSizing: 'border-box' }}>
 
         {/* Logo */}
-        <div className="flex flex-col items-center gap-3">
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-md"
-            style={{ backgroundColor: '#059669' }}
-          >
-            <span className="text-white text-3xl font-black">M</span>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-black text-stone-800 dark:text-stone-50 tracking-tight">MargoPro</p>
-            <p className="text-sm text-stone-500 dark:text-stone-400 mt-0.5">Gérez votre commerce simplement</p>
-          </div>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <img src="/logo-margopro.svg" alt="MargoPro" style={{ width: 72, height: 72, borderRadius: 18, boxShadow: '0 4px 16px rgba(212,96,26,0.18)' }} />
         </div>
 
         {/* Formulaire */}
-        <form onSubmit={soumettre} className="space-y-4">
-          <div className="space-y-1">
-            <label className="block text-sm font-semibold text-stone-700 dark:text-stone-300">
+        <form onSubmit={soumettre} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontSize: 13, fontWeight: 700, color: T.text, fontFamily: 'Manrope, sans-serif' }}>
               Adresse email
             </label>
             <input
@@ -94,56 +125,86 @@ export default function AuthPage() {
               placeholder="exemple@email.com"
               autoComplete="email"
               required
-              className="w-full border-2 border-stone-200 dark:border-stone-600 rounded-xl px-4 py-4 text-base bg-white dark:bg-stone-700 text-stone-800 dark:text-stone-100 focus:border-emerald outline-none transition-colors"
+              style={inputStyle}
+              onFocus={e => (e.target.style.borderColor = T.accent)}
+              onBlur={e => (e.target.style.borderColor = T.border)}
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="block text-sm font-semibold text-stone-700 dark:text-stone-300">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontSize: 13, fontWeight: 700, color: T.text, fontFamily: 'Manrope, sans-serif' }}>
               Mot de passe
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Minimum 6 caractères"
-              autoComplete={mode === 'connexion' ? 'current-password' : 'new-password'}
-              required
-              className="w-full border-2 border-stone-200 dark:border-stone-600 rounded-xl px-4 py-4 text-base bg-white dark:bg-stone-700 text-stone-800 dark:text-stone-100 focus:border-emerald outline-none transition-colors"
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Minimum 6 caractères"
+                autoComplete={mode === 'connexion' ? 'current-password' : 'new-password'}
+                required
+                style={{ ...inputStyle, paddingRight: 48 }}
+                onFocus={e => (e.target.style.borderColor = T.accent)}
+                onBlur={e => (e.target.style.borderColor = T.border)}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: T.textMuted }}
+              >
+                {showPassword ? (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/></svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.75"/></svg>
+                )}
+              </button>
+            </div>
           </div>
 
           {mode === 'inscription' && (
             <>
-              <div className="space-y-1">
-                <label className="block text-sm font-semibold text-stone-700 dark:text-stone-300">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 13, fontWeight: 700, color: T.text, fontFamily: 'Manrope, sans-serif' }}>
                   Confirmer le mot de passe
                 </label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Répétez votre mot de passe"
-                  autoComplete="new-password"
-                  required
-                  className="w-full border-2 border-stone-200 dark:border-stone-600 rounded-xl px-4 py-4 text-base bg-white dark:bg-stone-700 text-stone-800 dark:text-stone-100 focus:border-emerald outline-none transition-colors"
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showConfirm ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Répétez votre mot de passe"
+                    autoComplete="new-password"
+                    required
+                    style={{ ...inputStyle, paddingRight: 48 }}
+                    onFocus={e => (e.target.style.borderColor = T.accent)}
+                    onBlur={e => (e.target.style.borderColor = T.border)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(v => !v)}
+                    style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: T.textMuted }}
+                  >
+                    {showConfirm ? (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/></svg>
+                    ) : (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.75"/></svg>
+                    )}
+                  </button>
+                </div>
               </div>
 
-              <label className="flex items-start gap-3 cursor-pointer pt-1">
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginTop: 4 }}>
                 <input
                   type="checkbox"
                   checked={cguAccepte}
                   onChange={(e) => setCguAccepte(e.target.checked)}
-                  className="mt-0.5 w-5 h-5 accent-emerald flex-shrink-0"
+                  style={{ marginTop: 2, width: 20, height: 20, accentColor: T.accent, flexShrink: 0 }}
                 />
-                <span className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
+                <span style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.6, fontFamily: 'Manrope, sans-serif' }}>
                   J&apos;ai lu et j&apos;accepte les{' '}
                   <a
-                    href="https://eidma.co/cgu"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-emerald underline"
+                    href="/cgu"
+                    style={{ color: T.accent, textDecoration: 'underline' }}
                   >
                     Conditions Générales d&apos;Utilisation
                   </a>{' '}
@@ -154,20 +215,18 @@ export default function AuthPage() {
           )}
 
           {mode === 'connexion' && (
-            <label className="flex items-start gap-3 cursor-pointer">
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={cguAccepte}
                 onChange={(e) => setCguAccepte(e.target.checked)}
-                className="mt-0.5 w-5 h-5 accent-emerald flex-shrink-0"
+                style={{ marginTop: 2, width: 20, height: 20, accentColor: T.accent, flexShrink: 0 }}
               />
-              <span className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
+              <span style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.6, fontFamily: 'Manrope, sans-serif' }}>
                 J&apos;ai lu et j&apos;accepte les{' '}
                 <a
-                  href="https://eidma.co/cgu"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-emerald underline"
+                  href="/cgu"
+                  style={{ color: T.accent, textDecoration: 'underline' }}
                 >
                   Conditions Générales d&apos;Utilisation
                 </a>{' '}
@@ -177,7 +236,7 @@ export default function AuthPage() {
           )}
 
           {erreur && (
-            <p className="text-red-loss text-sm font-medium text-center bg-red-50 dark:bg-red-900/20 rounded-xl px-4 py-3">
+            <p style={{ fontSize: 13, fontWeight: 600, color: T.red, textAlign: 'center', background: T.redBg, borderRadius: 12, padding: '12px 16px', margin: 0, fontFamily: 'Manrope, sans-serif' }}>
               {erreur}
             </p>
           )}
@@ -185,7 +244,16 @@ export default function AuthPage() {
           <button
             type="submit"
             disabled={!formulaireValide || loading}
-            className="w-full bg-emerald text-white rounded-xl py-4 text-lg font-bold min-h-[56px] disabled:opacity-40 transition-opacity mt-2"
+            style={{
+              width: '100%', height: 52, borderRadius: 14,
+              background: T.accent, color: '#fff',
+              fontSize: 15, fontWeight: 700,
+              border: 'none', cursor: 'pointer',
+              opacity: (!formulaireValide || loading) ? 0.4 : 1,
+              transition: 'opacity 0.2s',
+              fontFamily: 'Manrope, sans-serif',
+              marginTop: 4,
+            }}
           >
             {loading
               ? '...'
@@ -196,11 +264,11 @@ export default function AuthPage() {
         </form>
 
         {/* Basculer mode */}
-        <p className="text-center text-sm text-stone-600 dark:text-stone-400">
+        <p style={{ textAlign: 'center', fontSize: 13, color: T.textMuted, margin: 0, fontFamily: 'Manrope, sans-serif' }}>
           {mode === 'connexion' ? "Pas encore de compte ?" : "Déjà un compte ?"}{' '}
           <button
             onClick={basculerMode}
-            className="text-emerald font-semibold underline"
+            style={{ color: T.accent, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontSize: 13, fontFamily: 'Manrope, sans-serif' }}
           >
             {mode === 'connexion' ? 'Créer un compte' : 'Se connecter'}
           </button>
@@ -210,3 +278,4 @@ export default function AuthPage() {
     </div>
   );
 }
+

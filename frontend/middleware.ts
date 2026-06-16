@@ -1,7 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-// Auth enforcement désactivé pendant la phase bêta.
-// Le middleware est prêt — réactiver quand les comptes utilisateurs seront lancés.
 export function middleware(_request: NextRequest) {
   return NextResponse.next();
 }

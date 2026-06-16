@@ -5,8 +5,12 @@ export interface Produit {
   prixAchat: number;
   prixVente: number;
   seuilAlerte: number;
+  codeBarres?: string;
+  categorie?: string;
+  tailleConditionnement?: number;
   createdAt: number;
   updatedAt: number;
+  deleted?: boolean;
 }
 
 export interface Vente {
@@ -19,6 +23,8 @@ export interface Vente {
   total: number;
   benefice: number;
   date: number;
+  updatedAt: number;
+  deleted?: boolean;
 }
 
 export interface Config {
@@ -27,6 +33,8 @@ export interface Config {
   devise: string;
   symboleDevise: string;
   onboardingComplete: boolean;
+  dateAbonnement?: number;
+  updatedAt?: number;
 }
 
 export type Periode = 'jour' | 'semaine' | 'mois' | 'tout';

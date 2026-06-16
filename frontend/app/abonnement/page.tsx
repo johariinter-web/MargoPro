@@ -1,0 +1,165 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useColors } from '@/lib/hooks/useColors';
+import { useConfig } from '@/lib/hooks/useConfig';
+import { useEffect, useState } from 'react';
+
+const FEATURES = [
+  { emoji: '📦', bg: '#FEF3D8', label: 'Produits illimités', subtitle: 'Gérez tout votre stock sans limites' },
+  { emoji: '📊', bg: '#E6F0FE', label: 'Graphiques avancés', subtitle: 'CA, bénéfices, top produits du jour' },
+  { emoji: '📄', bg: '#F2F2F2', label: 'Export PDF & Excel', subtitle: 'Partagez vos rapports facilement' },
+  { emoji: '☁️', bg: '#F2EBFD', label: 'Sauvegarde cloud', subtitle: 'Vos données protégées en ligne' },
+];
+
+const FREE_FEATURES = [
+  'Stock jusqu\'à 10 produits',
+  'Enregistrer des ventes',
+  'Accueil basique',
+  'Mode offline',
+];
+
+export default function AbonnementPage() {
+  const T = useColors();
+  const router = useRouter();
+  const { config, saveConfig } = useConfig();
+  const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    if (config && !config.dateAbonnement) {
+      saveConfig({ ...config, dateAbonnement: Date.now() });
+    }
+  }, [config]);
+
+  const dateDebut = config?.dateAbonnement ?? Date.now();
+  const dateExpiry = new Date(dateDebut + 30 * 24 * 60 * 60 * 1000);
+  const joursRestants = Math.max(0, Math.ceil((dateExpiry.getTime() - Date.now()) / (24 * 60 * 60 * 1000)));
+  const expiryLabel = dateExpiry.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  return (
+    <div style={{ minHeight: '100dvh', background: T.bg, fontFamily: 'Manrope, sans-serif', paddingBottom: 40 }}>
+
+      {/* MODAL */}
+      {showModal && (
+        <div
+          onClick={() => setShowModal(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(28,24,17,0.6)', display: 'flex', alignItems: 'flex-end' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: T.surface, borderRadius: '24px 24px 0 0', width: '100%', padding: '28px 24px 40px' }}
+          >
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border, margin: '0 auto 20px' }} />
+            <div style={{ fontSize: 36, textAlign: 'center', marginBottom: 12 }}>🚀</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: T.text, textAlign: 'center', marginBottom: 8 }}>Bientôt disponible</div>
+            <div style={{ fontSize: 14, color: T.textMuted, textAlign: 'center', lineHeight: 1.6, marginBottom: 24 }}>
+              Le paiement Mobile Money et Wave sera disponible très bientôt. Continue d&apos;utiliser MargoPro gratuitement en attendant.
+            </div>
+            <button
+              onClick={() => setShowModal(false)}
+              style={{ width: '100%', height: 50, borderRadius: 14, background: T.accent, color: 'white', fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'Manrope, sans-serif' }}
+            >
+              Compris
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* HEADER */}
+      <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <button
+          onClick={() => router.back()}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 600, color: T.text, padding: 0, fontFamily: 'Manrope, sans-serif' }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M15 18l-6-6 6-6" stroke={T.text} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Abonnement
+        </button>
+        <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 500, color: T.textMuted, fontFamily: 'Manrope, sans-serif' }}>
+          Restaurer
+        </button>
+      </div>
+
+      <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        {/* STATUT PREMIUM */}
+        <div style={{ background: '#FEF9EC', borderRadius: 20, padding: '16px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#B8860B' }}>👑 Premium actif</div>
+            <div style={{ fontSize: 13, color: T.textMuted, marginTop: 4 }}>Expire dans {joursRestants} jour{joursRestants > 1 ? 's' : ''} · {expiryLabel}</div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+            <div style={{ background: 'white', borderRadius: 20, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 5, border: '1px solid #E6DDD3' }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: T.accent }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>1 en attente</span>
+            </div>
+            <div style={{ width: 32, height: 32, borderRadius: 10, background: '#EAF5EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M20 6L9 17l-5-5" stroke="#2E7D46" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* FEATURES */}
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, letterSpacing: '1px', marginBottom: 12 }}>
+            CE QUE VOUS OBTENEZ
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {FEATURES.map(f => (
+              <div
+                key={f.label}
+                style={{ background: T.surface, borderRadius: 16, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 1px 3px rgba(28,24,17,0.06)' }}
+              >
+                <div style={{ width: 48, height: 48, borderRadius: 14, flexShrink: 0, background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
+                  {f.emoji}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: T.text }}>{f.label}</div>
+                  <div style={{ fontSize: 13, color: T.textMuted, marginTop: 2 }}>{f.subtitle}</div>
+                </div>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: '#EAF5EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 6L9 17l-5-5" stroke="#2E7D46" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* PLAN GRATUIT */}
+        <div style={{ background: T.bgSubtle, borderRadius: 16, padding: '16px 18px' }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 12 }}>Plan gratuit inclut :</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {FREE_FEATURES.map(f => (
+              <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <path d="M20 6L9 17l-5-5" stroke={T.textMuted} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span style={{ fontSize: 14, color: T.textSub }}>{f}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* BOUTON RENOUVELER */}
+        <button
+          onClick={() => setShowModal(true)}
+          style={{
+            width: '100%', height: 54, borderRadius: 16,
+            background: 'transparent', border: `2px solid ${T.accent}`,
+            color: T.accent, fontSize: 16, fontWeight: 700,
+            cursor: 'pointer', fontFamily: 'Manrope, sans-serif',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}
+        >
+          🔄 Renouveler (+30 jours)
+        </button>
+
+      </div>
+    </div>
+  );
+}

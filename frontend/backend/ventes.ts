@@ -70,5 +70,6 @@ export function creerVente(
     total,
     benefice,
     date: Date.now(),
+    updatedAt: Date.now(),
   };
 }

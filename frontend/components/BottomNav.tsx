@@ -1,42 +1,115 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useColors } from '@/lib/hooks/useColors';
+
+const HIDDEN_PATHS = ['/onboarding', '/auth', '/alertes', '/parametres', '/abonnement', '/sauvegarde', '/aide'];
 
 const tabs = [
-  { href: '/', label: 'Accueil', icon: '🏠' },
-  { href: '/stock', label: 'Stock', icon: '📦' },
-  { href: '/ventes', label: 'Ventes', icon: '📊' },
-  { href: '/marges', label: 'Marges', icon: '💰' },
-  { href: '/parametres', label: 'Réglages', icon: '⚙️' },
+  {
+    href: '/',
+    label: 'Accueil',
+    icon: (color: string) => (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H5a1 1 0 01-1-1V9.5z" stroke={color} strokeWidth="1.75" strokeLinejoin="round"/>
+        <path d="M9 21V12h6v9" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    href: '/marges',
+    label: 'Marge',
+    icon: (color: string) => (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M3 3v18h18" stroke={color} strokeWidth="1.75" strokeLinecap="round"/>
+        <path d="M7 14l4-5 4 3.5 4-6" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    href: '/stock',
+    label: 'Stock',
+    icon: (color: string) => (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M21 8l-9-5-9 5v8l9 5 9-5V8z" stroke={color} strokeWidth="1.75" strokeLinejoin="round"/>
+        <path d="M12 3v18M3 8l9 5 9-5" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    href: '/ventes',
+    label: 'Ventes',
+    icon: (color: string) => (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <rect x="4" y="2" width="16" height="20" rx="2" stroke={color} strokeWidth="1.75"/>
+        <path d="M8 7h8M8 11h8M8 15h5" stroke={color} strokeWidth="1.75" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
 ];
 
 export default function BottomNav() {
+  const T = useColors();
   const pathname = usePathname();
+  const router = useRouter();
 
-  if (pathname === '/onboarding' || pathname === '/auth' || pathname === '/alertes') return null;
+  if (HIDDEN_PATHS.some(p => pathname.startsWith(p))) return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-stone-800 border-t border-stone-200 dark:border-stone-700 z-50">
-      <div className="flex">
+    <nav style={{
+      position: 'fixed',
+      bottom: 0,
+      left: '50%',
+      transform: 'translateX(-50%)',
+      width: '100%',
+      maxWidth: 480,
+      background: T.surface,
+      borderTop: `1px solid ${T.border}`,
+      zIndex: 100,
+    }}>
+      <div style={{ display: 'flex', height: 72, paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {tabs.map((tab) => {
           const isActive = pathname === tab.href;
+          const color = isActive ? T.accent : T.textMuted;
           return (
-            <Link
+            <button
               key={tab.href}
-              href={tab.href}
-              className={`flex-1 flex flex-col items-center justify-center min-h-[64px] gap-1 text-xs font-medium transition-colors ${
-                isActive
-                  ? 'text-emerald dark:text-emerald-light'
-                  : 'text-stone-600 dark:text-stone-400'
-              }`}
+              onClick={() => router.push(tab.href)}
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 3,
+                position: 'relative',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                WebkitTapHighlightColor: 'transparent',
+              }}
             >
-              <span className="text-2xl leading-none">{tab.icon}</span>
-              <span className={isActive ? 'font-bold' : ''}>{tab.label}</span>
               {isActive && (
-                <span className="absolute bottom-0 h-0.5 w-12 bg-emerald rounded-full" />
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  width: 36,
+                  height: 3,
+                  borderRadius: '0 0 3px 3px',
+                  background: T.accent,
+                }} />
               )}
-            </Link>
+              {tab.icon(color)}
+              <span style={{
+                fontSize: 10,
+                fontWeight: isActive ? 700 : 500,
+                color,
+                fontFamily: 'Manrope, sans-serif',
+              }}>
+                {tab.label}
+              </span>
+            </button>
           );
         })}
       </div>

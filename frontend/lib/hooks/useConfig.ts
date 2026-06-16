@@ -2,6 +2,7 @@
 
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
+import { requestSync } from '../syncController';
 import type { Config } from '@backend/types';
 
 export function useConfig() {
@@ -15,7 +16,8 @@ export function useConfig() {
   const config = result?.data ?? null;
 
   async function saveConfig(data: Omit<Config, 'id'>) {
-    await db.config.put({ id: 'singleton', ...data });
+    await db.config.put({ id: 'singleton', ...data, updatedAt: Date.now() });
+    requestSync();
   }
 
   return { config, saveConfig, isReady };
