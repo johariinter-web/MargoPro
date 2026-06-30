@@ -126,6 +126,64 @@ export default function MargesPage() {
     setGenEnCours(false);
   }
 
+  // Génère une IMAGE d'UN SEUL produit et la partage.
+  async function partagerProduit(p: typeof produits[number]) {
+    if (genEnCours) return;
+    setGenEnCours(true);
+    try {
+      const W = 600, pad = 30;
+      const imgSize = W - pad * 2;
+      const headerH = 70, infoH = 120;
+      const H = headerH + imgSize + infoH + pad;
+      const canvas = document.createElement('canvas');
+      canvas.width = W; canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { setGenEnCours(false); return; }
+
+      ctx.fillStyle = T.bg; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = T.text; ctx.font = '800 30px sans-serif';
+      ctx.fillText(config?.nomCommerce || 'Ma boutique', pad, 48);
+
+      const img = p.photo ? await chargerImage(p.photo) : null;
+      const iy = headerH;
+      if (img) {
+        ctx.save();
+        ctx.beginPath(); ctx.rect(pad, iy, imgSize, imgSize); ctx.clip();
+        dessinerCover(ctx, img, pad, iy, imgSize, imgSize);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = T.accentLight; ctx.fillRect(pad, iy, imgSize, imgSize);
+        ctx.fillStyle = T.accent; ctx.font = '800 160px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(p.nom.charAt(0).toUpperCase(), W / 2, iy + imgSize / 2);
+        ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      }
+
+      ctx.fillStyle = T.text; ctx.font = '800 34px sans-serif';
+      let nom = p.nom;
+      while (ctx.measureText(nom).width > imgSize && nom.length > 1) nom = nom.slice(0, -1);
+      if (nom !== p.nom) nom = nom.slice(0, -1) + '…';
+      ctx.fillText(nom, pad, iy + imgSize + 48);
+      ctx.fillStyle = T.accent; ctx.font = '800 40px sans-serif';
+      ctx.fillText(`${fmtF(p.prixVente)} ${symbole}`, pad, iy + imgSize + 96);
+
+      const blob: Blob | null = await new Promise(res => canvas.toBlob(b => res(b), 'image/jpeg', 0.85));
+      if (!blob) { setGenEnCours(false); return; }
+      const file = new File([blob], 'produit.jpg', { type: 'image/jpeg' });
+      type NavShare = Navigator & { canShare?: (d: { files: File[] }) => boolean };
+      const nav = navigator as NavShare;
+      if (nav.canShare && nav.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], text: `${p.nom} — ${fmtF(p.prixVente)} ${symbole}` });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'produit.jpg'; a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch { /* partage annulé : on ignore */ }
+    setGenEnCours(false);
+  }
+
   const produitsAvecMarges = produits.map(p => ({
     ...p,
     pct: p.prixVente > 0 ? Math.round((p.prixVente - p.prixAchat) / p.prixVente * 100) : 0,
@@ -523,8 +581,18 @@ export default function MargesPage() {
               {produitVitrine.quantite === 0 && (
                 <div style={{ fontSize: 12, color: T.red, fontWeight: 700, marginTop: 6 }}>En rupture de stock</div>
               )}
+              <button onClick={() => partagerProduit(produitVitrine)} disabled={genEnCours}
+                style={{ width: '100%', height: 46, marginTop: 16, borderRadius: 12, background: T.accent, border: 'none', cursor: genEnCours ? 'default' : 'pointer', opacity: genEnCours ? 0.6 : 1, fontSize: 14, fontWeight: 700, color: 'white', fontFamily: 'Manrope, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <circle cx="18" cy="5" r="3" stroke="white" strokeWidth="1.75"/>
+                  <circle cx="6" cy="12" r="3" stroke="white" strokeWidth="1.75"/>
+                  <circle cx="18" cy="19" r="3" stroke="white" strokeWidth="1.75"/>
+                  <path d="M8.6 10.5l6.8-4M8.6 13.5l6.8 4" stroke="white" strokeWidth="1.75" strokeLinecap="round"/>
+                </svg>
+                {genEnCours ? 'Génération...' : 'Partager ce produit'}
+              </button>
               <button onClick={() => setProduitVitrine(null)}
-                style={{ width: '100%', height: 44, marginTop: 16, borderRadius: 12, background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: T.textSub, fontFamily: 'Manrope, sans-serif' }}>
+                style={{ width: '100%', height: 44, marginTop: 8, borderRadius: 12, background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: T.textSub, fontFamily: 'Manrope, sans-serif' }}>
                 Fermer
               </button>
             </div>
