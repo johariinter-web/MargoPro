@@ -34,6 +34,12 @@ export function useStock() {
     requestSync();
   }
 
+  async function restaurerProduit(id: string) {
+    // Annule une suppression (le produit n'était que masqué).
+    await db.produits.update(id, { deleted: false, updatedAt: Date.now() });
+    requestSync();
+  }
+
   async function deduireStock(produitId: string, quantite: number) {
     const produit = await db.produits.get(produitId);
     if (!produit) return;
@@ -49,6 +55,7 @@ export function useStock() {
     ajouterProduit,
     modifierProduit,
     supprimerProduit,
+    restaurerProduit,
     deduireStock,
   };
 }

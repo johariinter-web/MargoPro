@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStock } from '@/lib/hooks/useStock';
 import { useVentes } from '@/lib/hooks/useVentes';
 import { useConfig } from '@/lib/hooks/useConfig';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import { useColors } from '@/lib/hooks/useColors';
 import type { Periode } from '@backend/types';
+import { filtrerParPeriode } from '@backend/ventes';
 
 function fmtF(n: number) {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -23,25 +24,42 @@ const PERIODES: { value: Periode; label: string }[] = [
   { value: 'tout', label: 'Tout' },
 ];
 
-const SALE_EMOJIS = ['🛒', '🧴', '🍚', '🫙', '📦', '🧺'];
-function getSaleEmoji(productName: string) {
-  let h = 0;
-  for (let i = 0; i < productName.length; i++) h = (h * 31 + productName.charCodeAt(i)) | 0;
-  return SALE_EMOJIS[Math.abs(h) % SALE_EMOJIS.length];
-}
 
 export default function VentesPage() {
   const T = useColors();
   const { config } = useConfig();
   const { produits, deduireStock } = useStock();
   const [periode, setPeriode] = useState<Periode>('jour');
-  const { ventes, stats, enregistrerVente, supprimerVente } = useVentes(periode);
+  const { ventes, ventesSupprimees, stats, enregistrerVente, supprimerVente, restaurerVente } = useVentes(periode);
   const [showForm, setShowForm] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [produitId, setProduitId] = useState('');
   const [quantite, setQuantite] = useState('1');
   const [erreur, setErreur] = useState('');
   const [prixGros, setPrixGros] = useState('');
+  const [venteSelectionnee, setVenteSelectionnee] = useState<typeof ventes[number] | null>(null);
+  const [venteSupprimee, setVenteSupprimee] = useState<typeof ventes[number] | null>(null);
+  const [showHistorique, setShowHistorique] = useState(false);
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
+
+  function confirmerSuppressionVente() {
+    if (!venteSelectionnee) return;
+    const v = venteSelectionnee;
+    setVenteSelectionnee(null);
+    supprimerVente(v.id);
+    setVenteSupprimee(v);
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    undoTimer.current = setTimeout(() => setVenteSupprimee(null), 6000);
+  }
+
+  function annulerSuppressionVente() {
+    if (!venteSupprimee) return;
+    restaurerVente(venteSupprimee.id);
+    setVenteSupprimee(null);
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+  }
 
   const symbole = config?.symboleDevise ?? 'FCFA';
 
@@ -83,8 +101,11 @@ export default function VentesPage() {
     setShowForm(false);
   }
 
+  // Filtre la liste selon la période choisie (Jour / Semaine / Mois / Tout)
+  const ventesPeriode = filtrerParPeriode(ventes, periode);
+
   // Group ventes by day
-  const grouped = ventes.slice(0, 50).reduce((acc, v) => {
+  const grouped = ventesPeriode.slice(0, 50).reduce((acc, v) => {
     const day = new Date(v.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
     if (!acc[day]) acc[day] = [];
     acc[day].push(v);
@@ -103,6 +124,96 @@ export default function VentesPage() {
       {/* SCANNER */}
       {showScanner && (
         <BarcodeScanner onScan={handleScan} onClose={() => setShowScanner(false)} />
+      )}
+
+      {/* MENU D'UNE VENTE (toucher une vente) */}
+      {venteSelectionnee && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'flex-end' }}
+          onClick={() => setVenteSelectionnee(null)}
+        >
+          <div
+            style={{ background: T.surface, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, margin: '0 auto', padding: '20px 20px 36px' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border, margin: '0 auto 16px' }} />
+            <div style={{ fontSize: 17, fontWeight: 800, color: T.text, marginBottom: 4 }}>{venteSelectionnee.produitNom}</div>
+            <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 18 }}>
+              {venteSelectionnee.quantite} unité{venteSelectionnee.quantite > 1 ? 's' : ''} · {fmtF(venteSelectionnee.total)} {symbole} · {new Date(venteSelectionnee.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+            </div>
+            <button
+              onClick={confirmerSuppressionVente}
+              style={{ width: '100%', height: 48, borderRadius: 12, background: T.redBg, border: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 700, color: T.red, fontFamily: 'Manrope, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m2 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke={T.red} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M10 11v6M14 11v6" stroke={T.red} strokeWidth="1.75" strokeLinecap="round"/>
+              </svg>
+              Supprimer cette vente
+            </button>
+            <button
+              onClick={() => setVenteSelectionnee(null)}
+              style={{ width: '100%', height: 48, marginTop: 10, borderRadius: 12, background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 600, color: T.textSub, fontFamily: 'Manrope, sans-serif' }}
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* HISTORIQUE DES SUPPRESSIONS */}
+      {showHistorique && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'flex-end' }}
+          onClick={() => setShowHistorique(false)}
+        >
+          <div
+            style={{ background: T.surface, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, margin: '0 auto', padding: '20px 20px 36px', maxHeight: '80dvh', overflowY: 'auto' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border, margin: '0 auto 16px' }} />
+            <div style={{ fontSize: 18, fontWeight: 800, color: T.text, marginBottom: 4 }}>Historique des suppressions</div>
+            <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 16 }}>
+              Toutes les ventes supprimées restent visibles ici, avec leur date.
+            </div>
+            {ventesSupprimees.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '30px 0', color: T.textMuted, fontSize: 14 }}>
+                Aucune vente supprimée
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {ventesSupprimees.map(v => (
+                  <div key={v.id} style={{ background: T.bgSubtle, borderRadius: 12, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.produitNom}</div>
+                      <div style={{ fontSize: 11, color: T.textMuted, marginTop: 1 }}>
+                        Vendue le {new Date(v.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                        {v.updatedAt ? ` · supprimée le ${new Date(v.updatedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: T.textSub, fontFamily: '"Space Grotesk", sans-serif', flexShrink: 0 }}>
+                      {fmtF(v.total)} {symbole}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* BANDEAU ANNULER (après suppression d'une vente) */}
+      {venteSupprimee && (
+        <div style={{ position: 'fixed', left: 0, right: 0, bottom: 80, zIndex: 250, display: 'flex', justifyContent: 'center', padding: '0 16px' }}>
+          <div style={{ background: T.text, borderRadius: 14, padding: '12px 14px 12px 16px', display: 'flex', alignItems: 'center', gap: 12, maxWidth: 480, width: '100%', boxShadow: T.shadow }}>
+            <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: '#F4EEE4', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              Vente «&nbsp;{venteSupprimee.produitNom}&nbsp;» supprimée
+            </span>
+            <button onClick={annulerSuppressionVente} style={{ background: 'rgba(255,255,255,0.16)', borderRadius: 10, height: 36, padding: '0 16px', color: '#F4EEE4', fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'Manrope, sans-serif', flexShrink: 0 }}>
+              Annuler
+            </button>
+          </div>
+        </div>
       )}
 
       {/* HEADER */}
@@ -245,8 +356,11 @@ export default function VentesPage() {
                 </div>
               )}
               {Number(prixGros) > 0 && selectedProduit && Number(prixGros) < selectedProduit.prixAchat && (
-                <div style={{ fontSize: 11, color: T.red, fontWeight: 600, marginTop: 4 }}>
-                  ⚠ Prix gros inférieur au prix d&apos;achat — vente à perte
+                <div style={{ fontSize: 11, color: T.red, fontWeight: 600, marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                    <path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z" stroke={T.red} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Prix gros inférieur au prix d&apos;achat — vente à perte
                 </div>
               )}
             </div>
@@ -274,11 +388,29 @@ export default function VentesPage() {
         </div>
       )}
 
+      {/* LIEN HISTORIQUE DES SUPPRESSIONS */}
+      <div style={{ padding: '0 16px 8px', display: 'flex', justifyContent: 'flex-end' }}>
+        <button
+          onClick={() => setShowHistorique(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: T.textMuted, padding: '4px 0', fontFamily: 'Manrope, sans-serif' }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M3 3v5h5M3.05 13a9 9 0 102.5-7.4L3 8" stroke={T.textMuted} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M12 7v5l3 2" stroke={T.textMuted} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Historique des suppressions{ventesSupprimees.length > 0 ? ` (${ventesSupprimees.length})` : ''}
+        </button>
+      </div>
+
       {/* VENTES LIST - grouped by date */}
       <div style={{ padding: '0 16px', overflowY: 'auto', scrollbarWidth: 'none' }}>
-        {ventes.length === 0 ? (
+        {ventesPeriode.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 0' }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🛒</div>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto 12px', display: 'block' }}>
+              <path d="M2 3h2l2.4 12.4a2 2 0 002 1.6h8.8a2 2 0 002-1.6L22 7H6" stroke={T.textMuted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <circle cx="9" cy="20" r="1.5" fill={T.textMuted}/>
+              <circle cx="18" cy="20" r="1.5" fill={T.textMuted}/>
+            </svg>
             <div style={{ fontSize: 16, fontWeight: 600, color: T.textSub }}>Aucune vente pour cette période</div>
           </div>
         ) : (
@@ -298,10 +430,11 @@ export default function VentesPage() {
                   {dayVentes.map(v => (
                     <div
                       key={v.id}
+                      onClick={() => setVenteSelectionnee(v)}
                       style={{
                         background: T.surface, borderRadius: 12, padding: '10px 12px',
                         boxShadow: T.shadow, display: 'flex', alignItems: 'center', gap: 10,
-                        position: 'relative',
+                        position: 'relative', cursor: 'pointer',
                       }}
                     >
                       {/* Timeline dot */}
@@ -310,7 +443,9 @@ export default function VentesPage() {
                         width: 8, height: 8, borderRadius: '50%', background: T.accent,
                         border: `2px solid ${T.bg}`,
                       }} />
-                      <span style={{ fontSize: 20 }}>{getSaleEmoji(v.produitNom)}</span>
+                      <div style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: T.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 15, fontWeight: 800, color: T.accent }}>{(v.produitNom || '?').charAt(0).toUpperCase()}</span>
+                      </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {v.produitNom}
@@ -327,17 +462,6 @@ export default function VentesPage() {
                           +{fmtF(v.benefice)} {symbole}
                         </div>
                       </div>
-                      <button
-                        onClick={() => supprimerVente(v.id)}
-                        style={{
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          color: T.textMuted, padding: '4px 2px', fontSize: 18, lineHeight: 1,
-                          flexShrink: 0,
-                        }}
-                        aria-label="Supprimer cette vente"
-                      >
-                        ×
-                      </button>
                     </div>
                   ))}
                 </div>

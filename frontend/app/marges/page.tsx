@@ -25,6 +25,7 @@ export default function MargesPage() {
   const [simProduitId, setSimProduitId] = useState('');
   const [simQte, setSimQte] = useState('');
   const [simPrixGros, setSimPrixGros] = useState('');
+  const [catsOuvertes, setCatsOuvertes] = useState<Record<string, boolean>>({});
 
   const symbole = config?.symboleDevise ?? 'FCFA';
 
@@ -82,72 +83,8 @@ export default function MargesPage() {
 
       {tab === '%Marge' && (
         <>
-          {/* PRODUCT LIST */}
-          <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {produitsAvecMarges.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <div style={{ fontSize: 48, marginBottom: 12 }}>📊</div>
-                <div style={{ fontSize: 16, fontWeight: 600, color: T.textSub }}>Aucun produit à analyser</div>
-                <div style={{ fontSize: 13, color: T.textMuted, marginTop: 6 }}>Ajoutez des produits dans l&apos;onglet Stock</div>
-              </div>
-            ) : (
-              produitsAvecMarges.map(p => {
-                const isGood = p.pct >= 25;
-                const delta = p.pct - avgPct;
-                return (
-                  <div
-                    key={p.id}
-                    style={{
-                      background: T.surface, borderRadius: 16, boxShadow: T.shadow,
-                      padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12,
-                    }}
-                  >
-                    {/* Left % square */}
-                    <div style={{
-                      width: 52, height: 52, borderRadius: 14, flexShrink: 0,
-                      background: isGood ? T.greenBg : T.redBg,
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <span style={{
-                        fontSize: 20, fontWeight: 800,
-                        color: isGood ? T.green : T.red,
-                        fontFamily: '"Space Grotesk", sans-serif',
-                        lineHeight: 1,
-                      }}>
-                        {p.pct}
-                      </span>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: isGood ? T.green : T.red }}>%</span>
-                    </div>
-
-                    {/* Middle */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {p.nom}
-                      </div>
-                      <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2, fontFamily: '"Space Grotesk", sans-serif' }}>
-                        {fmtF(p.prixVente)} {symbole} · {p.quantite} unités
-                      </div>
-                    </div>
-
-                    {/* Right delta vs moyenne */}
-                    {delta !== 0 && (
-                      <span style={{
-                        fontSize: 12, fontWeight: 700,
-                        color: delta > 0 ? T.green : T.red,
-                        fontFamily: '"Space Grotesk", sans-serif',
-                        flexShrink: 0,
-                      }}>
-                        {delta > 0 ? '+' : ''}{delta}%
-                      </span>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          {/* CALCULATOR */}
-          <div style={{ margin: '16px 16px 0', background: T.surface, borderRadius: 20, padding: 16, boxShadow: T.shadow }}>
+          {/* CALCULATOR (en premier) */}
+          <div style={{ margin: '0 16px 16px', background: T.surface, borderRadius: 20, padding: 16, boxShadow: T.shadow }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, letterSpacing: '0.6px', textTransform: 'uppercase', marginBottom: 12 }}>
               Calculateur
             </div>
@@ -224,6 +161,85 @@ export default function MargesPage() {
               </div>
             )}
           </div>
+
+          {/* LISTE GROUPÉE PAR CATÉGORIE */}
+          {produitsAvecMarges.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto 12px', display: 'block' }}>
+                <path d="M3 3v18h18" stroke={T.textMuted} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M7 14l3-3 3 3 4-5" stroke={T.accent} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <div style={{ fontSize: 16, fontWeight: 600, color: T.textSub }}>Aucun produit à analyser</div>
+              <div style={{ fontSize: 13, color: T.textMuted, marginTop: 6 }}>Ajoutez des produits dans l&apos;onglet Stock</div>
+            </div>
+          ) : (() => {
+            // Regroupement des produits par catégorie (un seul niveau)
+            const groupes = new Map<string, typeof produitsAvecMarges>();
+            for (const p of produitsAvecMarges) {
+              const cle = p.categorie?.trim() || 'Sans catégorie';
+              if (!groupes.has(cle)) groupes.set(cle, []);
+              groupes.get(cle)!.push(p);
+            }
+            const listeGroupes = Array.from(groupes.entries()).sort((a, b) => {
+              if (a[0] === 'Sans catégorie') return 1;
+              if (b[0] === 'Sans catégorie') return -1;
+              return a[0].localeCompare(b[0]);
+            });
+            return (
+              <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {listeGroupes.map(([cat, items]) => {
+                  const ouvert = catsOuvertes[cat] ?? false;
+                  const moyenneCat = Math.round(items.reduce((s, p) => s + p.pct, 0) / items.length);
+                  const catOk = moyenneCat >= 25;
+                  return (
+                    <div key={cat} style={{ background: T.surface, borderRadius: 16, boxShadow: T.shadow, overflow: 'hidden' }}>
+                      {/* En-tête repliable */}
+                      <button onClick={() => setCatsOuvertes(o => ({ ...o, [cat]: !ouvert }))}
+                        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'Manrope, sans-serif' }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, transform: ouvert ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>
+                          <path d="M9 6l6 6-6 6" stroke={T.textSub} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        <span style={{ flex: 1, textAlign: 'left', fontSize: 15, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cat}</span>
+                        <span style={{ fontSize: 12, color: T.textMuted }}>{items.length} produit{items.length > 1 ? 's' : ''}</span>
+                        <span style={{ background: catOk ? T.greenBg : T.redBg, color: catOk ? T.green : T.red, fontSize: 12, fontWeight: 700, borderRadius: 20, padding: '3px 8px', fontFamily: '"Space Grotesk", sans-serif', flexShrink: 0 }}>
+                          {moyenneCat}%
+                        </span>
+                      </button>
+
+                      {/* Produits de la catégorie */}
+                      {ouvert && (
+                        <div style={{ padding: '0 14px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {items.map(p => {
+                            const isGood = p.pct >= 25;
+                            const delta = p.pct - avgPct;
+                            return (
+                              <div key={p.id} style={{ background: T.bgSubtle, borderRadius: 12, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <div style={{ width: 46, height: 46, borderRadius: 12, flexShrink: 0, background: isGood ? T.greenBg : T.redBg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                  <span style={{ fontSize: 18, fontWeight: 800, color: isGood ? T.green : T.red, fontFamily: '"Space Grotesk", sans-serif', lineHeight: 1 }}>{p.pct}</span>
+                                  <span style={{ fontSize: 9, fontWeight: 700, color: isGood ? T.green : T.red }}>%</span>
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: 14, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nom}</div>
+                                  <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2, fontFamily: '"Space Grotesk", sans-serif' }}>
+                                    {fmtF(p.prixVente)} {symbole} · {p.quantite} unités
+                                  </div>
+                                </div>
+                                {delta !== 0 && (
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: delta > 0 ? T.green : T.red, fontFamily: '"Space Grotesk", sans-serif', flexShrink: 0 }}>
+                                    {delta > 0 ? '+' : ''}{delta}%
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </>
       )}
 
@@ -237,7 +253,11 @@ export default function MargesPage() {
           <div style={{ padding: '0 16px' }}>
             {produits.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <div style={{ fontSize: 48, marginBottom: 12 }}>🛒</div>
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto 12px', display: 'block' }}>
+                  <path d="M2 3h2l2.4 12.4a2 2 0 002 1.6h8.8a2 2 0 002-1.6L22 7H6" stroke={T.textMuted} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="9" cy="20" r="1.4" fill={T.textMuted}/>
+                  <circle cx="18" cy="20" r="1.4" fill={T.textMuted}/>
+                </svg>
                 <div style={{ fontSize: 16, fontWeight: 600, color: T.textSub }}>Aucun produit</div>
                 <div style={{ fontSize: 13, color: T.textMuted, marginTop: 6 }}>Ajoutez des produits dans l&apos;onglet Stock</div>
               </div>
@@ -287,8 +307,11 @@ export default function MargesPage() {
                           </strong>
                         </div>
                         {simPrixNum < simProduit.prixAchat && (
-                          <div style={{ fontSize: 11, color: T.red, fontWeight: 600, marginTop: 8 }}>
-                            ⚠ Prix gros inférieur au prix d&apos;achat — vente à perte
+                          <div style={{ fontSize: 11, color: T.red, fontWeight: 600, marginTop: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                              <path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z" stroke={T.red} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                            Prix gros inférieur au prix d&apos;achat — vente à perte
                           </div>
                         )}
                       </div>
@@ -303,7 +326,10 @@ export default function MargesPage() {
 
       {tab === 'Fiches' && (
         <div style={{ textAlign: 'center', padding: '60px 16px', color: T.textMuted }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>📄</div>
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto 12px', display: 'block' }}>
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke={T.textMuted} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M14 2v6h6M8 13h8M8 17h5" stroke={T.textMuted} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
           <div style={{ fontSize: 15, fontWeight: 600, color: T.textSub }}>Fiches produits</div>
           <div style={{ fontSize: 13, marginTop: 6 }}>Bientôt disponible</div>
         </div>
@@ -376,7 +402,10 @@ export default function MargesPage() {
             {/* Liste */}
             {morts.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto 12px', display: 'block' }}>
+                  <circle cx="12" cy="12" r="9" stroke={T.green} strokeWidth="1.75"/>
+                  <path d="M8 12l2.5 2.5L16 9" stroke={T.green} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
                 <div style={{ fontSize: 16, fontWeight: 600, color: T.textSub }}>Aucun stock mort</div>
                 <div style={{ fontSize: 13, color: T.textMuted, marginTop: 6 }}>
                   Tous tes produits en stock se sont vendus dans les {seuil} derniers jours

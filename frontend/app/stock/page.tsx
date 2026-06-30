@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStock } from '@/lib/hooks/useStock';
 import { useConfig } from '@/lib/hooks/useConfig';
 import { useColors } from '@/lib/hooks/useColors';
@@ -20,7 +20,7 @@ const CHAMPS_VIDES = {
 export default function StockPage() {
   const T = useColors();
   const { config } = useConfig();
-  const { produits, alertes, ajouterProduit, supprimerProduit, modifierProduit } = useStock();
+  const { produits, alertes, ajouterProduit, supprimerProduit, restaurerProduit, modifierProduit } = useStock();
   const { categories, ajouterCategorie } = useCategories();
 
   const [showForm, setShowForm] = useState(false);
@@ -35,6 +35,31 @@ export default function StockPage() {
   const [champsReappro, setChampsReappro] = useState({ quantite: '', prixAchat: '' });
   const [reapproMode, setReapproMode] = useState<'paquets' | 'unites'>('unites');
   const [reapproMsg, setReapproMsg] = useState('');
+  const [showReappro, setShowReappro] = useState(false);
+  const [produitASupprimer, setProduitASupprimer] = useState<Produit | null>(null);
+  const [produitSupprime, setProduitSupprime] = useState<Produit | null>(null);
+  const [catsOuvertes, setCatsOuvertes] = useState<Record<string, boolean>>({});
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Nettoie le minuteur du bandeau « Annuler » au démontage.
+  useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
+
+  function confirmerSuppression() {
+    if (!produitASupprimer) return;
+    const produit = produitASupprimer;
+    setProduitASupprimer(null);
+    supprimerProduit(produit.id);
+    setProduitSupprime(produit);
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    undoTimer.current = setTimeout(() => setProduitSupprime(null), 6000);
+  }
+
+  function annulerSuppression() {
+    if (!produitSupprime) return;
+    restaurerProduit(produitSupprime.id);
+    setProduitSupprime(null);
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+  }
 
   const symbole = config?.symboleDevise ?? 'FCFA';
 
@@ -65,6 +90,7 @@ export default function StockPage() {
     setChampsReappro({ quantite: '', prixAchat: '' });
     setReapproMode(produit.tailleConditionnement && produit.tailleConditionnement > 0 ? 'paquets' : 'unites');
     setReapproMsg('');
+    setShowReappro(false);
   }
 
   function handleAjouterAuStock() {
@@ -82,6 +108,7 @@ export default function StockPage() {
     }));
     setReapproMsg(`+${unites} unité${unites > 1 ? 's' : ''} → ${nouveauTotal} unités en stock`);
     setChampsReappro({ quantite: '', prixAchat: '' });
+    setShowReappro(false);
   }
 
   async function handleEditer() {
@@ -144,6 +171,66 @@ export default function StockPage() {
 
   const stockValue = produits.reduce((sum, p) => sum + p.prixAchat * p.quantite, 0);
 
+  // Carte d'un produit (réutilisée en liste plate et en liste groupée)
+  function carteProduit(produit: Produit) {
+    const stockBas = produit.quantite <= produit.seuilAlerte;
+    const marge = produit.prixVente > 0 ? Math.round((produit.prixVente - produit.prixAchat) / produit.prixVente * 100) : 0;
+    const margeOk = marge >= 25;
+    return (
+      <div key={produit.id} onClick={() => openEditer(produit)} style={{ background: T.surface, borderRadius: 14, padding: '12px 14px', boxShadow: T.shadow, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+        <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: produit.quantite === 0 ? T.redBg : T.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontSize: 18, fontWeight: 800, color: produit.quantite === 0 ? T.red : T.accent }}>
+            {produit.nom.charAt(0).toUpperCase()}
+          </span>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {produit.nom}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 12, color: stockBas ? T.red : T.textMuted }}>
+              {produit.quantite === 0 ? 'Rupture' : `${produit.quantite} unités`}
+            </span>
+            {produit.tailleConditionnement && (
+              <span style={{ fontSize: 11, fontWeight: 600, background: T.bgSubtle, color: T.textSub, borderRadius: 20, padding: '1px 7px' }}>
+                Paquet de {produit.tailleConditionnement} unités
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize: 11, color: T.textMuted, marginTop: 1, fontFamily: '"Space Grotesk", sans-serif' }}>
+            Achat: {fmtF(produit.prixAchat)} · Vente: {fmtF(produit.prixVente)}
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+          <span style={{ fontSize: 14, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>
+            {fmtF(produit.prixVente)} {symbole}
+          </span>
+          <span style={{ background: margeOk ? T.greenBg : T.redBg, color: margeOk ? T.green : T.red, fontSize: 12, fontWeight: 700, borderRadius: 20, padding: '3px 8px', fontFamily: '"Space Grotesk", sans-serif' }}>
+            {marge}%
+          </span>
+        </div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+          <path d="M9 6l6 6-6 6" stroke={T.textMuted} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+    );
+  }
+
+  // Regroupement par catégorie (un seul niveau) — utilisé quand on ne recherche pas
+  const groupesStock = (() => {
+    const m = new Map<string, Produit[]>();
+    for (const p of produitsFiltres) {
+      const cle = p.categorie?.trim() || 'Sans catégorie';
+      if (!m.has(cle)) m.set(cle, []);
+      m.get(cle)!.push(p);
+    }
+    return Array.from(m.entries()).sort((a, b) => {
+      if (a[0] === 'Sans catégorie') return 1;
+      if (b[0] === 'Sans catégorie') return -1;
+      return a[0].localeCompare(b[0]);
+    });
+  })();
+
   // Category breakdown for Détail modal
   const parCategorie = categories.map(cat => {
     const ps = produits.filter(p => p.categorie === cat);
@@ -165,6 +252,54 @@ export default function StockPage() {
 
       {/* SCANNER */}
       {showScanner && <BarcodeScanner onScan={handleScan} onClose={() => setShowScanner(false)} />}
+
+      {/* CONFIRMATION DE SUPPRESSION */}
+      {produitASupprimer && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={() => setProduitASupprimer(null)}
+        >
+          <div
+            style={{ background: T.surface, borderRadius: 20, width: '100%', maxWidth: 340, padding: 22 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ width: 48, height: 48, borderRadius: 14, background: T.redBg, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m2 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke={T.red} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M10 11v6M14 11v6" stroke={T.red} strokeWidth="1.75" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: T.text, textAlign: 'center', marginBottom: 6 }}>
+              Supprimer ce produit ?
+            </div>
+            <div style={{ fontSize: 14, color: T.textSub, textAlign: 'center', marginBottom: 20 }}>
+              «&nbsp;<strong style={{ color: T.text }}>{produitASupprimer.nom}</strong>&nbsp;» sera retiré de ton stock.
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setProduitASupprimer(null)} style={{ flex: 1, height: 46, borderRadius: 12, background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: T.textSub, fontFamily: 'Manrope, sans-serif' }}>
+                Annuler
+              </button>
+              <button onClick={confirmerSuppression} style={{ flex: 1, height: 46, borderRadius: 12, background: T.red, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: 'white', fontFamily: 'Manrope, sans-serif' }}>
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BANDEAU ANNULER (après suppression) */}
+      {produitSupprime && (
+        <div style={{ position: 'fixed', left: 0, right: 0, bottom: 80, zIndex: 250, display: 'flex', justifyContent: 'center', padding: '0 16px' }}>
+          <div style={{ background: T.text, borderRadius: 14, padding: '12px 14px 12px 16px', display: 'flex', alignItems: 'center', gap: 12, maxWidth: 480, width: '100%', boxShadow: T.shadow }}>
+            <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: '#F4EEE4', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              «&nbsp;{produitSupprime.nom}&nbsp;» supprimé
+            </span>
+            <button onClick={annulerSuppression} style={{ background: 'rgba(255,255,255,0.16)', borderRadius: 10, height: 36, padding: '0 16px', color: '#F4EEE4', fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'Manrope, sans-serif', flexShrink: 0 }}>
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* BOTTOM SHEET ÉDITION */}
       {produitEnEdition && (
@@ -214,61 +349,20 @@ export default function StockPage() {
               )}
             </div>
 
-            {/* RÉAPPRO — encadré "J'ai reçu de la marchandise" */}
-            <div style={{ marginBottom: 14, border: `1.5px solid ${T.accent}`, background: T.accentLight, borderRadius: 12, padding: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: T.accent, marginBottom: 8 }}>
-                📦 J&apos;ai reçu de la marchandise
-              </div>
-
-              {/* Choix Paquets / Unités — seulement si le produit est conditionné en paquets */}
-              {Number(champsEdition.tailleConditionnement) > 0 && (
-                <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-                  {([
-                    { mode: 'paquets' as const, label: 'En paquets' },
-                    { mode: 'unites' as const, label: 'En unités' },
-                  ]).map(({ mode, label }) => (
-                    <button key={mode} onClick={() => { setReapproMode(mode); setReapproMsg(''); }}
-                      style={{ flex: 1, height: 34, borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                        border: `1.5px solid ${reapproMode === mode ? T.accent : T.border}`,
-                        background: reapproMode === mode ? T.accent : T.surface,
-                        color: reapproMode === mode ? 'white' : T.textSub }}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Quantité reçue */}
-              <div style={{ marginBottom: 8 }}>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>
-                  {Number(champsEdition.tailleConditionnement) > 0 && reapproMode === 'paquets' ? 'Paquets reçus' : 'Unités reçues'}
-                </label>
-                <input type="number" value={champsReappro.quantite} onChange={e => { setChampsReappro(c => ({ ...c, quantite: e.target.value })); setReapproMsg(''); }} placeholder="0" min="0"
-                  step={Number(champsEdition.tailleConditionnement) > 0 && reapproMode === 'paquets' ? '1' : 'any'}
-                  style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.surface, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
-                {Number(champsEdition.tailleConditionnement) > 0 && reapproMode === 'paquets' && Number(champsReappro.quantite) > 0 && (
-                  <div style={{ fontSize: 12, color: T.accent, fontWeight: 600, marginTop: 4 }}>
-                    → +{Number(champsReappro.quantite) * Number(champsEdition.tailleConditionnement)} unités
-                  </div>
-                )}
-              </div>
-
-              {/* Nouveau prix d'achat optionnel */}
-              <div style={{ marginBottom: 10 }}>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Nouveau prix d&apos;achat (optionnel)</label>
-                <input type="number" value={champsReappro.prixAchat} onChange={e => setChampsReappro(c => ({ ...c, prixAchat: e.target.value }))} placeholder={`Inchangé : ${champsEdition.prixAchat || '0'}`} min="0"
-                  style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.surface, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
-              </div>
-
-              {reapproMsg && (
-                <div style={{ fontSize: 12, color: T.accent, fontWeight: 700, marginBottom: 8 }}>{reapproMsg}</div>
-              )}
-
-              <button onClick={handleAjouterAuStock} disabled={!(Number(champsReappro.quantite) > 0)}
-                style={{ width: '100%', height: 40, borderRadius: 10, background: T.accent, border: 'none', cursor: Number(champsReappro.quantite) > 0 ? 'pointer' : 'default', fontSize: 13, fontWeight: 700, color: 'white', opacity: Number(champsReappro.quantite) > 0 ? 1 : 0.5 }}>
-                Ajouter au stock
-              </button>
-            </div>
+            {/* RÉAPPRO — bouton qui ouvre une fenêtre */}
+            <button
+              onClick={() => { setChampsReappro({ quantite: '', prixAchat: '' }); setShowReappro(true); }}
+              style={{ width: '100%', marginBottom: reapproMsg ? 6 : 14, height: 46, borderRadius: 12, border: `1.5px solid ${T.accent}`, background: T.accentLight, cursor: 'pointer', fontSize: 14, fontWeight: 700, color: T.accent, fontFamily: 'Manrope, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke={T.accent} strokeWidth="1.75" strokeLinejoin="round"/>
+                <path d="M3.3 7l8.7 5 8.7-5M12 22V12" stroke={T.accent} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              J&apos;ai reçu de la marchandise
+            </button>
+            {reapproMsg && (
+              <div style={{ fontSize: 12, color: T.accent, fontWeight: 700, marginBottom: 14, textAlign: 'center' }}>{reapproMsg}</div>
+            )}
 
             {/* Autres champs numériques */}
             {[
@@ -313,6 +407,90 @@ export default function StockPage() {
               </button>
               <button onClick={handleEditer} style={{ flex: 2, height: 44, borderRadius: 12, background: T.accent, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: 'white' }}>
                 Enregistrer
+              </button>
+            </div>
+
+            {/* Supprimer ce produit */}
+            <button
+              onClick={() => { const p = produitEnEdition; setProduitEnEdition(null); setProduitASupprimer(p); }}
+              style={{ width: '100%', height: 44, marginTop: 10, borderRadius: 12, background: 'transparent', border: `1.5px solid ${T.redBg}`, cursor: 'pointer', fontSize: 14, fontWeight: 700, color: T.red, fontFamily: 'Manrope, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m2 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke={T.red} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M10 11v6M14 11v6" stroke={T.red} strokeWidth="1.75" strokeLinecap="round"/>
+              </svg>
+              Supprimer ce produit
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* FENÊTRE RÉAPPRO */}
+      {showReappro && produitEnEdition && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 280, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={() => setShowReappro(false)}
+        >
+          <div
+            style={{ background: T.surface, borderRadius: 20, width: '100%', maxWidth: 360, padding: 20 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke={T.accent} strokeWidth="1.75" strokeLinejoin="round"/>
+                <path d="M3.3 7l8.7 5 8.7-5M12 22V12" stroke={T.accent} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              J&apos;ai reçu de la marchandise
+            </div>
+            <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 14 }}>{produitEnEdition.nom}</div>
+
+            {/* Choix Paquets / Unités — seulement si le produit est conditionné en paquets */}
+            {Number(champsEdition.tailleConditionnement) > 0 && (
+              <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                {([
+                  { mode: 'paquets' as const, label: 'En paquets' },
+                  { mode: 'unites' as const, label: 'En unités' },
+                ]).map(({ mode, label }) => (
+                  <button key={mode} onClick={() => setReapproMode(mode)}
+                    style={{ flex: 1, height: 36, borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                      border: `1.5px solid ${reapproMode === mode ? T.accent : T.border}`,
+                      background: reapproMode === mode ? T.accent : T.surface,
+                      color: reapproMode === mode ? 'white' : T.textSub }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Quantité reçue */}
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>
+                {Number(champsEdition.tailleConditionnement) > 0 && reapproMode === 'paquets' ? 'Paquets reçus' : 'Unités reçues'}
+              </label>
+              <input type="number" autoFocus value={champsReappro.quantite} onChange={e => setChampsReappro(c => ({ ...c, quantite: e.target.value }))} placeholder="0" min="0"
+                step={Number(champsEdition.tailleConditionnement) > 0 && reapproMode === 'paquets' ? '1' : 'any'}
+                style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '12px 14px', fontSize: 18, fontWeight: 700, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
+              {Number(champsEdition.tailleConditionnement) > 0 && reapproMode === 'paquets' && Number(champsReappro.quantite) > 0 && (
+                <div style={{ fontSize: 12, color: T.accent, fontWeight: 600, marginTop: 4 }}>
+                  → +{Number(champsReappro.quantite) * Number(champsEdition.tailleConditionnement)} unités
+                </div>
+              )}
+            </div>
+
+            {/* Nouveau prix d'achat optionnel */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Nouveau prix d&apos;achat (optionnel)</label>
+              <input type="number" value={champsReappro.prixAchat} onChange={e => setChampsReappro(c => ({ ...c, prixAchat: e.target.value }))} placeholder={`Inchangé : ${champsEdition.prixAchat || '0'}`} min="0"
+                style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setShowReappro(false)} style={{ flex: 1, height: 46, borderRadius: 12, background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: T.textSub, fontFamily: 'Manrope, sans-serif' }}>
+                Annuler
+              </button>
+              <button onClick={handleAjouterAuStock} disabled={!(Number(champsReappro.quantite) > 0)}
+                style={{ flex: 2, height: 46, borderRadius: 12, background: T.accent, border: 'none', cursor: Number(champsReappro.quantite) > 0 ? 'pointer' : 'default', fontSize: 14, fontWeight: 700, color: 'white', opacity: Number(champsReappro.quantite) > 0 ? 1 : 0.5, fontFamily: 'Manrope, sans-serif' }}>
+                Ajouter au stock
               </button>
             </div>
           </div>
@@ -495,55 +673,43 @@ export default function StockPage() {
       <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {produitsFiltres.length === 0 && !showForm ? (
           <div style={{ textAlign: 'center', padding: '60px 0', color: T.textMuted }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>📦</div>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto 12px', display: 'block' }}>
+              <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke={T.textMuted} strokeWidth="1.5" strokeLinejoin="round"/>
+              <path d="M3.3 7l8.7 5 8.7-5M12 22V12" stroke={T.textMuted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
             <div style={{ fontSize: 16, fontWeight: 600, color: T.textSub }}>
               {recherche ? 'Aucun produit trouvé' : "Aucun produit pour l'instant"}
             </div>
           </div>
+        ) : recherche.trim() ? (
+          // Recherche active : liste plate
+          produitsFiltres.map(carteProduit)
         ) : (
-          produitsFiltres.map((produit: Produit) => {
-            const stockBas = produit.quantite <= produit.seuilAlerte;
-            const marge = produit.prixVente > 0 ? Math.round((produit.prixVente - produit.prixAchat) / produit.prixVente * 100) : 0;
-            const margeOk = marge >= 25;
+          // Pas de recherche : groupes repliables par catégorie
+          groupesStock.map(([cat, items]) => {
+            const ouvert = catsOuvertes[cat] ?? false;
+            const valeurCat = items.reduce((s, p) => s + p.prixAchat * p.quantite, 0);
+            const alertesCat = items.filter(p => p.quantite <= p.seuilAlerte).length;
             return (
-              <div key={produit.id} onClick={() => openEditer(produit)} style={{ background: T.surface, borderRadius: 14, padding: '12px 14px', boxShadow: T.shadow, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: produit.quantite === 0 ? T.redBg : T.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: 18, fontWeight: 800, color: produit.quantite === 0 ? T.red : T.accent }}>
-                    {produit.nom.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {produit.nom}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 12, color: stockBas ? T.red : T.textMuted }}>
-                      {produit.quantite === 0 ? 'Rupture' : `${produit.quantite} unités`}
+              <div key={cat} style={{ background: T.surface, borderRadius: 16, boxShadow: T.shadow, overflow: 'hidden' }}>
+                <button onClick={() => setCatsOuvertes(o => ({ ...o, [cat]: !ouvert }))}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'Manrope, sans-serif' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, transform: ouvert ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>
+                    <path d="M9 6l6 6-6 6" stroke={T.textSub} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span style={{ flex: 1, textAlign: 'left', fontSize: 15, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cat}</span>
+                  {alertesCat > 0 && (
+                    <span style={{ background: T.redBg, color: T.red, fontSize: 11, fontWeight: 700, borderRadius: 20, padding: '2px 7px', flexShrink: 0 }}>
+                      {alertesCat} stock bas
                     </span>
-                    {produit.categorie && (
-                      <span style={{ fontSize: 11, fontWeight: 600, background: T.bgSubtle, color: T.textSub, borderRadius: 20, padding: '1px 7px' }}>
-                        {produit.categorie}
-                      </span>
-                    )}
-                    {produit.tailleConditionnement && (
-                      <span style={{ fontSize: 11, fontWeight: 600, background: T.bgSubtle, color: T.textSub, borderRadius: 20, padding: '1px 7px' }}>
-                        Paquet de {produit.tailleConditionnement} unités
-                      </span>
-                    )}
+                  )}
+                  <span style={{ fontSize: 12, color: T.textMuted, flexShrink: 0 }}>{items.length} produit{items.length > 1 ? 's' : ''}</span>
+                </button>
+                {ouvert && (
+                  <div style={{ padding: '0 10px 10px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {items.map(carteProduit)}
                   </div>
-                  <div style={{ fontSize: 11, color: T.textMuted, marginTop: 1, fontFamily: '"Space Grotesk", sans-serif' }}>
-                    Achat: {fmtF(produit.prixAchat)} · Vente: {fmtF(produit.prixVente)}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>
-                    {fmtF(produit.prixVente)} {symbole}
-                  </span>
-                  <span style={{ background: margeOk ? T.greenBg : T.redBg, color: margeOk ? T.green : T.red, fontSize: 12, fontWeight: 700, borderRadius: 20, padding: '3px 8px', fontFamily: '"Space Grotesk", sans-serif' }}>
-                    {marge}%
-                  </span>
-                </div>
-                <button onClick={e => { e.stopPropagation(); supprimerProduit(produit.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textMuted, padding: '4px 2px', fontSize: 16, lineHeight: 1 }} aria-label="Supprimer">×</button>
+                )}
               </div>
             );
           })

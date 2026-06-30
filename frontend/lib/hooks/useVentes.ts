@@ -11,6 +11,11 @@ export function useVentes(periode: Periode = 'jour') {
     () => db.ventes.orderBy('date').reverse().filter((v) => !v.deleted).toArray()
   ) ?? [];
 
+  // Ventes supprimées, du plus récent au plus ancien — pour l'historique des suppressions.
+  const ventesSupprimees = useLiveQuery(
+    () => db.ventes.orderBy('updatedAt').reverse().filter((v) => !!v.deleted).toArray()
+  ) ?? [];
+
   const stats = calculerStats(ventes, periode);
   const top3 = topProduits(ventes, 3);
 
@@ -41,5 +46,20 @@ export function useVentes(periode: Periode = 'jour') {
     requestSync();
   }
 
-  return { ventes, stats, top3, enregistrerVente, supprimerVente };
+  async function restaurerVente(id: string) {
+    const vente = await db.ventes.get(id);
+    if (!vente) return;
+    // Annule la suppression : on remet la vente et on redéduit le stock rendu.
+    await db.ventes.update(id, { deleted: false, updatedAt: Date.now() });
+    const produit = await db.produits.get(vente.produitId);
+    if (produit) {
+      await db.produits.update(vente.produitId, {
+        quantite: Math.max(0, produit.quantite - vente.quantite),
+        updatedAt: Date.now(),
+      });
+    }
+    requestSync();
+  }
+
+  return { ventes, ventesSupprimees, stats, top3, enregistrerVente, supprimerVente, restaurerVente };
 }
