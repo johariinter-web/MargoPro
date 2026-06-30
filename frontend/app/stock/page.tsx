@@ -698,7 +698,18 @@ export default function StockPage() {
       {/* ADD FORM */}
       {showForm && (
         <div style={{ margin: '0 16px 12px', background: T.surface, borderRadius: 16, padding: 16, boxShadow: T.shadow }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: T.text, marginBottom: 14 }}>Nouveau produit</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <button
+              onClick={() => { setShowForm(false); setErreur(''); setChamps(CHAMPS_VIDES); }}
+              aria-label="Retour à mes produits"
+              style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0, background: T.bgSubtle, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M15 18l-6-6 6-6" stroke={T.textSub} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            <span style={{ fontSize: 16, fontWeight: 700, color: T.text }}>Nouveau produit</span>
+          </div>
           {erreur && (
             <div style={{ fontSize: 13, color: T.red, fontWeight: 600, marginBottom: 10, padding: '8px 12px', background: T.redBg, borderRadius: 8 }}>
               {erreur}
