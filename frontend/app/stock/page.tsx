@@ -13,23 +13,25 @@ function fmtF(n: number) {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 
-// Lit un fichier image, le redimensionne (max 400px) et le compresse en base64.
+// Lit un fichier image, le recadre en carré (centré) de 400x400 et le compresse en base64.
+// Résultat : une miniature carrée uniforme qui s'intègre parfaitement dans tous les cadres.
 function fichierVersPhoto(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       const img = new Image();
       img.onload = () => {
-        const max = 400;
-        let { width, height } = img;
-        if (width > height && width > max) { height = Math.round(height * max / width); width = max; }
-        else if (height >= width && height > max) { width = Math.round(width * max / height); height = max; }
+        const taille = 400; // miniature carrée
         const canvas = document.createElement('canvas');
-        canvas.width = width; canvas.height = height;
+        canvas.width = taille; canvas.height = taille;
         const ctx = canvas.getContext('2d');
         if (!ctx) { reject(new Error('canvas')); return; }
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.6));
+        // Recadrage centré : on prend le plus grand carré possible au milieu de la photo.
+        const cote = Math.min(img.width, img.height);
+        const dx = (img.width - cote) / 2;
+        const dy = (img.height - cote) / 2;
+        ctx.drawImage(img, dx, dy, cote, cote, 0, 0, taille, taille);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
       };
       img.onerror = reject;
       img.src = reader.result as string;
