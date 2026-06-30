@@ -7,9 +7,9 @@ import { useEffect, useState } from 'react';
 
 const FEATURES = [
   { icon: 'box', color: '#B8860B', bg: '#FEF3D8', label: 'Produits illimités', subtitle: 'Gérez tout votre stock sans limites' },
-  { icon: 'chart', color: '#2563EB', bg: '#E6F0FE', label: 'Graphiques avancés', subtitle: 'CA, bénéfices, top produits du jour' },
-  { icon: 'doc', color: '#6B7280', bg: '#F2F2F2', label: 'Export PDF & Excel', subtitle: 'Partagez vos rapports facilement' },
-  { icon: 'cloud', color: '#7C3AED', bg: '#F2EBFD', label: 'Sauvegarde cloud', subtitle: 'Vos données protégées en ligne' },
+  { icon: 'image', color: '#059669', bg: '#E3F4EC', label: 'Photos & Catalogue', subtitle: 'Vitrine à partager sur WhatsApp' },
+  { icon: 'chart', color: '#2563EB', bg: '#E6F0FE', label: 'Marges & stock mort', subtitle: 'Analysez vos bénéfices' },
+  { icon: 'cloud', color: '#7C3AED', bg: '#F2EBFD', label: 'Sauvegarde cloud', subtitle: 'Vos données sur tous vos appareils' },
 ];
 
 function FeatureIcon({ name, color }: { name: string; color: string }) {
@@ -23,16 +23,19 @@ function FeatureIcon({ name, color }: { name: string; color: string }) {
   if (name === 'doc') return (
     <svg {...common}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke={color} strokeWidth="1.75" strokeLinejoin="round"/><path d="M14 2v6h6M8 13h8M8 17h5" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/></svg>
   );
+  if (name === 'image') return (
+    <svg {...common}><rect x="3" y="3" width="18" height="18" rx="3" stroke={color} strokeWidth="1.75"/><circle cx="8.5" cy="9" r="1.5" stroke={color} strokeWidth="1.5"/><path d="M21 15l-5-4-7 6" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  );
   return (
     <svg {...common}><path d="M18 10h-1.3A6 6 0 106 15h11a3.5 3.5 0 001-6.85" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/></svg>
   );
 }
 
 const FREE_FEATURES = [
-  'Stock jusqu\'à 10 produits',
+  'Stock jusqu\'à 5 produits',
   'Enregistrer des ventes',
-  'Accueil basique',
-  'Mode offline',
+  'Gain du jour (tableau simple)',
+  'Fonctionne sans internet',
 ];
 
 export default function AbonnementPage() {
