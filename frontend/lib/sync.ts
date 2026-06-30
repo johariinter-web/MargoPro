@@ -190,7 +190,8 @@ async function pull(userId: string): Promise<void> {
     const remote = rowToProduit(row);
     const local = await db.produits.get(remote.id);
     if (!local || remote.updatedAt > local.updatedAt) {
-      await db.produits.put(remote);
+      // La photo est locale (non synchronisée) : on la conserve si le cloud n'en a pas.
+      await db.produits.put({ ...remote, photo: remote.photo ?? local?.photo });
     }
   }
 

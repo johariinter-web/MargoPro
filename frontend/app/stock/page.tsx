@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ChangeEvent } from 'react';
 import { useStock } from '@/lib/hooks/useStock';
+import { useVentes } from '@/lib/hooks/useVentes';
 import { useConfig } from '@/lib/hooks/useConfig';
 import { useColors } from '@/lib/hooks/useColors';
 import { useCategories } from '@/lib/hooks/useCategories';
@@ -12,15 +13,99 @@ function fmtF(n: number) {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 
+// Lit un fichier image, le redimensionne (max 400px) et le compresse en base64.
+function fichierVersPhoto(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 400;
+        let { width, height } = img;
+        if (width > height && width > max) { height = Math.round(height * max / width); width = max; }
+        else if (height >= width && height > max) { width = Math.round(width * max / height); height = max; }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject(new Error('canvas')); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.6));
+      };
+      img.onerror = reject;
+      img.src = reader.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 const CHAMPS_VIDES = {
   nom: '', quantite: '', prixAchat: '', prixVente: '',
-  seuilAlerte: '5', codeBarres: '', categorie: '', tailleConditionnement: '',
+  seuilAlerte: '5', codeBarres: '', categorie: '', tailleConditionnement: '', photo: '',
 };
+
+// Champ photo : appareil photo natif du téléphone OU galerie, aperçu, retrait.
+function PhotoField({ T, value, onChange }: { T: Record<string, string>; value: string; onChange: (v: string) => void }) {
+  const inputCamRef = useRef<HTMLInputElement>(null);
+  const inputGalRef = useRef<HTMLInputElement>(null);
+  async function handleFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      try { onChange(await fichierVersPhoto(file)); } catch { /* image illisible : on ignore */ }
+    }
+    e.target.value = '';
+  }
+  return (
+    <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div
+        style={{ width: 64, height: 64, borderRadius: 14, flexShrink: 0, background: value ? 'transparent' : T.bgSubtle, border: `1.5px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        {value ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={value} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          // Aperçu vide : icône "image" (pas une caméra), pour ne pas faire doublon avec le bouton Photo
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="3" width="18" height="18" rx="3" stroke={T.textMuted} strokeWidth="1.75"/>
+            <circle cx="8.5" cy="9" r="1.5" stroke={T.textMuted} strokeWidth="1.5"/>
+            <path d="M21 15l-5-4-7 6" stroke={T.textMuted} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button type="button" onClick={() => inputCamRef.current?.click()}
+            style={{ height: 34, borderRadius: 9, padding: '0 12px', background: T.accent, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'white', fontFamily: 'Manrope, sans-serif', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" stroke="white" strokeWidth="1.75" strokeLinejoin="round"/>
+              <circle cx="12" cy="13" r="4" stroke="white" strokeWidth="1.75"/>
+            </svg>
+            Photo
+          </button>
+          <button type="button" onClick={() => inputGalRef.current?.click()}
+            style={{ height: 34, borderRadius: 9, padding: '0 12px', background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: T.textSub, fontFamily: 'Manrope, sans-serif' }}>
+            Galerie
+          </button>
+        </div>
+        {value && (
+          <button type="button" onClick={() => onChange('')}
+            style={{ height: 26, borderRadius: 9, padding: '0 4px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: T.red, fontFamily: 'Manrope, sans-serif', textAlign: 'left' }}>
+            Retirer la photo
+          </button>
+        )}
+      </div>
+      {/* Caméra native (téléphone) */}
+      <input ref={inputCamRef} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{ display: 'none' }} />
+      {/* Galerie / fichiers */}
+      <input ref={inputGalRef} type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
+    </div>
+  );
+}
 
 export default function StockPage() {
   const T = useColors();
   const { config } = useConfig();
   const { produits, alertes, ajouterProduit, supprimerProduit, restaurerProduit, modifierProduit } = useStock();
+  const { ventes } = useVentes('tout');
   const { categories, ajouterCategorie } = useCategories();
 
   const [showForm, setShowForm] = useState(false);
@@ -39,6 +124,8 @@ export default function StockPage() {
   const [produitASupprimer, setProduitASupprimer] = useState<Produit | null>(null);
   const [produitSupprime, setProduitSupprime] = useState<Produit | null>(null);
   const [catsOuvertes, setCatsOuvertes] = useState<Record<string, boolean>>({});
+  const [vueStock, setVueStock] = useState<'produits' | 'mort'>('produits');
+  const [morteSeuilStr, setMorteSeuilStr] = useState('30');
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Nettoie le minuteur du bandeau « Annuler » au démontage.
@@ -85,6 +172,7 @@ export default function StockPage() {
       codeBarres: produit.codeBarres ?? '',
       categorie: produit.categorie ?? '',
       tailleConditionnement: produit.tailleConditionnement ? String(produit.tailleConditionnement) : '',
+      photo: produit.photo ?? '',
     });
     setErreurEdition('');
     setChampsReappro({ quantite: '', prixAchat: '' });
@@ -118,13 +206,14 @@ export default function StockPage() {
     const taille = Number(champsEdition.tailleConditionnement);
     const data: {
       nom: string; quantite: number; prixAchat: number; prixVente: number;
-      seuilAlerte: number; codeBarres?: string; categorie?: string; tailleConditionnement?: number;
+      seuilAlerte: number; codeBarres?: string; categorie?: string; tailleConditionnement?: number; photo?: string;
     } = {
       nom: champsEdition.nom.trim(),
       quantite: Number(champsEdition.quantite), // déjà en unités
       prixAchat: Number(champsEdition.prixAchat),
       prixVente: Number(champsEdition.prixVente),
       seuilAlerte: Number(champsEdition.seuilAlerte) || 5,
+      photo: champsEdition.photo || '', // '' = pas de photo (permet aussi de la retirer)
     };
     if (champsEdition.codeBarres.trim()) data.codeBarres = champsEdition.codeBarres.trim();
     if (champsEdition.categorie.trim()) {
@@ -162,6 +251,7 @@ export default function StockPage() {
       }
     }
     if (taille > 0) data.tailleConditionnement = taille;
+    if (champs.photo) data.photo = champs.photo;
 
     const err = await ajouterProduit(data);
     if (err) { setErreur(err); return; }
@@ -178,10 +268,15 @@ export default function StockPage() {
     const margeOk = marge >= 25;
     return (
       <div key={produit.id} onClick={() => openEditer(produit)} style={{ background: T.surface, borderRadius: 14, padding: '12px 14px', boxShadow: T.shadow, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
-        <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: produit.quantite === 0 ? T.redBg : T.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontSize: 18, fontWeight: 800, color: produit.quantite === 0 ? T.red : T.accent }}>
-            {produit.nom.charAt(0).toUpperCase()}
-          </span>
+        <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: produit.quantite === 0 ? T.redBg : T.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+          {produit.photo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={produit.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <span style={{ fontSize: 18, fontWeight: 800, color: produit.quantite === 0 ? T.red : T.accent }}>
+              {produit.nom.charAt(0).toUpperCase()}
+            </span>
+          )}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -319,6 +414,9 @@ export default function StockPage() {
                 {erreurEdition}
               </div>
             )}
+
+            {/* Photo */}
+            <PhotoField T={T as unknown as Record<string, string>} value={champsEdition.photo} onChange={v => setChampsEdition(c => ({ ...c, photo: v }))} />
 
             {/* Nom */}
             <div style={{ marginBottom: 10 }}>
@@ -561,6 +659,27 @@ export default function StockPage() {
         </div>
       </div>
 
+      {/* SÉLECTEUR Mes produits / Stock mort */}
+      <div style={{ padding: '0 16px 10px' }}>
+        <div style={{ display: 'flex', background: T.bgSubtle, borderRadius: 12, padding: 3, gap: 2 }}>
+          {([
+            { v: 'produits' as const, label: 'Mes produits' },
+            { v: 'mort' as const, label: 'Stock mort' },
+          ]).map(({ v, label }) => (
+            <button key={v} onClick={() => setVueStock(v)}
+              style={{ flex: 1, height: 36, border: 'none', cursor: 'pointer', borderRadius: 10, fontSize: 13,
+                fontWeight: vueStock === v ? 700 : 500,
+                color: vueStock === v ? T.text : T.textMuted,
+                background: vueStock === v ? T.surface : 'transparent',
+                boxShadow: vueStock === v ? T.shadow : 'none', fontFamily: 'Manrope, sans-serif' }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {vueStock === 'produits' && (
+      <>
       {/* SEARCH BAR */}
       <div style={{ margin: '0 16px 10px', background: T.bgSubtle, borderRadius: 12, padding: '10px 14px', display: 'flex', gap: 8, alignItems: 'center' }}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -585,6 +704,9 @@ export default function StockPage() {
               {erreur}
             </div>
           )}
+
+          {/* Photo */}
+          <PhotoField T={T as unknown as Record<string, string>} value={champs.photo} onChange={v => setChamps(c => ({ ...c, photo: v }))} />
 
           {/* Nom */}
           <div style={{ marginBottom: 10 }}>
@@ -737,6 +859,100 @@ export default function StockPage() {
           </div>
         </div>
       )}
+      </>
+      )}
+
+      {/* VUE STOCK MORT */}
+      {vueStock === 'mort' && (() => {
+        const now = Date.now();
+        const JOUR = 86_400_000;
+        const derniereVente = new Map<string, number>();
+        for (const v of ventes) {
+          const prev = derniereVente.get(v.produitId) ?? 0;
+          if (v.date > prev) derniereVente.set(v.produitId, v.date);
+        }
+        const seuil = Math.max(1, Number(morteSeuilStr) || 0);
+        const morts = produits
+          .filter(p => p.quantite > 0)
+          .map(p => {
+            const last = derniereVente.get(p.id);
+            const ref = last ?? p.createdAt ?? now;
+            const jours = Math.floor((now - ref) / JOUR);
+            return { ...p, jours, jamaisVendu: !last, valeur: p.prixAchat * p.quantite };
+          })
+          .filter(a => a.jours >= seuil)
+          .sort((a, b) => b.jours - a.jours);
+        const argentImmobilise = morts.reduce((s, a) => s + a.valeur, 0);
+        return (
+          <div style={{ padding: '0 16px' }}>
+            {/* Réglage du seuil */}
+            <div style={{ background: T.surface, borderRadius: 16, padding: 16, boxShadow: T.shadow, marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: T.textSub }}>Sans vente depuis</div>
+                <div style={{ background: T.bgSubtle, borderRadius: 10, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <input type="number" min={1} max={365} value={morteSeuilStr}
+                    onChange={e => setMorteSeuilStr(e.target.value)}
+                    style={{ width: 46, border: 'none', background: 'transparent', fontSize: 16, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif', outline: 'none', textAlign: 'right' }} />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: T.accent }}>jours</span>
+                </div>
+              </div>
+              <input type="range" min={7} max={180}
+                value={Math.min(180, Math.max(7, seuil))}
+                onChange={e => setMorteSeuilStr(e.target.value)}
+                style={{ width: '100%', accentColor: T.accent }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: T.textMuted, marginTop: 4 }}>
+                <span>7j</span><span>30j</span><span>90j</span><span>180j</span>
+              </div>
+            </div>
+
+            {/* Résumé argent immobilisé */}
+            {morts.length > 0 && (
+              <div style={{ background: T.redBg, borderRadius: 14, padding: '12px 16px', marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: 12, color: T.textSub, fontWeight: 600 }}>Argent immobilisé</div>
+                  <div style={{ fontSize: 11, color: T.textMuted, marginTop: 1 }}>
+                    {morts.length} produit{morts.length > 1 ? 's' : ''} qui {morts.length > 1 ? 'dorment' : 'dort'}
+                  </div>
+                </div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: T.red, fontFamily: '"Space Grotesk", sans-serif' }}>
+                  {fmtF(argentImmobilise)} <span style={{ fontSize: 12 }}>{symbole}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Liste */}
+            {morts.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto 12px', display: 'block' }}>
+                  <circle cx="12" cy="12" r="9" stroke={T.green} strokeWidth="1.75"/>
+                  <path d="M8 12l2.5 2.5L16 9" stroke={T.green} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <div style={{ fontSize: 16, fontWeight: 600, color: T.textSub }}>Aucun stock mort</div>
+                <div style={{ fontSize: 13, color: T.textMuted, marginTop: 6 }}>
+                  Tous tes produits en stock se sont vendus dans les {seuil} derniers jours
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {morts.map(p => (
+                  <div key={p.id} onClick={() => openEditer(p)} style={{ background: T.surface, borderRadius: 16, boxShadow: T.shadow, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+                    <div style={{ width: 52, height: 52, borderRadius: 14, flexShrink: 0, background: T.redBg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 18, fontWeight: 800, color: T.red, fontFamily: '"Space Grotesk", sans-serif', lineHeight: 1 }}>{p.jours}</span>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: T.red }}>jours</span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nom}</div>
+                      <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2, fontFamily: '"Space Grotesk", sans-serif' }}>
+                        {p.jamaisVendu ? 'Jamais vendu' : 'Sans vente'} · {p.quantite} u · {fmtF(p.valeur)} {symbole}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {alertes.length > 0 && <div style={{ display: 'none' }} aria-hidden="true" />}
     </div>

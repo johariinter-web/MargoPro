@@ -8,6 +8,7 @@ export interface Produit {
   codeBarres?: string;
   categorie?: string;
   tailleConditionnement?: number;
+  photo?: string; // image compressée en base64 (data URL), stockée localement
   createdAt: number;
   updatedAt: number;
   deleted?: boolean;
