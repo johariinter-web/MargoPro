@@ -32,6 +32,9 @@ export default function StockPage() {
   const [produitEnEdition, setProduitEnEdition] = useState<Produit | null>(null);
   const [champsEdition, setChampsEdition] = useState({ ...CHAMPS_VIDES });
   const [erreurEdition, setErreurEdition] = useState('');
+  const [champsReappro, setChampsReappro] = useState({ quantite: '', prixAchat: '' });
+  const [reapproMode, setReapproMode] = useState<'paquets' | 'unites'>('unites');
+  const [reapproMsg, setReapproMsg] = useState('');
 
   const symbole = config?.symboleDevise ?? 'FCFA';
 
@@ -50,9 +53,7 @@ export default function StockPage() {
     setProduitEnEdition(produit);
     setChampsEdition({
       nom: produit.nom,
-      quantite: produit.tailleConditionnement && produit.tailleConditionnement > 0
-        ? String(Math.round(produit.quantite / produit.tailleConditionnement))
-        : String(produit.quantite),
+      quantite: String(produit.quantite), // toujours en unités
       prixAchat: String(produit.prixAchat),
       prixVente: String(produit.prixVente),
       seuilAlerte: String(produit.seuilAlerte),
@@ -61,6 +62,26 @@ export default function StockPage() {
       tailleConditionnement: produit.tailleConditionnement ? String(produit.tailleConditionnement) : '',
     });
     setErreurEdition('');
+    setChampsReappro({ quantite: '', prixAchat: '' });
+    setReapproMode(produit.tailleConditionnement && produit.tailleConditionnement > 0 ? 'paquets' : 'unites');
+    setReapproMsg('');
+  }
+
+  function handleAjouterAuStock() {
+    const recu = Number(champsReappro.quantite);
+    if (!recu || recu <= 0) return;
+    const taille = Number(champsEdition.tailleConditionnement);
+    // Conversion en unités réelles selon le mode choisi (paquets ou unités).
+    const unites = reapproMode === 'paquets' && taille > 0 ? recu * taille : recu;
+    // On additionne directement au stock en unités, visible dans le champ Quantité.
+    const nouveauTotal = Number(champsEdition.quantite || 0) + unites;
+    setChampsEdition(c => ({
+      ...c,
+      quantite: String(nouveauTotal),
+      ...(champsReappro.prixAchat.trim() ? { prixAchat: champsReappro.prixAchat.trim() } : {}),
+    }));
+    setReapproMsg(`+${unites} unité${unites > 1 ? 's' : ''} → ${nouveauTotal} unités en stock`);
+    setChampsReappro({ quantite: '', prixAchat: '' });
   }
 
   async function handleEditer() {
@@ -73,7 +94,7 @@ export default function StockPage() {
       seuilAlerte: number; codeBarres?: string; categorie?: string; tailleConditionnement?: number;
     } = {
       nom: champsEdition.nom.trim(),
-      quantite: taille > 0 ? Number(champsEdition.quantite) * taille : Number(champsEdition.quantite),
+      quantite: Number(champsEdition.quantite), // déjà en unités
       prixAchat: Number(champsEdition.prixAchat),
       prixVente: Number(champsEdition.prixVente),
       seuilAlerte: Number(champsEdition.seuilAlerte) || 5,
@@ -178,19 +199,75 @@ export default function StockPage() {
                 style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
             </div>
 
-            {/* Quantité */}
+            {/* Quantité — toujours en unités */}
             <div style={{ marginBottom: 10 }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>
-                {Number(champsEdition.tailleConditionnement) > 0 ? 'Nombre de paquets' : 'Quantité en stock'}
+                Quantité en stock (unités)
               </label>
-              <input type="number" value={champsEdition.quantite} onChange={e => setChampsEdition(c => ({ ...c, quantite: e.target.value }))} placeholder="0" min="0"
-                step={Number(champsEdition.tailleConditionnement) > 0 ? '1' : 'any'}
+              <input type="number" value={champsEdition.quantite} onChange={e => setChampsEdition(c => ({ ...c, quantite: e.target.value }))} placeholder="0" min="0" step="any"
                 style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
               {Number(champsEdition.tailleConditionnement) > 0 && Number(champsEdition.quantite) > 0 && (
-                <div style={{ fontSize: 12, color: T.accent, fontWeight: 600, marginTop: 4 }}>
-                  {champsEdition.quantite} paquet{Number(champsEdition.quantite) > 1 ? 's' : ''} × {champsEdition.tailleConditionnement} = {Number(champsEdition.quantite) * Number(champsEdition.tailleConditionnement)} unités
+                <div style={{ fontSize: 12, color: T.textMuted, fontWeight: 600, marginTop: 4 }}>
+                  soit ~{Math.floor(Number(champsEdition.quantite) / Number(champsEdition.tailleConditionnement))} paquet{Math.floor(Number(champsEdition.quantite) / Number(champsEdition.tailleConditionnement)) > 1 ? 's' : ''} de {champsEdition.tailleConditionnement}
+                  {Number(champsEdition.quantite) % Number(champsEdition.tailleConditionnement) > 0 ? ` + ${Number(champsEdition.quantite) % Number(champsEdition.tailleConditionnement)} unité${Number(champsEdition.quantite) % Number(champsEdition.tailleConditionnement) > 1 ? 's' : ''}` : ''}
                 </div>
               )}
+            </div>
+
+            {/* RÉAPPRO — encadré "J'ai reçu de la marchandise" */}
+            <div style={{ marginBottom: 14, border: `1.5px solid ${T.accent}`, background: T.accentLight, borderRadius: 12, padding: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: T.accent, marginBottom: 8 }}>
+                📦 J&apos;ai reçu de la marchandise
+              </div>
+
+              {/* Choix Paquets / Unités — seulement si le produit est conditionné en paquets */}
+              {Number(champsEdition.tailleConditionnement) > 0 && (
+                <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                  {([
+                    { mode: 'paquets' as const, label: 'En paquets' },
+                    { mode: 'unites' as const, label: 'En unités' },
+                  ]).map(({ mode, label }) => (
+                    <button key={mode} onClick={() => { setReapproMode(mode); setReapproMsg(''); }}
+                      style={{ flex: 1, height: 34, borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                        border: `1.5px solid ${reapproMode === mode ? T.accent : T.border}`,
+                        background: reapproMode === mode ? T.accent : T.surface,
+                        color: reapproMode === mode ? 'white' : T.textSub }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Quantité reçue */}
+              <div style={{ marginBottom: 8 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>
+                  {Number(champsEdition.tailleConditionnement) > 0 && reapproMode === 'paquets' ? 'Paquets reçus' : 'Unités reçues'}
+                </label>
+                <input type="number" value={champsReappro.quantite} onChange={e => { setChampsReappro(c => ({ ...c, quantite: e.target.value })); setReapproMsg(''); }} placeholder="0" min="0"
+                  step={Number(champsEdition.tailleConditionnement) > 0 && reapproMode === 'paquets' ? '1' : 'any'}
+                  style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.surface, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
+                {Number(champsEdition.tailleConditionnement) > 0 && reapproMode === 'paquets' && Number(champsReappro.quantite) > 0 && (
+                  <div style={{ fontSize: 12, color: T.accent, fontWeight: 600, marginTop: 4 }}>
+                    → +{Number(champsReappro.quantite) * Number(champsEdition.tailleConditionnement)} unités
+                  </div>
+                )}
+              </div>
+
+              {/* Nouveau prix d'achat optionnel */}
+              <div style={{ marginBottom: 10 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Nouveau prix d&apos;achat (optionnel)</label>
+                <input type="number" value={champsReappro.prixAchat} onChange={e => setChampsReappro(c => ({ ...c, prixAchat: e.target.value }))} placeholder={`Inchangé : ${champsEdition.prixAchat || '0'}`} min="0"
+                  style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.surface, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
+              </div>
+
+              {reapproMsg && (
+                <div style={{ fontSize: 12, color: T.accent, fontWeight: 700, marginBottom: 8 }}>{reapproMsg}</div>
+              )}
+
+              <button onClick={handleAjouterAuStock} disabled={!(Number(champsReappro.quantite) > 0)}
+                style={{ width: '100%', height: 40, borderRadius: 10, background: T.accent, border: 'none', cursor: Number(champsReappro.quantite) > 0 ? 'pointer' : 'default', fontSize: 13, fontWeight: 700, color: 'white', opacity: Number(champsReappro.quantite) > 0 ? 1 : 0.5 }}>
+                Ajouter au stock
+              </button>
             </div>
 
             {/* Autres champs numériques */}
