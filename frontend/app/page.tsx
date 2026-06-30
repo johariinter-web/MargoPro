@@ -210,8 +210,15 @@ export default function Dashboard() {
             <div style={{ fontSize: 28, fontWeight: 800, color: T.text, fontFamily: '"Space Grotesk", sans-serif', letterSpacing: '-1.2px', lineHeight: 1 }}>
               {fmtF(totalStock)}
             </div>
-            <div style={{ fontSize: 11, fontWeight: 600, marginTop: 5, fontFamily: 'Manrope, sans-serif', color: alertes.length > 0 ? T.red : T.textMuted }}>
-              {alertes.length > 0 ? `⚠ ${alertes.length} alertes` : `${produits.length} produits`}
+            <div style={{ fontSize: 11, fontWeight: 600, marginTop: 5, fontFamily: 'Manrope, sans-serif', color: alertes.length > 0 ? T.red : T.textMuted, display: 'flex', alignItems: 'center', gap: 4 }}>
+              {alertes.length > 0 ? (
+                <>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                    <path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z" stroke={T.red} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  {alertes.length} alertes
+                </>
+              ) : `${produits.length} produits`}
             </div>
           </div>
         </div>

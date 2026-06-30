@@ -6,11 +6,27 @@ import { useConfig } from '@/lib/hooks/useConfig';
 import { useEffect, useState } from 'react';
 
 const FEATURES = [
-  { emoji: '📦', bg: '#FEF3D8', label: 'Produits illimités', subtitle: 'Gérez tout votre stock sans limites' },
-  { emoji: '📊', bg: '#E6F0FE', label: 'Graphiques avancés', subtitle: 'CA, bénéfices, top produits du jour' },
-  { emoji: '📄', bg: '#F2F2F2', label: 'Export PDF & Excel', subtitle: 'Partagez vos rapports facilement' },
-  { emoji: '☁️', bg: '#F2EBFD', label: 'Sauvegarde cloud', subtitle: 'Vos données protégées en ligne' },
+  { icon: 'box', color: '#B8860B', bg: '#FEF3D8', label: 'Produits illimités', subtitle: 'Gérez tout votre stock sans limites' },
+  { icon: 'chart', color: '#2563EB', bg: '#E6F0FE', label: 'Graphiques avancés', subtitle: 'CA, bénéfices, top produits du jour' },
+  { icon: 'doc', color: '#6B7280', bg: '#F2F2F2', label: 'Export PDF & Excel', subtitle: 'Partagez vos rapports facilement' },
+  { icon: 'cloud', color: '#7C3AED', bg: '#F2EBFD', label: 'Sauvegarde cloud', subtitle: 'Vos données protégées en ligne' },
 ];
+
+function FeatureIcon({ name, color }: { name: string; color: string }) {
+  const common = { width: 24, height: 24, viewBox: '0 0 24 24', fill: 'none' as const };
+  if (name === 'box') return (
+    <svg {...common}><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke={color} strokeWidth="1.75" strokeLinejoin="round"/><path d="M3.3 7l8.7 5 8.7-5M12 22V12" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  );
+  if (name === 'chart') return (
+    <svg {...common}><path d="M3 3v18h18" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 14l3-3 3 3 4-5" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  );
+  if (name === 'doc') return (
+    <svg {...common}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke={color} strokeWidth="1.75" strokeLinejoin="round"/><path d="M14 2v6h6M8 13h8M8 17h5" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  );
+  return (
+    <svg {...common}><path d="M18 10h-1.3A6 6 0 106 15h11a3.5 3.5 0 001-6.85" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  );
+}
 
 const FREE_FEATURES = [
   'Stock jusqu\'à 10 produits',
@@ -50,7 +66,12 @@ export default function AbonnementPage() {
             style={{ background: T.surface, borderRadius: '24px 24px 0 0', width: '100%', padding: '28px 24px 40px' }}
           >
             <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border, margin: '0 auto 20px' }} />
-            <div style={{ fontSize: 36, textAlign: 'center', marginBottom: 12 }}>🚀</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                <path d="M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2-.1-2.8a2 2 0 00-2.8-.1zM12 15l-3-3a12 12 0 015-8c1.9-1.1 5-1 5-1s.1 3.1-1 5a12 12 0 01-8 5z" stroke={T.accent} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M9 12H4s.5-2.8 2-4 4-1 4-1M12 15v5s2.8-.5 4-2 1-4 1-4" stroke={T.accent} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
             <div style={{ fontSize: 20, fontWeight: 800, color: T.text, textAlign: 'center', marginBottom: 8 }}>Bientôt disponible</div>
             <div style={{ fontSize: 14, color: T.textMuted, textAlign: 'center', lineHeight: 1.6, marginBottom: 24 }}>
               Le paiement Mobile Money et Wave sera disponible très bientôt. Continue d&apos;utiliser MargoPro gratuitement en attendant.
@@ -86,7 +107,12 @@ export default function AbonnementPage() {
         {/* STATUT PREMIUM */}
         <div style={{ background: '#FEF9EC', borderRadius: 20, padding: '16px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: '#B8860B' }}>👑 Premium actif</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#B8860B', display: 'flex', alignItems: 'center', gap: 7 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                <path d="M3 7l4.5 4L12 5l4.5 6L21 7l-1.8 11.2a1 1 0 01-1 .8H5.8a1 1 0 01-1-.8L3 7z" stroke="#B8860B" strokeWidth="1.6" strokeLinejoin="round"/>
+              </svg>
+              Premium actif
+            </div>
             <div style={{ fontSize: 13, color: T.textMuted, marginTop: 4 }}>Expire dans {joursRestants} jour{joursRestants > 1 ? 's' : ''} · {expiryLabel}</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
@@ -113,8 +139,8 @@ export default function AbonnementPage() {
                 key={f.label}
                 style={{ background: T.surface, borderRadius: 16, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 1px 3px rgba(28,24,17,0.06)' }}
               >
-                <div style={{ width: 48, height: 48, borderRadius: 14, flexShrink: 0, background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
-                  {f.emoji}
+                <div style={{ width: 48, height: 48, borderRadius: 14, flexShrink: 0, background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FeatureIcon name={f.icon} color={f.color} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 15, fontWeight: 700, color: T.text }}>{f.label}</div>
@@ -156,7 +182,11 @@ export default function AbonnementPage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}
         >
-          🔄 Renouveler (+30 jours)
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+            <path d="M21 12a9 9 0 01-9 9 9 9 0 01-6.4-2.6L3 16M3 12a9 9 0 019-9 9 9 0 016.4 2.6L21 8" stroke={T.accent} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M21 3v5h-5M3 21v-5h5" stroke={T.accent} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Renouveler (+30 jours)
         </button>
 
       </div>

@@ -292,7 +292,14 @@ export default function ParametresPage() {
                 opacity: !nomCommerce.trim() ? 0.4 : 1, transition: 'background 0.2s',
               }}
             >
-              {saved ? '✓ Sauvegardé' : 'Enregistrer'}
+              {saved ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                    <path d="M5 12l4.5 4.5L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Sauvegardé
+                </span>
+              ) : 'Enregistrer'}
             </button>
           </div>
         )}
@@ -348,7 +355,14 @@ export default function ParametresPage() {
                 opacity: !deviseCode ? 0.4 : 1, transition: 'background 0.2s',
               }}
             >
-              {saved ? '✓ Sauvegardé' : 'Enregistrer'}
+              {saved ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                    <path d="M5 12l4.5 4.5L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Sauvegardé
+                </span>
+              ) : 'Enregistrer'}
             </button>
           </div>
         )}

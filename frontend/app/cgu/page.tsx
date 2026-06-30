@@ -84,7 +84,7 @@ export default function CguPage() {
 
         <Section title="10. Contact">
           Pour toute question relative aux présentes CGU ou à l&apos;utilisation de MargoPro, contactez-nous à :{'\n\n'}
-          📧 support@eidma.co
+          Email : support@eidma.co
         </Section>
 
       </div>

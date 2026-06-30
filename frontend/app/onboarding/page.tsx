@@ -143,7 +143,10 @@ export default function OnboardingPage() {
         {etape === 2 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div>
-              <p style={{ fontSize: 48, marginBottom: 12 }}>💱</p>
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" style={{ marginBottom: 12, display: 'block' }}>
+                <circle cx="12" cy="12" r="9" stroke={T.accent} strokeWidth="1.75"/>
+                <path d="M9.5 9.5A2.5 2.5 0 0112 8c1.4 0 2.5.9 2.5 2M12 8v8m0 0c-1.4 0-2.5-.9-2.5-2" stroke={T.accent} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
               <h1 style={{ fontSize: 28, fontWeight: 800, color: T.text, letterSpacing: '-0.7px' }}>Quelle devise tu utilises ?</h1>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '45vh', overflowY: 'auto', scrollbarWidth: 'none' as const }}>
@@ -170,10 +173,26 @@ export default function OnboardingPage() {
               <p style={{ fontSize: 15, color: T.textSub, lineHeight: 1.6, marginTop: 8 }}>Ajoutez votre premier produit pour commencer.</p>
             </div>
             <div style={{ background: T.accentLight, borderRadius: 16, padding: '16px 18px' }}>
-              <p style={{ fontWeight: 700, color: T.accent, marginBottom: 10, fontSize: 14 }}>✅ Tout est prêt :</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {['📦 Gérez votre stock','💰 Calculez vos marges','📊 Suivez vos ventes','📴 Fonctionne sans internet'].map((item,i) => (
-                  <span key={i} style={{ fontSize: 14, color: T.text, fontWeight: 500 }}>{item}</span>
+              <p style={{ fontWeight: 700, color: T.accent, marginBottom: 10, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                  <circle cx="12" cy="12" r="9" stroke={T.accent} strokeWidth="1.75"/>
+                  <path d="M8 12l2.5 2.5L16 9" stroke={T.accent} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Tout est prêt :
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[
+                  { texte: 'Gérez votre stock', path: 'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16zM3.3 7l8.7 5 8.7-5M12 22V12' },
+                  { texte: 'Calculez vos marges', path: 'M9.5 9.5A2.5 2.5 0 0112 8c1.4 0 2.5.9 2.5 2M12 8v8m0 0c-1.4 0-2.5-.9-2.5-2M12 3a9 9 0 100 18 9 9 0 000-18z' },
+                  { texte: 'Suivez vos ventes', path: 'M3 3v18h18M7 14l3-3 3 3 4-5' },
+                  { texte: 'Fonctionne sans internet', path: 'M1 1l22 22M16.7 11.3A6 6 0 006 15M5 12.5a10 10 0 014-2.4M12 20h.01' },
+                ].map((item, i) => (
+                  <span key={i} style={{ fontSize: 14, color: T.text, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                      <path d={item.path} stroke={T.accent} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    {item.texte}
+                  </span>
                 ))}
               </div>
             </div>
@@ -185,7 +204,7 @@ export default function OnboardingPage() {
             </label>
             <div style={{ display: 'flex', gap: 12 }}>
               <button onClick={() => setEtape(2)} style={{ flex: 1, height: 52, borderRadius: 14, border: `2px solid ${T.border}`, background: T.surface, color: T.text, fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'Manrope, sans-serif' }}>← Retour</button>
-              <button onClick={terminer} disabled={!cguAccepte} style={{ flex: 2, height: 52, borderRadius: 14, background: T.accent, color: '#fff', fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer', opacity: cguAccepte ? 1 : 0.4, fontFamily: 'Manrope, sans-serif' }}>Commencer 🎉</button>
+              <button onClick={terminer} disabled={!cguAccepte} style={{ flex: 2, height: 52, borderRadius: 14, background: T.accent, color: '#fff', fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer', opacity: cguAccepte ? 1 : 0.4, fontFamily: 'Manrope, sans-serif' }}>Commencer</button>
             </div>
           </div>
         )}

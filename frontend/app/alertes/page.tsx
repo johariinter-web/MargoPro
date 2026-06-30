@@ -48,8 +48,11 @@ export default function AlertesPage() {
       ) : (
         <>
           <div className="bg-orange-alert/10 border border-orange-alert/30 rounded-2xl p-4">
-            <p className="text-orange-alert font-bold text-lg">
-              ⚠️ {alertes.length} produit{alertes.length > 1 ? 's' : ''} en stock bas
+            <p className="text-orange-alert font-bold text-lg flex items-center gap-2">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="shrink-0">
+                <path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              {alertes.length} produit{alertes.length > 1 ? 's' : ''} en stock bas
             </p>
             <p className="text-stone-600 dark:text-stone-400 text-sm mt-1">
               Réapprovisionnez ces produits pour éviter les ruptures.
@@ -71,7 +74,12 @@ export default function AlertesPage() {
                         <span className="text-2xl font-bold text-orange-alert">
                           {produit.quantite} unités
                         </span>
-                        <span className="text-orange-alert text-sm font-bold">⚠️ Stock bas</span>
+                        <span className="text-orange-alert text-sm font-bold inline-flex items-center gap-1">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0">
+                            <path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                          Stock bas
+                        </span>
                       </div>
                       <p className="text-stone-500 dark:text-stone-400 text-sm mt-1">
                         Seuil d&apos;alerte : {produit.seuilAlerte} unités
@@ -81,7 +89,10 @@ export default function AlertesPage() {
                         Prix achat : {formatMontant(produit.prixAchat, symbole)}
                       </p>
                     </div>
-                    <span className="text-3xl ml-3">📦</span>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="ml-3 shrink-0 text-orange-alert">
+                      <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+                      <path d="M3.3 7l8.7 5 8.7-5M12 22V12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                   </div>
                 </div>
               );
