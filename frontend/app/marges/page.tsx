@@ -9,6 +9,26 @@ function fmtF(n: number) {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 
+// Charge une image base64 en objet Image (null si illisible).
+function chargerImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((res) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = () => res(null);
+    i.src = src;
+  });
+}
+
+// Dessine une image en mode "cover" (remplit la zone sans déformer).
+function dessinerCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, dx: number, dy: number, dw: number, dh: number) {
+  const ar = img.width / img.height;
+  const tar = dw / dh;
+  let sx = 0, sy = 0, sw = img.width, sh = img.height;
+  if (ar > tar) { sw = img.height * tar; sx = (img.width - sw) / 2; }
+  else { sh = img.width / tar; sy = (img.height - sh) / 2; }
+  ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+}
+
 type TabMode = '%Marge' | 'Pluriels' | 'Catalogue';
 
 export default function MargesPage() {
@@ -23,8 +43,88 @@ export default function MargesPage() {
   const [simQte, setSimQte] = useState('');
   const [simPrixGros, setSimPrixGros] = useState('');
   const [catsOuvertes, setCatsOuvertes] = useState<Record<string, boolean>>({});
+  const [catalogueMsg, setCatalogueMsg] = useState('');
+  const [genEnCours, setGenEnCours] = useState(false);
+  const [produitVitrine, setProduitVitrine] = useState<typeof produits[number] | null>(null);
 
   const symbole = config?.symboleDevise ?? 'FCFA';
+
+  // Génère une IMAGE de la vitrine (photos + noms + prix) et la partage.
+  async function partagerCatalogue() {
+    const dispo = produits.filter(p => p.prixVente > 0);
+    if (dispo.length === 0 || genEnCours) return;
+    setGenEnCours(true);
+    try {
+      const W = 720, pad = 30, cols = 2, gap = 20;
+      const cardW = Math.floor((W - pad * 2 - gap * (cols - 1)) / cols);
+      const imgH = cardW, infoH = 70, cardH = imgH + infoH;
+      const rows = Math.ceil(dispo.length / cols);
+      const headerH = 100;
+      const H = headerH + rows * cardH + (rows - 1) * gap + pad;
+      const canvas = document.createElement('canvas');
+      canvas.width = W; canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { setGenEnCours(false); return; }
+
+      ctx.fillStyle = T.bg; ctx.fillRect(0, 0, W, H);
+      // En-tête
+      ctx.fillStyle = T.text;
+      ctx.font = '800 38px sans-serif';
+      ctx.fillText(config?.nomCommerce || 'Ma boutique', pad, 56);
+      ctx.fillStyle = T.accent;
+      ctx.font = '700 22px sans-serif';
+      ctx.fillText('Catalogue', pad, 86);
+
+      const imgs = await Promise.all(dispo.map(p => p.photo ? chargerImage(p.photo) : Promise.resolve(null)));
+
+      dispo.forEach((p, idx) => {
+        const col = idx % cols, row = Math.floor(idx / cols);
+        const x = pad + col * (cardW + gap);
+        const y = headerH + row * (cardH + gap);
+        // Image
+        const img = imgs[idx];
+        if (img) {
+          ctx.save();
+          ctx.beginPath(); ctx.rect(x, y, cardW, imgH); ctx.clip();
+          dessinerCover(ctx, img, x, y, cardW, imgH);
+          ctx.restore();
+        } else {
+          ctx.fillStyle = T.accentLight; ctx.fillRect(x, y, cardW, imgH);
+          ctx.fillStyle = T.accent; ctx.font = '800 90px sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(p.nom.charAt(0).toUpperCase(), x + cardW / 2, y + imgH / 2);
+          ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+        }
+        // Nom (tronqué)
+        ctx.fillStyle = T.text; ctx.font = '700 24px sans-serif';
+        let nom = p.nom;
+        while (ctx.measureText(nom).width > cardW - 8 && nom.length > 1) nom = nom.slice(0, -1);
+        if (nom !== p.nom) nom = nom.slice(0, -1) + '…';
+        ctx.fillText(nom, x, y + imgH + 32);
+        // Prix
+        ctx.fillStyle = T.accent; ctx.font = '800 26px sans-serif';
+        ctx.fillText(`${fmtF(p.prixVente)} ${symbole}`, x, y + imgH + 60);
+      });
+
+      const blob: Blob | null = await new Promise(res => canvas.toBlob(b => res(b), 'image/jpeg', 0.85));
+      if (!blob) { setGenEnCours(false); return; }
+      const file = new File([blob], 'catalogue.jpg', { type: 'image/jpeg' });
+
+      type NavShare = Navigator & { canShare?: (d: { files: File[] }) => boolean };
+      const nav = navigator as NavShare;
+      if (nav.canShare && nav.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], text: `${config?.nomCommerce || ''} — Catalogue` });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'catalogue.jpg'; a.click();
+        URL.revokeObjectURL(url);
+        setCatalogueMsg('Image enregistrée — tu peux l\'envoyer sur WhatsApp.');
+        setTimeout(() => setCatalogueMsg(''), 5000);
+      }
+    } catch { /* partage annulé : on ignore */ }
+    setGenEnCours(false);
+  }
 
   const produitsAvecMarges = produits.map(p => ({
     ...p,
@@ -321,14 +421,114 @@ export default function MargesPage() {
         );
       })()}
 
-      {tab === 'Catalogue' && (
-        <div style={{ textAlign: 'center', padding: '60px 16px', color: T.textMuted }}>
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto 12px', display: 'block' }}>
-            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke={T.textMuted} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M14 2v6h6M8 13h8M8 17h5" stroke={T.textMuted} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <div style={{ fontSize: 15, fontWeight: 600, color: T.textSub }}>Catalogue</div>
-          <div style={{ fontSize: 13, marginTop: 6 }}>Bientôt disponible</div>
+      {tab === 'Catalogue' && (() => {
+        const dispo = produits.filter(p => p.prixVente > 0);
+        if (dispo.length === 0) {
+          return (
+            <div style={{ textAlign: 'center', padding: '60px 16px', color: T.textMuted }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto 12px', display: 'block' }}>
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke={T.textMuted} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M14 2v6h6M8 13h8M8 17h5" stroke={T.textMuted} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <div style={{ fontSize: 15, fontWeight: 600, color: T.textSub }}>Catalogue vide</div>
+              <div style={{ fontSize: 13, marginTop: 6 }}>Ajoute des produits avec un prix de vente pour les voir ici</div>
+            </div>
+          );
+        }
+        // Regroupement par catégorie
+        const groupes = new Map<string, typeof dispo>();
+        for (const p of dispo) {
+          const cle = p.categorie?.trim() || 'Autres';
+          if (!groupes.has(cle)) groupes.set(cle, []);
+          groupes.get(cle)!.push(p);
+        }
+        const listeGroupes = Array.from(groupes.entries()).sort((a, b) => {
+          if (a[0] === 'Autres') return 1;
+          if (b[0] === 'Autres') return -1;
+          return a[0].localeCompare(b[0]);
+        });
+        return (
+          <div style={{ padding: '0 16px' }}>
+            {/* Bouton partager */}
+            <button onClick={partagerCatalogue} disabled={genEnCours}
+              style={{ width: '100%', height: 46, borderRadius: 12, background: T.accent, border: 'none', cursor: genEnCours ? 'default' : 'pointer', opacity: genEnCours ? 0.6 : 1, fontSize: 14, fontWeight: 700, color: 'white', fontFamily: 'Manrope, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: catalogueMsg ? 8 : 14 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <circle cx="18" cy="5" r="3" stroke="white" strokeWidth="1.75"/>
+                <circle cx="6" cy="12" r="3" stroke="white" strokeWidth="1.75"/>
+                <circle cx="18" cy="19" r="3" stroke="white" strokeWidth="1.75"/>
+                <path d="M8.6 10.5l6.8-4M8.6 13.5l6.8 4" stroke="white" strokeWidth="1.75" strokeLinecap="round"/>
+              </svg>
+              {genEnCours ? 'Génération de l\'image...' : 'Partager mon catalogue (image)'}
+            </button>
+            {catalogueMsg && (
+              <div style={{ fontSize: 12, color: T.accent, fontWeight: 700, textAlign: 'center', marginBottom: 14 }}>{catalogueMsg}</div>
+            )}
+
+            {/* Vitrine compacte groupée par catégorie (3 par ligne) */}
+            {listeGroupes.map(([cat, items]) => (
+              <div key={cat} style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: T.textSub, marginBottom: 8 }}>{cat}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(78px, 1fr))', gap: 7 }}>
+                  {items.map(p => (
+                    <div key={p.id} onClick={() => setProduitVitrine(p)} style={{ background: T.surface, borderRadius: 10, boxShadow: T.shadow, overflow: 'hidden', cursor: 'pointer' }}>
+                      <div style={{ width: '100%', aspectRatio: '1 / 1', background: p.quantite === 0 ? T.redBg : T.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
+                        {p.photo ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={p.photo} alt={p.nom} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <span style={{ fontSize: 22, fontWeight: 800, color: p.quantite === 0 ? T.red : T.accent }}>{p.nom.charAt(0).toUpperCase()}</span>
+                        )}
+                        {p.quantite === 0 && (
+                          <span style={{ position: 'absolute', top: 3, right: 3, background: T.red, color: 'white', fontSize: 7, fontWeight: 700, borderRadius: 20, padding: '1px 5px' }}>Rupture</span>
+                        )}
+                      </div>
+                      <div style={{ padding: '4px 5px 6px' }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nom}</div>
+                        <div style={{ fontSize: 11, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>
+                          {fmtF(p.prixVente)} <span style={{ fontSize: 8 }}>{symbole}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
+      {/* FENÊTRE PRODUIT (vitrine) */}
+      {produitVitrine && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={() => setProduitVitrine(null)}
+        >
+          <div
+            style={{ background: T.surface, borderRadius: 20, width: '100%', maxWidth: 320, overflow: 'hidden' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ width: '100%', aspectRatio: '1 / 1', background: produitVitrine.quantite === 0 ? T.redBg : T.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+              {produitVitrine.photo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={produitVitrine.photo} alt={produitVitrine.nom} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ fontSize: 72, fontWeight: 800, color: produitVitrine.quantite === 0 ? T.red : T.accent }}>{produitVitrine.nom.charAt(0).toUpperCase()}</span>
+              )}
+            </div>
+            <div style={{ padding: '16px 18px 20px' }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: T.text, marginBottom: 4 }}>{produitVitrine.nom}</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>
+                {fmtF(produitVitrine.prixVente)} <span style={{ fontSize: 14 }}>{symbole}</span>
+              </div>
+              {produitVitrine.quantite === 0 && (
+                <div style={{ fontSize: 12, color: T.red, fontWeight: 700, marginTop: 6 }}>En rupture de stock</div>
+              )}
+              <button onClick={() => setProduitVitrine(null)}
+                style={{ width: '100%', height: 44, marginTop: 16, borderRadius: 12, background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: T.textSub, fontFamily: 'Manrope, sans-serif' }}>
+                Fermer
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
