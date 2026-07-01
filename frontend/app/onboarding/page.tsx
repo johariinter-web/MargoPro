@@ -73,7 +73,7 @@ export default function OnboardingPage() {
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'rgba(212,96,26,0.12)', borderRadius: 12, padding: '10px 16px' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 12l6 6L20 6" stroke="#D4601A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#D4601A', fontFamily: 'Manrope, sans-serif' }}>Huile de palme 1L · 2 800 F</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#D4601A', fontFamily: 'Manrope, sans-serif' }}>Produit · Prix</span>
             </div>
           </div>
         </div>
