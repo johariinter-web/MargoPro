@@ -119,7 +119,7 @@ export default function BarcodeScanner({ onScan, onClose }: Props) {
                 ref={videoRef}
                 playsInline
                 muted
-                style={{ width: '100%', display: 'block', maxHeight: 280, objectFit: 'cover' }}
+                style={{ width: '100%', display: 'block', maxHeight: 340, objectFit: 'cover' }}
               />
               <div style={{
                 position: 'absolute', inset: 0,
@@ -127,9 +127,9 @@ export default function BarcodeScanner({ onScan, onClose }: Props) {
                 pointerEvents: 'none',
               }}>
                 <div style={{
-                  width: 220, height: 80, borderRadius: 8,
-                  border: `2px solid ${T.accent}`,
-                  boxShadow: '0 0 0 2000px rgba(0,0,0,0.35)',
+                  width: '82%', height: 130, borderRadius: 10,
+                  border: `3px solid ${T.accent}`,
+                  boxShadow: '0 0 0 2000px rgba(0,0,0,0.45)',
                 }} />
               </div>
             </div>
