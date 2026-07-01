@@ -600,14 +600,13 @@ export default function StockPage() {
       {/* DÉTAIL MODAL */}
       {showDetail && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'flex-end' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
           onClick={() => setShowDetail(false)}
         >
           <div
-            style={{ background: T.surface, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, margin: '0 auto', padding: '20px 20px 40px', maxHeight: '85dvh', overflowY: 'auto' }}
+            style={{ background: T.surface, borderRadius: 20, width: '100%', maxWidth: 480, maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto', padding: '22px 20px 24px' }}
             onClick={e => e.stopPropagation()}
           >
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border, margin: '0 auto 16px' }} />
             <div style={{ fontSize: 18, fontWeight: 800, color: T.text, marginBottom: 4 }}>Valeur par catégorie</div>
             <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 16 }}>
               Total : <strong style={{ color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>{fmtF(stockValue)} {symbole}</strong>
