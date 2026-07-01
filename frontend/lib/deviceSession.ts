@@ -60,7 +60,7 @@ export async function checkAndRegisterDevice(
 
   if (data?.is_blocked === true) return 'blocked';
 
-  await supabase
+  const { error: upsertError } = await supabase
     .from('device_sessions')
     .upsert(
       {
@@ -71,6 +71,7 @@ export async function checkAndRegisterDevice(
       },
       { onConflict: 'user_id,device_id' },
     );
+  if (upsertError) throw upsertError;
 
   return 'ok';
 }
