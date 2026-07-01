@@ -272,8 +272,11 @@ async function pushPhotos(userId: string, produits: Produit[]): Promise<void> {
       if (p.photo && p.photoPath == null) {
         // Photo nouvelle ou modifiée → upload (les anciennes versions sont nettoyées dans uploadPhoto)
         const newPath = await uploadPhoto(supabase, userId, p);
-        await db.produits.update(p.id, { photoPath: newPath });
-        p.photoPath = newPath; // mise à jour en mémoire pour que produitToRow() ait le bon chemin
+        // Bumper updatedAt pour que les autres appareils détectent le nouveau photo_path via LWW.
+        const now = Date.now();
+        await db.produits.update(p.id, { photoPath: newPath, updatedAt: now });
+        p.photoPath = newPath;
+        p.updatedAt = now;
       } else if (p.photoPath && (!p.photo || p.deleted)) {
         // Photo retirée ou produit supprimé → supprimer le fichier bucket
         await supprimerPhoto(supabase, p.photoPath);
