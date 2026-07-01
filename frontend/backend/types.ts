@@ -8,7 +8,8 @@ export interface Produit {
   codeBarres?: string;
   categorie?: string;
   tailleConditionnement?: number;
-  photo?: string; // image compressée en base64 (data URL), stockée localement
+  photo?: string;       // base64 local, pour l'affichage hors-ligne
+  photoPath?: string | null; // chemin Supabase Storage ; null = à synchroniser
   createdAt: number;
   updatedAt: number;
   deleted?: boolean;

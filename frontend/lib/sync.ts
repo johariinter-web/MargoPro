@@ -31,6 +31,7 @@ type ProduitRow = {
   code_barres: string | null;
   categorie: string | null;
   taille_conditionnement: number | null;
+  photo_path: string | null;   // ← nouveau
   created_at: number;
   updated_at: number;
   deleted: boolean;
@@ -73,6 +74,7 @@ function produitToRow(p: Produit, userId: string): ProduitRow {
     code_barres: p.codeBarres ?? null,
     categorie: p.categorie ?? null,
     taille_conditionnement: p.tailleConditionnement ?? null,
+    photo_path: p.photoPath ?? null,   // ← nouveau
     created_at: p.createdAt ?? Date.now(),
     updated_at: p.updatedAt ?? Date.now(),
     deleted: p.deleted ?? false,
@@ -90,6 +92,7 @@ function rowToProduit(r: ProduitRow): Produit {
     codeBarres: r.code_barres ?? undefined,
     categorie: r.categorie ?? undefined,
     tailleConditionnement: r.taille_conditionnement ?? undefined,
+    photoPath: r.photo_path ?? undefined,   // ← nouveau
     createdAt: Number(r.created_at),
     updatedAt: Number(r.updated_at),
     deleted: r.deleted ?? false,
