@@ -3,6 +3,7 @@
 import { db } from './db';
 import { createClient } from './supabase/client';
 import type { Produit, Vente, Config } from '@backend/types';
+import { uploadPhoto, supprimerPhoto, peutSyncerPhotos } from './photoSync';
 
 // =====================================================================
 // MargoPro — Engine de synchronisation cloud (local-first)
@@ -235,11 +236,39 @@ async function pull(userId: string): Promise<void> {
 // PUSH : local -> cloud (upsert de toutes les lignes, y compris soft-deleted)
 // ---------------------------------------------------------------------
 
+// Push des photos vers Supabase Storage (greffé sur push()).
+// Chaque photo est traitée individuellement ; une erreur n'arrête pas les autres.
+async function pushPhotos(userId: string, produits: Produit[]): Promise<void> {
+  if (!peutSyncerPhotos()) return;
+  const supabase = getClient();
+
+  for (const p of produits) {
+    try {
+      if (p.photo && p.photoPath == null) {
+        // Photo nouvelle ou modifiée → upload (les anciennes versions sont nettoyées dans uploadPhoto)
+        const newPath = await uploadPhoto(supabase, userId, p);
+        await db.produits.update(p.id, { photoPath: newPath });
+        p.photoPath = newPath; // mise à jour en mémoire pour que produitToRow() ait le bon chemin
+      } else if (p.photoPath && (!p.photo || p.deleted)) {
+        // Photo retirée ou produit supprimé → supprimer le fichier bucket
+        await supprimerPhoto(supabase, p.photoPath);
+        await db.produits.update(p.id, { photoPath: null });
+        p.photoPath = null;
+      }
+    } catch {
+      // Réseau instable ou quota dépassé : on continue, la prochaine sync réessaiera.
+    }
+  }
+}
+
 async function push(userId: string): Promise<void> {
   const supabase = getClient();
 
-  // --- produits ---
+  // --- photos (avant l'upsert pour que photo_path soit à jour dans les lignes) ---
   const produits = await db.produits.toArray();
+  await pushPhotos(userId, produits);
+
+  // --- produits ---
   if (produits.length > 0) {
     const rows = produits.map((p) => produitToRow(p, userId));
     const { error } = await supabase.from('produits').upsert(rows, { onConflict: 'id' });
