@@ -3,6 +3,7 @@ import { Manrope, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import { SyncStarter } from "@/lib/hooks/useSync";
+import { DeviceSessionStarter } from "@/lib/hooks/useDeviceSession";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -48,6 +49,7 @@ export default function RootLayout({
       </head>
       <body style={{ minHeight: '100%', background: 'var(--background)', color: 'var(--foreground)' }}>
         <SyncStarter />
+        <DeviceSessionStarter />
         <main style={{ maxWidth: 480, margin: '0 auto', position: 'relative', minHeight: '100dvh' }}>
           {children}
           <BottomNav />

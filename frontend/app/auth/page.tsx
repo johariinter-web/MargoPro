@@ -27,7 +27,15 @@ export default function AuthPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [cguAccepte, setCguAccepte] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [erreur, setErreur] = useState('');
+  const [erreur, setErreur] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    const bloque = sessionStorage.getItem('margo_bloque');
+    if (bloque) {
+      sessionStorage.removeItem('margo_bloque');
+      return "Cet appareil a été bloqué par le propriétaire du compte. Contactez-le pour rétablir l'accès.";
+    }
+    return '';
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
