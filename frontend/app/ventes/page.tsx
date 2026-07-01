@@ -427,7 +427,9 @@ export default function VentesPage() {
                 </div>
                 {/* Timeline */}
                 <div style={{ borderLeft: `2px dashed ${T.border}`, marginLeft: 10, paddingLeft: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {dayVentes.map(v => (
+                  {dayVentes.map(v => {
+                    const photoVente = produits.find(p => p.id === v.produitId)?.photo;
+                    return (
                     <div
                       key={v.id}
                       onClick={() => setVenteSelectionnee(v)}
@@ -443,8 +445,13 @@ export default function VentesPage() {
                         width: 8, height: 8, borderRadius: '50%', background: T.accent,
                         border: `2px solid ${T.bg}`,
                       }} />
-                      <div style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: T.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: 15, fontWeight: 800, color: T.accent }}>{(v.produitNom || '?').charAt(0).toUpperCase()}</span>
+                      <div style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: T.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                        {photoVente ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={photoVente} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <span style={{ fontSize: 15, fontWeight: 800, color: T.accent }}>{(v.produitNom || '?').charAt(0).toUpperCase()}</span>
+                        )}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -463,7 +470,8 @@ export default function VentesPage() {
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             );
