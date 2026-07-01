@@ -218,7 +218,7 @@ export default function StockPage() {
     const taille = Number(champsEdition.tailleConditionnement);
     const data: {
       nom: string; quantite: number; prixAchat: number; prixVente: number;
-      seuilAlerte: number; codeBarres?: string; categorie?: string; tailleConditionnement?: number; photo?: string;
+      seuilAlerte: number; codeBarres?: string; categorie?: string; tailleConditionnement?: number; photo?: string; photoPath?: null;
     } = {
       nom: champsEdition.nom.trim(),
       quantite: Number(champsEdition.quantite), // déjà en unités
@@ -226,6 +226,11 @@ export default function StockPage() {
       prixVente: Number(champsEdition.prixVente),
       seuilAlerte: Number(champsEdition.seuilAlerte) || 5,
       photo: champsEdition.photo || '', // '' = pas de photo (permet aussi de la retirer)
+      // Si la photo a été remplacée (nouvelle valeur non-vide ≠ ancienne), marquer pour re-upload.
+      // Si retirée (''), on garde photoPath tel quel pour que le push puisse supprimer le fichier bucket.
+      ...(champsEdition.photo && champsEdition.photo !== produitEnEdition.photo
+        ? { photoPath: null as null }
+        : {}),
     };
     if (champsEdition.codeBarres.trim()) data.codeBarres = champsEdition.codeBarres.trim();
     if (champsEdition.categorie.trim()) {
