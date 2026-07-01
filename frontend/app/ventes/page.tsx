@@ -425,8 +425,8 @@ export default function VentesPage() {
                     {fmtF(dayTotal)} {symbole}
                   </span>
                 </div>
-                {/* Timeline */}
-                <div style={{ borderLeft: `2px dashed ${T.border}`, marginLeft: 10, paddingLeft: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {/* Liste des ventes du jour */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {dayVentes.map(v => {
                     const photoVente = produits.find(p => p.id === v.produitId)?.photo;
                     return (
@@ -439,12 +439,6 @@ export default function VentesPage() {
                         position: 'relative', cursor: 'pointer',
                       }}
                     >
-                      {/* Timeline dot */}
-                      <div style={{
-                        position: 'absolute', left: -21, top: '50%', transform: 'translateY(-50%)',
-                        width: 8, height: 8, borderRadius: '50%', background: T.accent,
-                        border: `2px solid ${T.bg}`,
-                      }} />
                       <div style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: T.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                         {photoVente ? (
                           // eslint-disable-next-line @next/next/no-img-element

@@ -108,7 +108,7 @@ export default function StockPage() {
   const { config } = useConfig();
   const { produits, alertes, ajouterProduit, supprimerProduit, restaurerProduit, modifierProduit } = useStock();
   const { ventes } = useVentes('tout');
-  const { categories, ajouterCategorie } = useCategories();
+  const { categories, ajouterCategorie, supprimerCategorie } = useCategories();
 
   const [showForm, setShowForm] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
@@ -128,6 +128,8 @@ export default function StockPage() {
   const [catsOuvertes, setCatsOuvertes] = useState<Record<string, boolean>>({});
   const [vueStock, setVueStock] = useState<'produits' | 'mort'>('produits');
   const [morteSeuilStr, setMorteSeuilStr] = useState('30');
+  const [showGererCats, setShowGererCats] = useState(false);
+  const [catASupprimer, setCatASupprimer] = useState<string | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Nettoie le minuteur du bandeau « Annuler » au démontage.
@@ -486,7 +488,15 @@ export default function StockPage() {
 
             {/* Catégorie */}
             <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 6 }}>Catégorie</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: T.textSub }}>Catégorie</label>
+                {categories.length > 0 && (
+                  <button type="button" onClick={() => setShowGererCats(true)}
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: T.accent, fontFamily: 'Manrope, sans-serif', padding: 0 }}>
+                    Gérer
+                  </button>
+                )}
+              </div>
               <input type="text" value={champsEdition.categorie} onChange={e => setChampsEdition(c => ({ ...c, categorie: e.target.value }))} placeholder="Taper ou choisir..."
                 style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box', marginBottom: categories.length > 0 ? 8 : 0 }} />
               {categories.length > 0 && (
@@ -598,6 +608,77 @@ export default function StockPage() {
       )}
 
       {/* DÉTAIL MODAL */}
+      {/* POPUP — Gérer les catégories */}
+      {showGererCats && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 250, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          onClick={() => setShowGererCats(false)}
+        >
+          <div
+            style={{ background: T.surface, borderRadius: 20, width: '100%', maxWidth: 420, maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto', padding: '22px 20px 24px' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 18, fontWeight: 800, color: T.text, marginBottom: 4 }}>Gérer les catégories</div>
+            <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 16 }}>
+              Supprimer une catégorie n&apos;efface aucun produit — ça retire seulement le raccourci.
+            </div>
+            {categories.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '24px 0', color: T.textMuted, fontSize: 14 }}>Aucune catégorie</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {categories.map(cat => {
+                  const nb = produits.filter(p => (p.categorie || '') === cat).length;
+                  return (
+                    <div key={cat} style={{ background: T.bgSubtle, borderRadius: 12, padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cat}</div>
+                        <div style={{ fontSize: 11, color: T.textMuted }}>{nb} produit{nb > 1 ? 's' : ''}</div>
+                      </div>
+                      <button type="button" onClick={() => setCatASupprimer(cat)}
+                        style={{ flexShrink: 0, height: 32, borderRadius: 9, padding: '0 12px', background: 'transparent', border: `1.5px solid ${T.border}`, cursor: 'pointer', fontSize: 12, fontWeight: 700, color: T.red, fontFamily: 'Manrope, sans-serif' }}>
+                        Supprimer
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <button type="button" onClick={() => setShowGererCats(false)}
+              style={{ width: '100%', height: 44, marginTop: 16, borderRadius: 12, background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: T.textSub, fontFamily: 'Manrope, sans-serif' }}>
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* POPUP — Confirmation suppression catégorie */}
+      {catASupprimer && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 260, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          onClick={() => setCatASupprimer(null)}
+        >
+          <div
+            style={{ background: T.surface, borderRadius: 20, width: '100%', maxWidth: 360, padding: '22px 20px 20px' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 17, fontWeight: 800, color: T.text, marginBottom: 8 }}>Supprimer «&nbsp;{catASupprimer}&nbsp;» ?</div>
+            <div style={{ fontSize: 13, color: T.textSub, marginBottom: 18 }}>
+              La catégorie sera retirée de la liste. Tes produits ne sont pas supprimés.
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button type="button" onClick={() => setCatASupprimer(null)}
+                style={{ flex: 1, height: 46, borderRadius: 12, background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: T.textSub, fontFamily: 'Manrope, sans-serif' }}>
+                Annuler
+              </button>
+              <button type="button" onClick={() => { supprimerCategorie(catASupprimer); setCatASupprimer(null); }}
+                style={{ flex: 1, height: 46, borderRadius: 12, background: T.red, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: 'white', fontFamily: 'Manrope, sans-serif' }}>
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showDetail && (
         <div
           style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
@@ -763,7 +844,15 @@ export default function StockPage() {
 
           {/* Catégorie */}
           <div style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 6 }}>Catégorie</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: T.textSub }}>Catégorie</label>
+              {categories.length > 0 && (
+                <button type="button" onClick={() => setShowGererCats(true)}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: T.accent, fontFamily: 'Manrope, sans-serif', padding: 0 }}>
+                  Gérer
+                </button>
+              )}
+            </div>
             <input
               type="text"
               value={champs.categorie}
