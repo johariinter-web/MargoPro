@@ -328,21 +328,21 @@ export default function StockPage() {
     });
   })();
 
-  // Category breakdown for Détail modal
-  const parCategorie = categories.map(cat => {
-    const ps = produits.filter(p => p.categorie === cat);
-    const valeur = ps.reduce((s, p) => s + p.prixAchat * p.quantite, 0);
-    return { cat, count: ps.length, valeur };
-  }).filter(g => g.count > 0);
-
-  const sansCat = produits.filter(p => !p.categorie);
-  if (sansCat.length > 0) {
-    parCategorie.push({
-      cat: 'Sans catégorie',
-      count: sansCat.length,
-      valeur: sansCat.reduce((s, p) => s + p.prixAchat * p.quantite, 0),
-    });
-  }
+  // Répartition par catégorie pour le popup Détail.
+  // On regroupe à partir des produits eux-mêmes (et non de la liste des
+  // catégories enregistrées) pour n'oublier aucun produit, même si sa
+  // catégorie n'existe pas/plus dans la liste.
+  const parCategorie = (() => {
+    const map = new Map<string, { count: number; valeur: number }>();
+    for (const p of produits) {
+      const cat = p.categorie || 'Sans catégorie';
+      const cur = map.get(cat) ?? { count: 0, valeur: 0 };
+      cur.count += 1;
+      cur.valeur += p.prixAchat * p.quantite;
+      map.set(cat, cur);
+    }
+    return Array.from(map, ([cat, v]) => ({ cat, count: v.count, valeur: v.valeur }));
+  })();
 
   return (
     <div style={{ minHeight: '100dvh', background: T.bg, paddingBottom: 90, fontFamily: 'Manrope, sans-serif' }}>
