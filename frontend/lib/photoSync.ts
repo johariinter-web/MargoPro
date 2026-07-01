@@ -36,7 +36,7 @@ export async function uploadPhoto(
   const blob = base64ToBlob(produit.photo);
   const { error } = await supabase.storage.from(BUCKET).upload(chemin, blob, {
     contentType: 'image/jpeg',
-    upsert: true,
+    upsert: false,
   });
   if (error) throw error;
   return chemin;
@@ -64,6 +64,7 @@ export async function supprimerPhoto(
 
 function base64ToBlob(dataUrl: string): Blob {
   const [header, data] = dataUrl.split(',');
+  if (!data) throw new Error('Data URL invalide : virgule manquante');
   const mime = header.match(/:(.*?);/)?.[1] ?? 'image/jpeg';
   const bytes = atob(data);
   const arr = new Uint8Array(bytes.length);

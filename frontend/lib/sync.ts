@@ -202,7 +202,8 @@ async function pull(userId: string): Promise<void> {
           // Nouveau chemin cloud → télécharger la photo
           try {
             mergedPhoto = await downloadPhoto(supabase, remote.photoPath);
-          } catch {
+          } catch (err) {
+            if (process.env.NODE_ENV !== 'production') console.warn('[photoSync] download échoué pour', remote.id, err);
             // Téléchargement échoué : on garde le cache local ; la prochaine sync réessaiera.
             mergedPhoto = local?.photo;
             mergedPhotoPath = local?.photoPath;
@@ -279,7 +280,8 @@ async function pushPhotos(userId: string, produits: Produit[]): Promise<void> {
         await db.produits.update(p.id, { photoPath: null });
         p.photoPath = null;
       }
-    } catch {
+    } catch (err) {
+      if (process.env.NODE_ENV !== 'production') console.warn('[photoSync] push échoué pour', p.id, err);
       // Réseau instable ou quota dépassé : on continue, la prochaine sync réessaiera.
     }
   }
