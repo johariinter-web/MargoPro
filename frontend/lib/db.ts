@@ -34,6 +34,18 @@ class MargoDB extends Dexie {
           if (c.updatedAt === undefined) c.updatedAt = Date.now();
         });
       });
+    // v3 — plan gratuit : champ archived sur les produits
+    this.version(3)
+      .stores({
+        produits: 'id, nom, quantite, updatedAt, deleted, archived',
+        ventes: 'id, produitId, date, updatedAt, deleted',
+        config: 'id',
+      })
+      .upgrade(async (tx) => {
+        await tx.table('produits').toCollection().modify((p) => {
+          if (p.archived === undefined) p.archived = false;
+        });
+      });
   }
 }
 

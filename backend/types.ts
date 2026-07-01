@@ -7,6 +7,13 @@ export interface Produit {
   seuilAlerte: number;
   createdAt: number;
   updatedAt: number;
+  deleted?: boolean;
+  archived?: boolean;      // true = masqué mais non supprimé
+  codeBarres?: string;
+  categorie?: string;
+  tailleConditionnement?: number;
+  photo?: string;
+  photoPath?: string | null;
 }
 
 export interface Vente {
@@ -19,6 +26,8 @@ export interface Vente {
   total: number;
   benefice: number;
   date: number;
+  updatedAt?: number;
+  deleted?: boolean;
 }
 
 export interface Config {
@@ -27,6 +36,10 @@ export interface Config {
   devise: string;
   symboleDevise: string;
   onboardingComplete: boolean;
+  trialStart?: number;     // timestamp ms du premier produit ajouté
+  isPremium?: boolean;     // true = plan Premium actif
+  dateAbonnement?: number;
+  updatedAt?: number;
 }
 
 export type Periode = 'jour' | 'semaine' | 'mois' | 'tout';
