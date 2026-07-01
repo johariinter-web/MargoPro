@@ -169,7 +169,7 @@ export function Appareils() {
                       <button
                         onClick={() => setConfirmingId(null)}
                         style={{
-                          padding: '6px 10px', borderRadius: 10, height: 34,
+                          padding: '6px 10px', borderRadius: 10, height: 44,
                           border: `1.5px solid ${T.border}`, background: T.bg,
                           color: T.textMuted, fontSize: 12, fontWeight: 600,
                           cursor: 'pointer', fontFamily: 'Manrope, sans-serif',
@@ -181,7 +181,7 @@ export function Appareils() {
                         onClick={() => handleBlock(session)}
                         disabled={actionId === session.id}
                         style={{
-                          padding: '6px 12px', borderRadius: 10, height: 34,
+                          padding: '6px 12px', borderRadius: 10, height: 44,
                           border: `1.5px solid ${T.red}`, background: T.redBg,
                           color: T.red, fontSize: 12, fontWeight: 700,
                           cursor: 'pointer', opacity: actionId === session.id ? 0.5 : 1,
@@ -199,7 +199,7 @@ export function Appareils() {
                       }}
                       disabled={actionId === session.id}
                       style={{
-                        padding: '6px 14px', borderRadius: 10, height: 34, flexShrink: 0,
+                        padding: '6px 14px', borderRadius: 10, height: 44, flexShrink: 0,
                         border: `1.5px solid ${session.is_blocked ? T.green : T.red}`,
                         background: session.is_blocked ? T.greenBg : T.redBg,
                         color: session.is_blocked ? T.green : T.red,
