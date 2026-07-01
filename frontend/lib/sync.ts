@@ -3,7 +3,7 @@
 import { db } from './db';
 import { createClient } from './supabase/client';
 import type { Produit, Vente, Config } from '@backend/types';
-import { uploadPhoto, supprimerPhoto, peutSyncerPhotos } from './photoSync';
+import { uploadPhoto, supprimerPhoto, downloadPhoto, peutSyncerPhotos } from './photoSync';
 
 // =====================================================================
 // MargoPro — Engine de synchronisation cloud (local-first)
@@ -194,8 +194,32 @@ async function pull(userId: string): Promise<void> {
     const remote = rowToProduit(row);
     const local = await db.produits.get(remote.id);
     if (!local || remote.updatedAt > local.updatedAt) {
-      // La photo est locale (non synchronisée) : on la conserve si le cloud n'en a pas.
-      await db.produits.put({ ...remote, photo: remote.photo ?? local?.photo });
+      let mergedPhoto: string | undefined = local?.photo;
+      let mergedPhotoPath: string | null | undefined = remote.photoPath;
+
+      if (peutSyncerPhotos()) {
+        if (remote.photoPath && remote.photoPath !== local?.photoPath) {
+          // Nouveau chemin cloud → télécharger la photo
+          try {
+            mergedPhoto = await downloadPhoto(supabase, remote.photoPath);
+          } catch {
+            // Téléchargement échoué : on garde le cache local ; la prochaine sync réessaiera.
+            mergedPhoto = local?.photo;
+            mergedPhotoPath = local?.photoPath;
+          }
+        } else if (!remote.photoPath) {
+          // Le cloud indique qu'il n'y a plus de photo
+          mergedPhoto = undefined;
+          mergedPhotoPath = null;
+        }
+        // Si même chemin → cache local valide, rien à faire (mergedPhoto = local?.photo déjà)
+      } else {
+        // Synchro photos désactivée : conserver le cache local tel quel
+        mergedPhoto = local?.photo;
+        mergedPhotoPath = local?.photoPath;
+      }
+
+      await db.produits.put({ ...remote, photo: mergedPhoto, photoPath: mergedPhotoPath });
     }
   }
 
