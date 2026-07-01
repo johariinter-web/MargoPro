@@ -130,6 +130,14 @@ export default function StockPage() {
   const [morteSeuilStr, setMorteSeuilStr] = useState('30');
   const [showGererCats, setShowGererCats] = useState(false);
   const [catASupprimer, setCatASupprimer] = useState<string | null>(null);
+
+  // Liste des catégories affichées : fusion des catégories enregistrées et de
+  // celles réellement portées par des produits — pour n'en oublier aucune
+  // (ex. une catégorie tapée à la main comme « Savon »).
+  const categoriesAffichees = Array.from(new Set([
+    ...categories,
+    ...produits.map(p => p.categorie?.trim()).filter((c): c is string => !!c),
+  ])).sort((a, b) => a.localeCompare(b));
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Nettoie le minuteur du bandeau « Annuler » au démontage.
@@ -490,7 +498,7 @@ export default function StockPage() {
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <label style={{ fontSize: 12, fontWeight: 600, color: T.textSub }}>Catégorie</label>
-                {categories.length > 0 && (
+                {categoriesAffichees.length > 0 && (
                   <button type="button" onClick={() => setShowGererCats(true)}
                     style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: T.accent, fontFamily: 'Manrope, sans-serif', padding: 0 }}>
                     Gérer
@@ -498,10 +506,10 @@ export default function StockPage() {
                 )}
               </div>
               <input type="text" value={champsEdition.categorie} onChange={e => setChampsEdition(c => ({ ...c, categorie: e.target.value }))} placeholder="Taper ou choisir..."
-                style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box', marginBottom: categories.length > 0 ? 8 : 0 }} />
-              {categories.length > 0 && (
+                style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box', marginBottom: categoriesAffichees.length > 0 ? 8 : 0 }} />
+              {categoriesAffichees.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {categories.map(cat => (
+                  {categoriesAffichees.map(cat => (
                     <button key={cat} onClick={() => setChampsEdition(c => ({ ...c, categorie: c.categorie === cat ? '' : cat }))}
                       style={{ height: 28, borderRadius: 20, padding: '0 10px', fontSize: 12, fontWeight: 600, border: `1.5px solid ${champsEdition.categorie === cat ? T.accent : T.border}`, cursor: 'pointer', background: champsEdition.categorie === cat ? T.accentLight : 'transparent', color: champsEdition.categorie === cat ? T.accent : T.textSub }}>
                       {cat}
@@ -620,24 +628,28 @@ export default function StockPage() {
           >
             <div style={{ fontSize: 18, fontWeight: 800, color: T.text, marginBottom: 4 }}>Gérer les catégories</div>
             <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 16 }}>
-              Supprimer une catégorie n&apos;efface aucun produit — ça retire seulement le raccourci.
+              Tu peux supprimer les catégories vides. Une catégorie utilisée par des produits reste tant que des produits l&apos;utilisent.
             </div>
-            {categories.length === 0 ? (
+            {categoriesAffichees.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '24px 0', color: T.textMuted, fontSize: 14 }}>Aucune catégorie</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {categories.map(cat => {
-                  const nb = produits.filter(p => (p.categorie || '') === cat).length;
+                {categoriesAffichees.map(cat => {
+                  const nb = produits.filter(p => (p.categorie || '').trim() === cat).length;
                   return (
                     <div key={cat} style={{ background: T.bgSubtle, borderRadius: 12, padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cat}</div>
                         <div style={{ fontSize: 11, color: T.textMuted }}>{nb} produit{nb > 1 ? 's' : ''}</div>
                       </div>
-                      <button type="button" onClick={() => setCatASupprimer(cat)}
-                        style={{ flexShrink: 0, height: 32, borderRadius: 9, padding: '0 12px', background: 'transparent', border: `1.5px solid ${T.border}`, cursor: 'pointer', fontSize: 12, fontWeight: 700, color: T.red, fontFamily: 'Manrope, sans-serif' }}>
-                        Supprimer
-                      </button>
+                      {nb === 0 ? (
+                        <button type="button" onClick={() => setCatASupprimer(cat)}
+                          style={{ flexShrink: 0, height: 32, borderRadius: 9, padding: '0 12px', background: 'transparent', border: `1.5px solid ${T.border}`, cursor: 'pointer', fontSize: 12, fontWeight: 700, color: T.red, fontFamily: 'Manrope, sans-serif' }}>
+                          Supprimer
+                        </button>
+                      ) : (
+                        <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 600, color: T.textMuted }}>utilisée</span>
+                      )}
                     </div>
                   );
                 })}
@@ -846,7 +858,7 @@ export default function StockPage() {
           <div style={{ marginBottom: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: T.textSub }}>Catégorie</label>
-              {categories.length > 0 && (
+              {categoriesAffichees.length > 0 && (
                 <button type="button" onClick={() => setShowGererCats(true)}
                   style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: T.accent, fontFamily: 'Manrope, sans-serif', padding: 0 }}>
                   Gérer
@@ -858,11 +870,11 @@ export default function StockPage() {
               value={champs.categorie}
               onChange={e => setChamps(c => ({ ...c, categorie: e.target.value }))}
               placeholder="Taper ou choisir une catégorie..."
-              style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box', marginBottom: categories.length > 0 ? 8 : 0 }}
+              style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box', marginBottom: categoriesAffichees.length > 0 ? 8 : 0 }}
             />
-            {categories.length > 0 && (
+            {categoriesAffichees.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {categories.map(cat => (
+                {categoriesAffichees.map(cat => (
                   <button
                     key={cat}
                     onClick={() => setChamps(c => ({ ...c, categorie: c.categorie === cat ? '' : cat }))}
