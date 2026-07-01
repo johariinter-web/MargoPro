@@ -11,119 +11,54 @@ interface Props {
 export default function BarcodeScanner({ onScan, onClose }: Props) {
   const T = useColors();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const doneRef = useRef(false);
+  const stopRef = useRef<(() => void) | null>(null);
   const [erreur, setErreur] = useState('');
   const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
     let active = true;
 
-    function stopAll() {
-      if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
-      streamRef.current?.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
-    }
-
     async function start() {
-      // 1. Vérifier la disponibilité de BarcodeDetector
-      if (!('BarcodeDetector' in window)) {
-        setErreur(
-          'Scan non disponible sur ce navigateur.\n' +
-          'Sur iPhone : mettez iOS à jour (17.4+) ou saisissez le code à la main.'
-        );
-        return;
-      }
-
-      // 2. Demander l'accès à la caméra
-      let stream: MediaStream;
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: false,
-        });
-      } catch {
-        if (active) setErreur(
-          "Impossible d'accéder à la caméra.\n" +
-          'Sur iPhone : Réglages → Safari → Caméra → Autoriser.'
-        );
-        return;
-      }
+        const { BrowserMultiFormatReader } = await import('@zxing/browser');
+        if (!active || !videoRef.current) return;
 
-      if (!active) { stream.getTracks().forEach(t => t.stop()); return; }
-      streamRef.current = stream;
+        const reader = new BrowserMultiFormatReader();
 
-      const video = videoRef.current!;
-      video.srcObject = stream;
-
-      // 3. Attendre que la vidéo soit prête (metadata + premier frame)
-      await new Promise<void>(resolve => {
-        video.onloadedmetadata = () => video.play().then(resolve).catch(resolve);
-      });
-
-      if (!active) return;
-      setScanning(true);
-
-      // 4. Construire le détecteur avec les formats disponibles
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const BD = (window as any).BarcodeDetector;
-      let formats: string[];
-      try {
-        const supported: string[] = await BD.getSupportedFormats();
-        const wanted = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'];
-        formats = wanted.filter(f => supported.includes(f));
-        if (formats.length === 0) formats = supported; // fallback : tout ce qui est dispo
-      } catch {
-        formats = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'];
-      }
-
-      let detector: { detect: (src: HTMLCanvasElement) => Promise<Array<{ rawValue: string }>> };
-      try {
-        detector = new BD({ formats });
-      } catch {
-        if (active) setErreur('Impossible d\'initialiser le détecteur de codes-barres.');
-        return;
-      }
-
-      // 5. Boucle de détection via canvas (plus fiable que passer la vidéo directement)
-      async function tick() {
-        if (!active || doneRef.current) return;
-
-        const vid = videoRef.current;
-        const cvs = canvasRef.current;
-        if (!vid || !cvs || vid.readyState < 2 || vid.videoWidth === 0) {
-          timerRef.current = setTimeout(tick, 100);
-          return;
-        }
-
-        cvs.width = vid.videoWidth;
-        cvs.height = vid.videoHeight;
-        const ctx = cvs.getContext('2d');
-        if (!ctx) { timerRef.current = setTimeout(tick, 200); return; }
-
-        ctx.drawImage(vid, 0, 0, cvs.width, cvs.height);
-
-        try {
-          const results = await detector.detect(cvs);
-          if (results.length > 0 && !doneRef.current && active) {
-            doneRef.current = true;
-            stopAll();
-            onScan(results[0].rawValue);
-            return;
+        const controls = await reader.decodeFromConstraints(
+          { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } },
+          videoRef.current,
+          (result) => {
+            if (!active || !result) return;
+            active = false;
+            controls.stop();
+            onScan(result.getText());
           }
-        } catch { /* frame non lisible, on réessaie */ }
+        );
 
-        if (active) timerRef.current = setTimeout(tick, 200);
+        stopRef.current = () => controls.stop();
+        if (active) setScanning(true);
+
+      } catch (err: unknown) {
+        if (!active) return;
+        const name = err instanceof Error ? err.name : '';
+        if (name === 'NotAllowedError') {
+          setErreur(
+            "Impossible d'accéder à la caméra.\n" +
+            'Sur iPhone : Réglages → Safari → Caméra → Autoriser.'
+          );
+        } else {
+          setErreur('Impossible de démarrer le scanner. Essayez de recharger la page.');
+        }
       }
-
-      // Démarrer après 500ms pour laisser la caméra se stabiliser
-      timerRef.current = setTimeout(tick, 500);
     }
 
     start();
-    return () => { active = false; stopAll(); };
+
+    return () => {
+      active = false;
+      stopRef.current?.();
+    };
   }, [onScan]);
 
   return (
@@ -186,11 +121,9 @@ export default function BarcodeScanner({ onScan, onClose }: Props) {
                 muted
                 style={{ width: '100%', display: 'block', maxHeight: 280, objectFit: 'cover' }}
               />
-              {/* Canvas caché — sert à la détection */}
-              <canvas ref={canvasRef} style={{ display: 'none' }} />
-              {/* Viseur */}
               <div style={{
-                position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                position: 'absolute', inset: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
                 pointerEvents: 'none',
               }}>
                 <div style={{
