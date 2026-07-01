@@ -8,36 +8,81 @@ interface Props {
   onClose: () => void;
 }
 
-const SCANNER_ID = 'barcode-scanner-container';
+const FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'];
 
 export default function BarcodeScanner({ onScan, onClose }: Props) {
   const T = useColors();
-  const scannerRef = useRef<{ stop: () => Promise<void> } | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scannedRef = useRef(false);
   const [erreur, setErreur] = useState('');
   const [scanning, setScanning] = useState(false);
-  const scannedRef = useRef(false);
 
   useEffect(() => {
-    import('html5-qrcode').then(({ Html5Qrcode }) => {
-      const scanner = new Html5Qrcode(SCANNER_ID);
-      scannerRef.current = scanner;
+    let active = true;
 
-      scanner.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 220, height: 100 } },
-        (decodedText: string) => {
-          if (scannedRef.current) return;
-          scannedRef.current = true;
-          scanner.stop().catch(() => {}).finally(() => onScan(decodedText));
-        },
-        () => {}
-      )
-        .then(() => setScanning(true))
-        .catch(() => setErreur("Impossible d'accéder à la caméra.\nVérifiez que vous avez accordé les autorisations."));
-    });
+    function stopStream() {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      streamRef.current?.getTracks().forEach(t => t.stop());
+    }
+
+    async function start() {
+      if (!('BarcodeDetector' in window)) {
+        setErreur(
+          "Scan non disponible sur ce navigateur.\n" +
+          "Sur iPhone : mettez iOS à jour (version 17+) ou saisissez le code à la main."
+        );
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+        });
+
+        if (!active) { stream.getTracks().forEach(t => t.stop()); return; }
+
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+          if (active) setScanning(true);
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const detector = new (window as any).BarcodeDetector({ formats: FORMATS });
+
+        async function tick() {
+          if (!active || scannedRef.current || !videoRef.current) return;
+          try {
+            const results = await detector.detect(videoRef.current);
+            if (results.length > 0 && !scannedRef.current) {
+              scannedRef.current = true;
+              stopStream();
+              onScan(results[0].rawValue);
+              return;
+            }
+          } catch { /* frame invalide, on continue */ }
+          if (active) timerRef.current = setTimeout(tick, 200);
+        }
+
+        tick();
+      } catch {
+        if (active) {
+          setErreur(
+            "Impossible d'accéder à la caméra.\n" +
+            "Sur iPhone : Réglages → Safari → Caméra → Autoriser."
+          );
+        }
+      }
+    }
+
+    start();
 
     return () => {
-      scannerRef.current?.stop().catch(() => {});
+      active = false;
+      stopStream();
     };
   }, [onScan]);
 
@@ -49,17 +94,12 @@ export default function BarcodeScanner({ onScan, onClose }: Props) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontFamily: 'Manrope, sans-serif',
       }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div style={{
-        background: T.surface, borderRadius: 24, overflow: 'hidden',
-        width: 'min(360px, 94vw)',
-      }}>
+      <div style={{ background: T.surface, borderRadius: 24, overflow: 'hidden', width: 'min(360px, 94vw)' }}>
+
         {/* Header */}
-        <div style={{
-          padding: '16px 20px 12px',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        }}>
+        <div style={{ padding: '16px 20px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path d="M3 9V6a1 1 0 011-1h3M3 15v3a1 1 0 001 1h3M15 5h3a1 1 0 011 1v3M15 19h3a1 1 0 001-1v-3" stroke={T.accent} strokeWidth="1.75" strokeLinecap="round"/>
@@ -71,10 +111,7 @@ export default function BarcodeScanner({ onScan, onClose }: Props) {
           </div>
           <button
             onClick={onClose}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 24, color: T.textMuted, lineHeight: 1, padding: '0 2px',
-            }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 24, color: T.textMuted, lineHeight: 1, padding: '0 2px' }}
           >
             ×
           </button>
@@ -84,7 +121,7 @@ export default function BarcodeScanner({ onScan, onClose }: Props) {
           <div style={{ padding: '20px 20px 28px', textAlign: 'center' }}>
             <div style={{
               background: T.redBg, borderRadius: 12, padding: '14px 16px', marginBottom: 16,
-              fontSize: 13, color: T.red, fontWeight: 600, lineHeight: 1.5, whiteSpace: 'pre-line',
+              fontSize: 13, color: T.red, fontWeight: 600, lineHeight: 1.6, whiteSpace: 'pre-line',
             }}>
               {erreur}
             </div>
@@ -101,15 +138,29 @@ export default function BarcodeScanner({ onScan, onClose }: Props) {
           </div>
         ) : (
           <>
-            <div
-              id={SCANNER_ID}
-              style={{ width: '100%', background: '#000' }}
-            />
-            <div style={{
-              padding: '12px 20px 18px', textAlign: 'center',
-              fontSize: 13, color: T.textMuted, fontWeight: 600,
-            }}>
-              {scanning ? 'Pointez vers le code-barres du produit' : 'Initialisation de la caméra...'}
+            {/* Viewfinder */}
+            <div style={{ position: 'relative', width: '100%', background: '#000', minHeight: 200 }}>
+              <video
+                ref={videoRef}
+                playsInline
+                muted
+                style={{ width: '100%', display: 'block', maxHeight: 280, objectFit: 'cover' }}
+              />
+              {/* Viseur centré */}
+              <div style={{
+                position: 'absolute', inset: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                pointerEvents: 'none',
+              }}>
+                <div style={{
+                  width: 220, height: 80, borderRadius: 8,
+                  border: `2px solid ${T.accent}`,
+                  boxShadow: '0 0 0 2000px rgba(0,0,0,0.35)',
+                }} />
+              </div>
+            </div>
+            <div style={{ padding: '12px 20px 18px', textAlign: 'center', fontSize: 13, color: T.textMuted, fontWeight: 600 }}>
+              {scanning ? 'Pointez vers le code-barres du produit' : 'Initialisation de la caméra…'}
             </div>
           </>
         )}
