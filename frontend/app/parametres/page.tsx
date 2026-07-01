@@ -7,6 +7,7 @@ import { useStock } from '@/lib/hooks/useStock';
 import { useColors, setDarkMode, isDarkMode, Colors } from '@/lib/hooks/useColors';
 import { useSync } from '@/lib/hooks/useSync';
 import { createClient } from '@/lib/supabase/client';
+import { Appareils } from '@/components/Appareils';
 
 function tempsRelatif(ts: number | null): string {
   if (!ts) return 'jamais';
@@ -443,7 +444,10 @@ export default function ParametresPage() {
         />
       </div>
 
-      {/* GROUP 4 : Abonnement & Aide */}
+      {/* GROUP 4 : Appareils */}
+      <Appareils />
+
+      {/* GROUP 5 : Abonnement & Aide */}
       <div style={{ margin: '0 16px 12px', background: T.surface, borderRadius: 16, boxShadow: T.shadow, overflow: 'hidden' }}>
         <Row
           T={T}
