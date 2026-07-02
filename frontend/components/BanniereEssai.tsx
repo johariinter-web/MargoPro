@@ -30,7 +30,7 @@ export function BanniereEssai() {
             style={{
               background: 'white', color: '#F97316',
               border: 'none', borderRadius: 8, padding: '0 12px',
-              fontWeight: 700, fontSize: 12, cursor: 'pointer', height: 32,
+              fontWeight: 700, fontSize: 12, cursor: 'pointer', height: 44,
             }}
           >
             Passer au Premium
@@ -40,7 +40,7 @@ export function BanniereEssai() {
             style={{
               background: 'rgba(255,255,255,0.25)', border: 'none',
               borderRadius: 8, color: 'white', fontWeight: 700, fontSize: 18,
-              cursor: 'pointer', width: 32, height: 32, lineHeight: 1, padding: 0,
+              cursor: 'pointer', width: 44, height: 44, lineHeight: 1, padding: 0,
             }}
             aria-label="Fermer la bannière"
           >
