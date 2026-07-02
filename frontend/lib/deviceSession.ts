@@ -60,13 +60,24 @@ export async function checkAndRegisterDevice(
 
   if (data?.is_blocked === true) return 'blocked';
 
+  const deviceName = getDeviceName();
+
+  // Supprimer les anciennes entrées du même type d'appareil (même nom) pour éviter les doublons
+  // quand Safari efface le localStorage et génère un nouveau device_id
+  await supabase
+    .from('device_sessions')
+    .delete()
+    .eq('user_id', userId)
+    .eq('device_name', deviceName)
+    .neq('device_id', deviceId);
+
   const { error: upsertError } = await supabase
     .from('device_sessions')
     .upsert(
       {
         user_id: userId,
         device_id: deviceId,
-        device_name: getDeviceName(),
+        device_name: deviceName,
         last_seen_at: new Date().toISOString(),
       },
       { onConflict: 'user_id,device_id' },
