@@ -761,10 +761,10 @@ export default function StockPage() {
               setShowForm(true);
             }}
             style={{
-              height: 40, borderRadius: 12,
+              height: 44, borderRadius: 12,
               background: plan.canAddProduct ? T.accent : '#D1D5DB',
               color: 'white', fontSize: 13, fontWeight: 700, padding: '0 14px',
-              border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+              border: 'none', cursor: plan.canAddProduct ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6,
             }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
