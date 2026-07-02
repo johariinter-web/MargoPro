@@ -34,14 +34,18 @@ export function EcranExpiration() {
   async function confirmer() {
     if (selection.size !== 5 || loading) return;
     setLoading(true);
-    const now = Date.now();
-    for (const p of produits) {
-      if (!selection.has(p.id)) {
-        await db.produits.update(p.id, { archived: true, updatedAt: now });
+    try {
+      const now = Date.now();
+      for (const p of produits) {
+        if (!selection.has(p.id)) {
+          await db.produits.update(p.id, { archived: true, updatedAt: now });
+        }
       }
+      requestSync();
+      // usePlan se re-calcule automatiquement via useLiveQuery → EcranExpiration disparaît
+    } catch {
+      setLoading(false);
     }
-    requestSync();
-    // usePlan se re-calcule automatiquement via useLiveQuery → EcranExpiration disparaît
   }
 
   const selCount = selection.size;
