@@ -7,6 +7,8 @@ import { useConfig } from '@/lib/hooks/useConfig';
 import { useColors } from '@/lib/hooks/useColors';
 import { useCategories } from '@/lib/hooks/useCategories';
 import BarcodeScanner from '@/components/BarcodeScanner';
+import { usePlan } from '@/lib/hooks/usePlan';
+import { ModalUpgrade } from '@/components/ModalUpgrade';
 import type { Produit } from '@backend/types';
 
 function fmtF(n: number) {
@@ -130,6 +132,8 @@ export default function StockPage() {
   const [morteSeuilStr, setMorteSeuilStr] = useState('30');
   const [showGererCats, setShowGererCats] = useState(false);
   const [catASupprimer, setCatASupprimer] = useState<string | null>(null);
+  const plan = usePlan();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Liste des catégories affichées : fusion des catégories enregistrées et de
   // celles réellement portées par des produits — pour n'en oublier aucune
@@ -751,8 +755,21 @@ export default function StockPage() {
               <circle cx="12" cy="13" r="4" stroke={T.textSub} strokeWidth="1.75"/>
             </svg>
           </button>
-          <button onClick={() => setShowForm(true)} style={{ height: 40, borderRadius: 12, background: T.accent, color: 'white', fontSize: 13, fontWeight: 700, padding: '0 14px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="white" strokeWidth="2.5" strokeLinecap="round"/></svg>
+          <button
+            onClick={() => {
+              if (!plan.canAddProduct) { setShowUpgradeModal(true); return; }
+              setShowForm(true);
+            }}
+            style={{
+              height: 40, borderRadius: 12,
+              background: plan.canAddProduct ? T.accent : '#D1D5DB',
+              color: 'white', fontSize: 13, fontWeight: 700, padding: '0 14px',
+              border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M12 5v14M5 12h14" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+            </svg>
             Ajouter
           </button>
         </div>
@@ -1072,6 +1089,7 @@ export default function StockPage() {
       })()}
 
       {alertes.length > 0 && <div style={{ display: 'none' }} aria-hidden="true" />}
+      {showUpgradeModal && <ModalUpgrade onClose={() => setShowUpgradeModal(false)} />}
     </div>
   );
 }

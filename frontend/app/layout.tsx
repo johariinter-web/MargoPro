@@ -4,6 +4,8 @@ import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import { SyncStarter } from "@/lib/hooks/useSync";
 import { DeviceSessionStarter } from "@/lib/hooks/useDeviceSession";
+import { BanniereEssai } from "@/components/BanniereEssai";
+import { EcranExpiration } from "@/components/EcranExpiration";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -51,6 +53,8 @@ export default function RootLayout({
         <SyncStarter />
         <DeviceSessionStarter />
         <main style={{ maxWidth: 480, margin: '0 auto', position: 'relative', minHeight: '100dvh' }}>
+          <BanniereEssai />
+          <EcranExpiration />
           {children}
           <BottomNav />
         </main>
