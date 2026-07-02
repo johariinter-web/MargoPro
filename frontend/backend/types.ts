@@ -13,6 +13,7 @@ export interface Produit {
   createdAt: number;
   updatedAt: number;
   deleted?: boolean;
+  archived?: boolean;   // true = masqué mais non supprimé
 }
 
 export interface Vente {
@@ -35,6 +36,8 @@ export interface Config {
   devise: string;
   symboleDevise: string;
   onboardingComplete: boolean;
+  trialStart?: number;  // timestamp ms du premier produit ajouté
+  isPremium?: boolean;  // true = plan Premium actif
   dateAbonnement?: number;
   updatedAt?: number;
 }

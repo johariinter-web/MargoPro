@@ -36,6 +36,7 @@ type ProduitRow = {
   created_at: number;
   updated_at: number;
   deleted: boolean;
+  archived: boolean;
 };
 
 type VenteRow = {
@@ -60,6 +61,8 @@ type ConfigRow = {
   symbole_devise: string | null;
   onboarding_complete: boolean;
   date_abonnement: number | null;
+  trial_start: number | null;
+  is_premium: boolean;
   updated_at: number;
 };
 
@@ -79,6 +82,7 @@ function produitToRow(p: Produit, userId: string): ProduitRow {
     created_at: p.createdAt ?? Date.now(),
     updated_at: p.updatedAt ?? Date.now(),
     deleted: p.deleted ?? false,
+    archived: p.archived ?? false,
   };
 }
 
@@ -97,6 +101,7 @@ function rowToProduit(r: ProduitRow): Produit {
     createdAt: Number(r.created_at),
     updatedAt: Number(r.updated_at),
     deleted: r.deleted ?? false,
+    archived: r.archived ?? false,
   };
 }
 
@@ -141,6 +146,8 @@ function configToRow(c: Config, userId: string): ConfigRow {
     symbole_devise: c.symboleDevise ?? null,
     onboarding_complete: c.onboardingComplete ?? false,
     date_abonnement: c.dateAbonnement ?? null,
+    trial_start: c.trialStart ?? null,
+    is_premium: c.isPremium ?? false,
     updated_at: c.updatedAt ?? Date.now(),
   };
 }
@@ -153,6 +160,8 @@ function rowToConfig(r: ConfigRow): Config {
     symboleDevise: r.symbole_devise ?? '',
     onboardingComplete: r.onboarding_complete ?? false,
     dateAbonnement: r.date_abonnement ?? undefined,
+    trialStart: r.trial_start ?? undefined,
+    isPremium: r.is_premium ?? false,
     updatedAt: Number(r.updated_at),
   };
 }
