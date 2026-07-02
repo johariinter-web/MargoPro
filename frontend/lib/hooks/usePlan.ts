@@ -13,6 +13,7 @@ export interface PlanInfo {
   isPremium: boolean;
   activeProductCount: number;
   canAddProduct: boolean;
+  isLoading?: boolean;     // true pendant que Dexie charge (< 100ms)
 }
 
 const TRIAL_DAYS = 30;
@@ -74,5 +75,6 @@ export function usePlan(): PlanInfo {
     isPremium: false,
     activeProductCount: 0,
     canAddProduct: true,
+    isLoading: true,
   };
 }
