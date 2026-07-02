@@ -8,14 +8,22 @@ import type { Produit } from '@backend/types';
 
 export function useStock() {
   const produits = useLiveQuery(
-    () => db.produits.orderBy('nom').filter((p) => !p.deleted).toArray()
+    () => db.produits.orderBy('nom').filter((p) => !p.deleted && !p.archived).toArray()
   ) ?? [];
 
   async function ajouterProduit(data: Omit<Produit, 'id' | 'createdAt' | 'updatedAt'>): Promise<string | null> {
     const erreur = validerProduit(data);
     if (erreur) return erreur;
     const now = Date.now();
-    await db.produits.add({ ...data, id: genId(), createdAt: now, updatedAt: now, deleted: false });
+
+    // Déclencher le chrono d'essai au premier produit
+    const config = await db.config.get('singleton');
+    if (config && config.trialStart === undefined) {
+      await db.config.update('singleton', { trialStart: now, updatedAt: now });
+      requestSync();
+    }
+
+    await db.produits.add({ ...data, id: genId(), createdAt: now, updatedAt: now, deleted: false, archived: false });
     requestSync();
     return null;
   }
@@ -29,13 +37,11 @@ export function useStock() {
   }
 
   async function supprimerProduit(id: string) {
-    // Soft delete : la suppression se propage entre appareils via la sync.
     await db.produits.update(id, { deleted: true, updatedAt: Date.now() });
     requestSync();
   }
 
   async function restaurerProduit(id: string) {
-    // Annule une suppression (le produit n'était que masqué).
     await db.produits.update(id, { deleted: false, updatedAt: Date.now() });
     requestSync();
   }
