@@ -46,6 +46,18 @@ class MargoDB extends Dexie {
           if (p.archived === undefined) p.archived = false;
         });
       });
+    // v4 — ventes à crédit : index modeReglement
+    this.version(4)
+      .stores({
+        produits: 'id, nom, quantite, updatedAt, deleted, archived',
+        ventes: 'id, produitId, date, updatedAt, deleted, modeReglement',
+        config: 'id',
+      })
+      .upgrade(async (tx) => {
+        await tx.table('ventes').toCollection().modify((v) => {
+          if (v.modeReglement === undefined) v.modeReglement = 'comptant';
+        });
+      });
   }
 }
 

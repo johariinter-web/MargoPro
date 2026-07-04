@@ -7,7 +7,7 @@ import { useConfig } from '@/lib/hooks/useConfig';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import { useColors } from '@/lib/hooks/useColors';
 import type { Periode } from '@backend/types';
-import { filtrerParPeriode } from '@backend/ventes';
+import { filtrerParPeriode, urgenceCredit, resteADoit } from '@backend/ventes';
 
 function fmtF(n: number) {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -30,16 +30,24 @@ export default function VentesPage() {
   const { config } = useConfig();
   const { produits, deduireStock } = useStock();
   const [periode, setPeriode] = useState<Periode>('jour');
-  const { ventes, ventesSupprimees, stats, enregistrerVente, supprimerVente, restaurerVente } = useVentes(periode);
+  const { ventes, ventesSupprimees, stats, credits, soldes, totalDu, enregistrerVente, enregistrerPaiementCredit, supprimerVente, restaurerVente } = useVentes(periode);
+  const [voirSoldes, setVoirSoldes] = useState(false);
+  const [onglet, setOnglet] = useState<'ventes' | 'carnet'>('ventes');
   const [showForm, setShowForm] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [produitId, setProduitId] = useState('');
   const [quantite, setQuantite] = useState('1');
   const [erreur, setErreur] = useState('');
   const [prixGros, setPrixGros] = useState('');
+  const [isCredit, setIsCredit] = useState(false);
+  const [clientNomCredit, setClientNomCredit] = useState('');
+  const [acompteCredit, setAcompteCredit] = useState('0');
   const [venteSelectionnee, setVenteSelectionnee] = useState<typeof ventes[number] | null>(null);
   const [venteSupprimee, setVenteSupprimee] = useState<typeof ventes[number] | null>(null);
   const [showHistorique, setShowHistorique] = useState(false);
+  const [ventePaiement, setVentePaiement] = useState<typeof ventes[number] | null>(null);
+  const [montantPaiement, setMontantPaiement] = useState('');
+  const [erreurPaiement, setErreurPaiement] = useState('');
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
@@ -92,13 +100,30 @@ export default function VentesPage() {
     const qte = Number(quantite);
     if (!qte || qte <= 0) { setErreur('Quantité invalide'); return; }
     if (qte > produit.quantite) { setErreur(`Stock insuffisant (${produit.quantite} disponibles)`); return; }
+    if (isCredit && !clientNomCredit.trim()) { setErreur('Nom du client requis pour un crédit'); return; }
     const prixFinal = Number(prixGros) > 0 ? Number(prixGros) : produit.prixVente;
-    await enregistrerVente(produit.id, produit.nom, qte, prixFinal, produit.prixAchat);
+    const creditParams = isCredit
+      ? { clientNom: clientNomCredit.trim(), montantRecu: Math.max(0, Number(acompteCredit) || 0) }
+      : undefined;
+    await enregistrerVente(produit.id, produit.nom, qte, prixFinal, produit.prixAchat, creditParams);
     await deduireStock(produit.id, qte);
     setProduitId('');
     setQuantite('1');
     setPrixGros('');
+    setIsCredit(false);
+    setClientNomCredit('');
+    setAcompteCredit('0');
     setShowForm(false);
+    if (isCredit) setOnglet('carnet');
+  }
+
+  async function handlePaiementCredit() {
+    if (!ventePaiement) return;
+    setErreurPaiement('');
+    const err = await enregistrerPaiementCredit(ventePaiement.id, Number(montantPaiement));
+    if (err) { setErreurPaiement(err); return; }
+    setVentePaiement(null);
+    setMontantPaiement('');
   }
 
   // Filtre la liste selon la période choisie (Jour / Semaine / Mois / Tout)
@@ -216,6 +241,54 @@ export default function VentesPage() {
         </div>
       )}
 
+      {/* MODAL PAIEMENT CRÉDIT */}
+      {ventePaiement && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'flex-end' }}
+          onClick={() => { setVentePaiement(null); setErreurPaiement(''); setMontantPaiement(''); }}
+        >
+          <div
+            style={{ background: T.surface, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, margin: '0 auto', padding: '20px 20px 36px' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border, margin: '0 auto 16px' }} />
+            <div style={{ fontSize: 17, fontWeight: 800, color: T.text, marginBottom: 4 }}>
+              Paiement — {ventePaiement.clientNom}
+            </div>
+            <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 16 }}>
+              Reste dû : <strong style={{ color: '#F97316' }}>{fmtF(resteADoit(ventePaiement))} {symbole}</strong>
+            </div>
+            {erreurPaiement && (
+              <div style={{ fontSize: 13, color: T.red, fontWeight: 600, marginBottom: 10, padding: '8px 12px', background: T.redBg, borderRadius: 8 }}>
+                {erreurPaiement}
+              </div>
+            )}
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Montant reçu ({symbole})</label>
+            <input
+              type="number"
+              value={montantPaiement}
+              onChange={e => setMontantPaiement(e.target.value)}
+              placeholder={String(resteADoit(ventePaiement))}
+              style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box', marginBottom: 14 }}
+            />
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => { setVentePaiement(null); setErreurPaiement(''); setMontantPaiement(''); }}
+                style={{ flex: 1, height: 48, borderRadius: 12, background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: T.textSub }}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handlePaiementCredit}
+                style={{ flex: 2, height: 48, borderRadius: 12, background: T.accent, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: 'white' }}
+              >
+                ✅ Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* HEADER */}
       <div style={{ padding: '12px 16px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: 22, fontWeight: 800, color: T.text }}>Ventes</span>
@@ -245,8 +318,29 @@ export default function VentesPage() {
         </div>
       </div>
 
-      {/* FILTER PILLS */}
-      <div style={{ padding: '0 16px 8px', display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none' }}>
+      {/* ONGLETS VENTES / CRÉDITS */}
+      <div style={{ padding: '0 16px 8px', display: 'flex', gap: 8 }}>
+        <button
+          onClick={() => setOnglet('ventes')}
+          style={{ flex: 1, height: 36, borderRadius: 10, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', background: onglet === 'ventes' ? T.accent : T.bgSubtle, color: onglet === 'ventes' ? 'white' : T.textSub }}
+        >
+          Ventes
+        </button>
+        <button
+          onClick={() => setOnglet('carnet')}
+          style={{ flex: 1, height: 36, borderRadius: 10, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', background: onglet === 'carnet' ? '#F97316' : T.bgSubtle, color: onglet === 'carnet' ? 'white' : T.textSub, position: 'relative' }}
+        >
+          Carnet
+          {credits.length > 0 && (
+            <span style={{ position: 'absolute', top: -6, right: -6, background: '#EF4444', color: 'white', borderRadius: '50%', width: 18, height: 18, fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {credits.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* FILTER PILLS — visible uniquement sur l'onglet Ventes */}
+      {onglet === 'ventes' && <div style={{ padding: '0 16px 8px', display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none' }}>
         {PERIODES.map(p => (
           <button
             key={p.value}
@@ -261,10 +355,10 @@ export default function VentesPage() {
             {p.label}
           </button>
         ))}
-      </div>
+      </div>}
 
-      {/* STATS CARD */}
-      <div style={{ margin: '0 16px 12px', background: T.surface, borderRadius: 16, padding: '14px 16px', boxShadow: T.shadow }}>
+      {/* STATS CARD — onglet Ventes uniquement */}
+      {onglet === 'ventes' && <div style={{ margin: '0 16px 12px', background: T.surface, borderRadius: 16, padding: '14px 16px', boxShadow: T.shadow }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 600, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>CA</div>
@@ -282,7 +376,7 @@ export default function VentesPage() {
             </div>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* SALE FORM */}
       {showForm && (
@@ -365,9 +459,44 @@ export default function VentesPage() {
               )}
             </div>
           )}
+          {/* TOGGLE CRÉDIT */}
+          <div
+            onClick={() => { setIsCredit(v => !v); setClientNomCredit(''); setAcompteCredit('0'); }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, cursor: 'pointer', padding: '10px 12px', background: isCredit ? '#FFF7ED' : T.bgSubtle, borderRadius: 10, border: isCredit ? '1.5px solid #F97316' : `1.5px solid ${T.border}` }}
+          >
+            <span style={{ fontSize: 13, fontWeight: 600, color: isCredit ? '#C2410C' : T.textSub }}>Vente à crédit</span>
+            <div style={{ width: 36, height: 20, borderRadius: 10, background: isCredit ? '#F97316' : T.border, position: 'relative', transition: 'background .2s' }}>
+              <div style={{ position: 'absolute', top: 2, left: isCredit ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: 'white', transition: 'left .2s', boxShadow: '0 1px 4px rgba(0,0,0,.2)' }} />
+            </div>
+          </div>
+          {isCredit && (
+            <>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Nom du client *</label>
+                <input
+                  type="text"
+                  value={clientNomCredit}
+                  onChange={e => setClientNomCredit(e.target.value)}
+                  placeholder="Ex : Aminata Koné"
+                  style={{ width: '100%', border: `1.5px solid #F97316`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Acompte reçu maintenant ({symbole})</label>
+                <input
+                  type="number"
+                  value={acompteCredit}
+                  onChange={e => setAcompteCredit(e.target.value)}
+                  placeholder="0"
+                  min="0"
+                  style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }}
+                />
+              </div>
+            </>
+          )}
           <div style={{ display: 'flex', gap: 10 }}>
             <button
-              onClick={() => { setShowForm(false); setErreur(''); setPrixGros(''); }}
+              onClick={() => { setShowForm(false); setErreur(''); setPrixGros(''); setIsCredit(false); setClientNomCredit(''); setAcompteCredit('0'); }}
               style={{
                 flex: 1, height: 44, borderRadius: 12, background: T.bgSubtle,
                 border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: T.textSub,
@@ -378,18 +507,18 @@ export default function VentesPage() {
             <button
               onClick={handleVente}
               style={{
-                flex: 2, height: 44, borderRadius: 12, background: T.accent,
+                flex: 2, height: 44, borderRadius: 12, background: isCredit ? '#F97316' : T.accent,
                 border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: 'white',
               }}
             >
-              Confirmer
+              {isCredit ? '📒 Crédit' : 'Confirmer'}
             </button>
           </div>
         </div>
       )}
 
-      {/* LIEN HISTORIQUE DES SUPPRESSIONS */}
-      <div style={{ padding: '0 16px 8px', display: 'flex', justifyContent: 'flex-end' }}>
+      {/* LIEN HISTORIQUE DES SUPPRESSIONS — onglet Ventes uniquement */}
+      {onglet === 'ventes' && <div style={{ padding: '0 16px 8px', display: 'flex', justifyContent: 'flex-end' }}>
         <button
           onClick={() => setShowHistorique(true)}
           style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: T.textMuted, padding: '4px 0', fontFamily: 'Manrope, sans-serif' }}
@@ -400,10 +529,10 @@ export default function VentesPage() {
           </svg>
           Historique des suppressions{ventesSupprimees.length > 0 ? ` (${ventesSupprimees.length})` : ''}
         </button>
-      </div>
+      </div>}
 
       {/* VENTES LIST - grouped by date */}
-      <div style={{ padding: '0 16px', overflowY: 'auto', scrollbarWidth: 'none' }}>
+      {onglet === 'ventes' && <div style={{ padding: '0 16px', overflowY: 'auto', scrollbarWidth: 'none' }}>
         {ventesPeriode.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 0' }}>
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto 12px', display: 'block' }}>
@@ -471,7 +600,100 @@ export default function VentesPage() {
             );
           })
         )}
-      </div>
+      </div>}
+
+      {/* VUE CARNET */}
+      {onglet === 'carnet' && (
+        <div style={{ padding: '0 16px' }}>
+          {credits.length === 0 && soldes.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 0' }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>📒</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: T.textSub }}>Aucun crédit en cours</div>
+              <div style={{ fontSize: 13, color: T.textMuted, marginTop: 4 }}>Tout le monde est à jour !</div>
+            </div>
+          ) : (
+            <>
+              {/* Bandeau total dû */}
+              {credits.length > 0 && (
+                <div style={{ background: '#FFF7ED', border: '2px solid #F97316', borderRadius: 14, padding: '14px 16px', marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#C2410C', marginBottom: 4 }}>Total qu&apos;on te doit</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: '#C2410C', fontFamily: '"Space Grotesk", sans-serif' }}>
+                    {fmtF(totalDu)} {symbole}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#9A3412', marginTop: 2 }}>
+                    {credits.length} client{credits.length > 1 ? 's' : ''} — tape un nom pour enregistrer un paiement
+                  </div>
+                </div>
+              )}
+
+              {/* Liste des créanciers — tap pour ouvrir la fiche paiement */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                {credits.map(v => {
+                  const urgence = urgenceCredit(v);
+                  const reste = resteADoit(v);
+                  const borderColor = urgence === 'urgent' ? '#EF4444' : urgence === 'moyen' ? '#F97316' : T.border;
+                  return (
+                    <div
+                      key={v.id}
+                      onClick={() => { setVentePaiement(v); setMontantPaiement(''); setErreurPaiement(''); }}
+                      style={{ background: T.surface, borderRadius: 14, padding: '12px 14px', border: `2px solid ${borderColor}`, boxShadow: T.shadow, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                          <span style={{ fontSize: 15, fontWeight: 800, color: T.text }}>{v.clientNom}</span>
+                          {urgence === 'urgent' && <span style={{ fontSize: 11, fontWeight: 700, color: '#EF4444' }}>🔴 +15j</span>}
+                          {urgence === 'moyen' && <span style={{ fontSize: 11, fontWeight: 700, color: '#F97316' }}>⚠ +7j</span>}
+                        </div>
+                        <div style={{ fontSize: 11, color: T.textMuted }}>
+                          {v.produitNom} · {new Date(v.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 17, fontWeight: 800, color: '#F97316', fontFamily: '"Space Grotesk", sans-serif' }}>
+                          {fmtF(reste)} {symbole}
+                        </div>
+                        <div style={{ fontSize: 10, color: T.textMuted, marginTop: 1 }}>
+                          sur {fmtF(v.total)} {symbole}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Crédits soldés — collapsibles avec bouton Supprimer */}
+              {soldes.length > 0 && (
+                <div>
+                  <button
+                    onClick={() => setVoirSoldes(s => !s)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: T.textMuted, padding: '4px 0', marginBottom: 8, fontFamily: 'Manrope, sans-serif' }}
+                  >
+                    {voirSoldes ? 'Masquer' : `Voir les ${soldes.length} crédit${soldes.length > 1 ? 's' : ''} soldé${soldes.length > 1 ? 's' : ''}`}
+                  </button>
+                  {voirSoldes && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {soldes.map(v => (
+                        <div key={v.id} style={{ background: T.surface, borderRadius: 12, padding: '10px 14px', border: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: T.textSub, textDecoration: 'line-through' }}>{v.clientNom}</div>
+                            <div style={{ fontSize: 11, color: T.textMuted }}>{fmtF(v.total)} {symbole} · {new Date(v.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</div>
+                          </div>
+                          <button
+                            onClick={() => supprimerVente(v.id)}
+                            style={{ height: 36, padding: '0 12px', borderRadius: 10, background: T.redBg, color: T.red, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
+                          >
+                            Supprimer
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

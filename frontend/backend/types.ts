@@ -28,6 +28,9 @@ export interface Vente {
   date: number;
   updatedAt: number;
   deleted?: boolean;
+  modeReglement?: 'comptant' | 'credit';
+  clientNom?: string;
+  montantRecu?: number;
 }
 
 export interface Config {

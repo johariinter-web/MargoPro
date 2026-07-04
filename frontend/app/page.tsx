@@ -19,7 +19,7 @@ export default function Dashboard() {
   const router = useRouter();
   const { config, isReady } = useConfig();
   const { produits, alertes, total: totalStock } = useStock();
-  const { stats, ventes } = useVentes('jour');
+  const { stats, ventes, totalDu } = useVentes('jour');
   const [authChecked, setAuthChecked] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
 
@@ -171,9 +171,11 @@ export default function Dashboard() {
             <div style={{ fontSize: 28, fontWeight: 800, color: T.text, fontFamily: '"Space Grotesk", sans-serif', letterSpacing: '-1.2px', lineHeight: 1 }}>
               {fmtF(stats.chiffreAffaires)} <span style={{ fontSize: 14 }}>{symbole}</span>
             </div>
-            <div style={{ fontSize: 11, color: T.textMuted, fontWeight: 600, marginTop: 5, fontFamily: 'Manrope, sans-serif' }}>
-              {stats.nombreVentes} vente{stats.nombreVentes !== 1 ? 's' : ''} aujourd&apos;hui
-            </div>
+            {totalDu > 0 && (
+              <div style={{ fontSize: 11, color: '#C2410C', fontWeight: 700, marginTop: 4, fontFamily: 'Manrope, sans-serif' }}>
+                {fmtF(totalDu)} {symbole} en attente
+              </div>
+            )}
           </div>
 
           {/* Card 2 - Bénéfice */}

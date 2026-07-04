@@ -2,7 +2,7 @@
 
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, genId } from '../db';
-import { calculerStats, topProduits, creerVente } from '@backend/ventes';
+import { calculerStats, topProduits, creerVente, creditsEnCours, creditsSoldes, totalCredit, resteADoit } from '@backend/ventes';
 import { requestSync } from '../syncController';
 import type { Periode } from '@backend/types';
 
@@ -24,11 +24,25 @@ export function useVentes(periode: Periode = 'jour') {
     produitNom: string,
     quantite: number,
     prixVente: number,
-    prixAchat: number
+    prixAchat: number,
+    credit?: { clientNom: string; montantRecu: number }
   ) {
-    const vente = creerVente(produitId, produitNom, quantite, prixVente, prixAchat);
+    const vente = creerVente(produitId, produitNom, quantite, prixVente, prixAchat, credit);
     await db.ventes.add({ ...vente, id: genId(), deleted: false });
     requestSync();
+  }
+
+  async function enregistrerPaiementCredit(venteId: string, montant: number): Promise<string | null> {
+    const vente = await db.ventes.get(venteId);
+    if (!vente) return 'Vente introuvable';
+    const reste = resteADoit(vente);
+    if (montant <= 0 || montant > reste) return 'Montant invalide';
+    await db.ventes.update(venteId, {
+      montantRecu: (vente.montantRecu ?? 0) + montant,
+      updatedAt: Date.now(),
+    });
+    requestSync();
+    return null;
   }
 
   async function supprimerVente(id: string) {
@@ -61,5 +75,9 @@ export function useVentes(periode: Periode = 'jour') {
     requestSync();
   }
 
-  return { ventes, ventesSupprimees, stats, top3, enregistrerVente, supprimerVente, restaurerVente };
+  const credits = creditsEnCours(ventes);
+  const soldes = creditsSoldes(ventes);
+  const totalDu = totalCredit(ventes);
+
+  return { ventes, ventesSupprimees, stats, top3, credits, soldes, totalDu, enregistrerVente, enregistrerPaiementCredit, supprimerVente, restaurerVente };
 }

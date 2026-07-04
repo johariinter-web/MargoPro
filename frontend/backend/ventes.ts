@@ -57,10 +57,12 @@ export function creerVente(
   produitNom: string,
   quantite: number,
   prixVente: number,
-  prixAchat: number
+  prixAchat: number,
+  credit?: { clientNom: string; montantRecu: number }
 ): Omit<Vente, 'id'> {
   const total = prixVente * quantite;
   const benefice = (prixVente - prixAchat) * quantite;
+  const now = Date.now();
   return {
     produitId,
     produitNom,
@@ -69,7 +71,33 @@ export function creerVente(
     prixAchat,
     total,
     benefice,
-    date: Date.now(),
-    updatedAt: Date.now(),
+    date: now,
+    updatedAt: now,
+    ...(credit
+      ? { modeReglement: 'credit', clientNom: credit.clientNom, montantRecu: credit.montantRecu }
+      : { modeReglement: 'comptant' }),
   };
+}
+
+export function resteADoit(vente: Vente): number {
+  return Math.max(0, vente.total - (vente.montantRecu ?? 0));
+}
+
+export function urgenceCredit(vente: Vente): 'normal' | 'moyen' | 'urgent' {
+  const jours = Math.floor((Date.now() - vente.date) / (1000 * 60 * 60 * 24));
+  if (jours >= 15) return 'urgent';
+  if (jours >= 7) return 'moyen';
+  return 'normal';
+}
+
+export function creditsEnCours(ventes: Vente[]): Vente[] {
+  return ventes.filter(v => v.modeReglement === 'credit' && resteADoit(v) > 0);
+}
+
+export function totalCredit(ventes: Vente[]): number {
+  return creditsEnCours(ventes).reduce((sum, v) => sum + resteADoit(v), 0);
+}
+
+export function creditsSoldes(ventes: Vente[]): Vente[] {
+  return ventes.filter(v => v.modeReglement === 'credit' && resteADoit(v) === 0);
 }
