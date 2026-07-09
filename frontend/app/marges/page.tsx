@@ -197,6 +197,7 @@ export default function MargesPage() {
   const prixVenteCalc = prixAchatNum > 0
     ? Math.round(prixAchatNum * (1 + margePct / 100))
     : 0;
+  const beneficeCalc = prixVenteCalc - prixAchatNum;
 
   const tabs: TabMode[] = ['%Marge', 'Pluriels', 'Catalogue'];
 
@@ -308,10 +309,18 @@ export default function MargesPage() {
 
             {/* Résultat */}
             {prixVenteCalc > 0 && (
-              <div style={{ background: T.accentLight, borderRadius: 14, padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: T.textSub }}>Prix de vente conseillé</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>
-                  {fmtF(prixVenteCalc)} <span style={{ fontSize: 13 }}>{symbole}</span>
+              <div style={{ background: T.accentLight, borderRadius: 14, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: T.textSub }}>Prix de vente conseillé</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>
+                    {fmtF(prixVenteCalc)} <span style={{ fontSize: 13 }}>{symbole}</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${T.border}`, paddingTop: 10 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: T.textSub }}>Bénéfice par unité</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: T.green, fontFamily: '"Space Grotesk", sans-serif' }}>
+                    +{fmtF(beneficeCalc)} <span style={{ fontSize: 13 }}>{symbole}</span>
+                  </div>
                 </div>
               </div>
             )}
