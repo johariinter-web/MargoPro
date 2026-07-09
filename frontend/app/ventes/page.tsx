@@ -683,11 +683,6 @@ export default function VentesPage() {
                           {urgence === 'urgent' && <span style={{ fontSize: 11, fontWeight: 700, color: '#EF4444' }}>🔴 +15j</span>}
                           {urgence === 'moyen' && <span style={{ fontSize: 11, fontWeight: 700, color: '#F97316' }}>⚠ +7j</span>}
                         </div>
-                        {v.clientTel && (
-                          <a href={`tel:${v.clientTel}`} onClick={e => e.stopPropagation()} style={{ fontSize: 12, color: T.accent, fontWeight: 600, textDecoration: 'none', display: 'block', marginBottom: 2 }}>
-                            📞 {v.clientTel}
-                          </a>
-                        )}
                         <div style={{ fontSize: 11, color: T.textMuted }}>
                           {v.produitNom} · {new Date(v.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                         </div>
