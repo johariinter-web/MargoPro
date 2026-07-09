@@ -33,6 +33,7 @@ export default function VentesPage() {
   const { ventes, ventesSupprimees, stats, credits, soldes, totalDu, enregistrerVente, enregistrerPaiementCredit, supprimerVente, restaurerVente } = useVentes(periode);
   const [voirSoldes, setVoirSoldes] = useState(false);
   const [onglet, setOnglet] = useState<'ventes' | 'carnet'>('ventes');
+  const [joursOuverts, setJoursOuverts] = useState<Record<string, boolean>>({});
   const [showForm, setShowForm] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [produitId, setProduitId] = useState('');
@@ -41,6 +42,7 @@ export default function VentesPage() {
   const [prixGros, setPrixGros] = useState('');
   const [isCredit, setIsCredit] = useState(false);
   const [clientNomCredit, setClientNomCredit] = useState('');
+  const [clientTelCredit, setClientTelCredit] = useState('');
   const [acompteCredit, setAcompteCredit] = useState('0');
   const [venteSelectionnee, setVenteSelectionnee] = useState<typeof ventes[number] | null>(null);
   const [venteSupprimee, setVenteSupprimee] = useState<typeof ventes[number] | null>(null);
@@ -103,7 +105,7 @@ export default function VentesPage() {
     if (isCredit && !clientNomCredit.trim()) { setErreur('Nom du client requis pour un crédit'); return; }
     const prixFinal = Number(prixGros) > 0 ? Number(prixGros) : produit.prixVente;
     const creditParams = isCredit
-      ? { clientNom: clientNomCredit.trim(), montantRecu: Math.max(0, Number(acompteCredit) || 0) }
+      ? { clientNom: clientNomCredit.trim(), clientTel: clientTelCredit.trim() || undefined, montantRecu: Math.max(0, Number(acompteCredit) || 0) }
       : undefined;
     await enregistrerVente(produit.id, produit.nom, qte, prixFinal, produit.prixAchat, creditParams);
     await deduireStock(produit.id, qte);
@@ -112,6 +114,7 @@ export default function VentesPage() {
     setPrixGros('');
     setIsCredit(false);
     setClientNomCredit('');
+    setClientTelCredit('');
     setAcompteCredit('0');
     setShowForm(false);
     if (isCredit) setOnglet('carnet');
@@ -130,12 +133,21 @@ export default function VentesPage() {
   const ventesPeriode = filtrerParPeriode(ventes, periode);
 
   // Group ventes by day
-  const grouped = ventesPeriode.slice(0, 50).reduce((acc, v) => {
+  const grouped = ventesPeriode.slice(0, 100).reduce((acc, v) => {
     const day = new Date(v.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
     if (!acc[day]) acc[day] = [];
     acc[day].push(v);
     return acc;
   }, {} as Record<string, typeof ventes>);
+
+  const joursKeys = Object.keys(grouped);
+  function isJourOuvert(day: string, index: number) {
+    if (day in joursOuverts) return joursOuverts[day];
+    return index === 0;
+  }
+  function toggleJour(day: string, index: number) {
+    setJoursOuverts(prev => ({ ...prev, [day]: !isJourOuvert(day, index) }));
+  }
 
   const selectedProduit = produits.find(p => p.id === produitId);
   const qteNum = Number(quantite) || 0;
@@ -461,7 +473,7 @@ export default function VentesPage() {
           )}
           {/* TOGGLE CRÉDIT */}
           <div
-            onClick={() => { setIsCredit(v => !v); setClientNomCredit(''); setAcompteCredit('0'); }}
+            onClick={() => { setIsCredit(v => !v); setClientNomCredit(''); setClientTelCredit(''); setAcompteCredit('0'); }}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, cursor: 'pointer', padding: '10px 12px', background: isCredit ? '#FFF7ED' : T.bgSubtle, borderRadius: 10, border: isCredit ? '1.5px solid #F97316' : `1.5px solid ${T.border}` }}
           >
             <span style={{ fontSize: 13, fontWeight: 600, color: isCredit ? '#C2410C' : T.textSub }}>Vente à crédit</span>
@@ -482,6 +494,16 @@ export default function VentesPage() {
                 />
               </div>
               <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Téléphone du client (optionnel)</label>
+                <input
+                  type="tel"
+                  value={clientTelCredit}
+                  onChange={e => setClientTelCredit(e.target.value)}
+                  placeholder="Ex : 77 123 45 67"
+                  style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div style={{ marginBottom: 12 }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Acompte reçu maintenant ({symbole})</label>
                 <input
                   type="number"
@@ -496,7 +518,7 @@ export default function VentesPage() {
           )}
           <div style={{ display: 'flex', gap: 10 }}>
             <button
-              onClick={() => { setShowForm(false); setErreur(''); setPrixGros(''); setIsCredit(false); setClientNomCredit(''); setAcompteCredit('0'); }}
+              onClick={() => { setShowForm(false); setErreur(''); setPrixGros(''); setIsCredit(false); setClientNomCredit(''); setClientTelCredit(''); setAcompteCredit('0'); }}
               style={{
                 flex: 1, height: 44, borderRadius: 12, background: T.bgSubtle,
                 border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: T.textSub,
@@ -543,19 +565,36 @@ export default function VentesPage() {
             <div style={{ fontSize: 16, fontWeight: 600, color: T.textSub }}>Aucune vente pour cette période</div>
           </div>
         ) : (
-          Object.entries(grouped).map(([day, dayVentes]) => {
+          Object.entries(grouped).map(([day, dayVentes], index) => {
             const dayTotal = dayVentes.reduce((s, v) => s + v.total, 0);
+            const ouvert = isJourOuvert(day, index);
             return (
-              <div key={day} style={{ marginBottom: 16 }}>
-                {/* Date group header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'capitalize' }}>{day}</span>
+              <div key={day} style={{ marginBottom: 12 }}>
+                {/* Date group header — tappable pour replier/déplier */}
+                <button
+                  onClick={() => toggleJour(day, index)}
+                  style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+                    padding: '4px 0', marginBottom: ouvert ? 8 : 0,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <svg
+                      width="12" height="12" viewBox="0 0 24 24" fill="none"
+                      style={{ transform: ouvert ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.15s' }}
+                    >
+                      <path d="M6 9l6 6 6-6" stroke={T.textMuted} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'capitalize' }}>{day}</span>
+                    <span style={{ fontSize: 11, color: T.textMuted, fontWeight: 500 }}>· {dayVentes.length} vente{dayVentes.length > 1 ? 's' : ''}</span>
+                  </div>
                   <span style={{ fontSize: 13, fontWeight: 800, color: T.text, fontFamily: '"Space Grotesk", sans-serif' }}>
                     {fmtF(dayTotal)} {symbole}
                   </span>
-                </div>
-                {/* Liste des ventes du jour */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                </button>
+                {/* Liste des ventes du jour — visible seulement si ouvert */}
+                {ouvert && <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {dayVentes.map(v => {
                     const photoVente = produits.find(p => p.id === v.produitId)?.photo;
                     return (
@@ -595,7 +634,7 @@ export default function VentesPage() {
                     </div>
                     );
                   })}
-                </div>
+                </div>}
               </div>
             );
           })
@@ -644,6 +683,11 @@ export default function VentesPage() {
                           {urgence === 'urgent' && <span style={{ fontSize: 11, fontWeight: 700, color: '#EF4444' }}>🔴 +15j</span>}
                           {urgence === 'moyen' && <span style={{ fontSize: 11, fontWeight: 700, color: '#F97316' }}>⚠ +7j</span>}
                         </div>
+                        {v.clientTel && (
+                          <a href={`tel:${v.clientTel}`} onClick={e => e.stopPropagation()} style={{ fontSize: 12, color: T.accent, fontWeight: 600, textDecoration: 'none', display: 'block', marginBottom: 2 }}>
+                            📞 {v.clientTel}
+                          </a>
+                        )}
                         <div style={{ fontSize: 11, color: T.textMuted }}>
                           {v.produitNom} · {new Date(v.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                         </div>

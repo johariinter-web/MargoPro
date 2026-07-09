@@ -52,6 +52,10 @@ type VenteRow = {
   date: number;
   updated_at: number;
   deleted: boolean;
+  mode_reglement: string | null;
+  client_nom: string | null;
+  client_tel: string | null;
+  montant_recu: number | null;
 };
 
 type ConfigRow = {
@@ -119,6 +123,10 @@ function venteToRow(v: Vente, userId: string): VenteRow {
     date: v.date ?? Date.now(),
     updated_at: v.updatedAt ?? v.date ?? Date.now(),
     deleted: v.deleted ?? false,
+    mode_reglement: v.modeReglement ?? null,
+    client_nom: v.clientNom ?? null,
+    client_tel: v.clientTel ?? null,
+    montant_recu: v.montantRecu ?? null,
   };
 }
 
@@ -135,6 +143,10 @@ function rowToVente(r: VenteRow): Vente {
     date: Number(r.date),
     updatedAt: Number(r.updated_at),
     deleted: r.deleted ?? false,
+    modeReglement: (r.mode_reglement as 'comptant' | 'credit') ?? undefined,
+    clientNom: r.client_nom ?? undefined,
+    clientTel: r.client_tel ?? undefined,
+    montantRecu: r.montant_recu ?? undefined,
   };
 }
 

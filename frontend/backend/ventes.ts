@@ -58,7 +58,7 @@ export function creerVente(
   quantite: number,
   prixVente: number,
   prixAchat: number,
-  credit?: { clientNom: string; montantRecu: number }
+  credit?: { clientNom: string; clientTel?: string; montantRecu: number }
 ): Omit<Vente, 'id'> {
   const total = prixVente * quantite;
   const benefice = (prixVente - prixAchat) * quantite;
@@ -74,7 +74,7 @@ export function creerVente(
     date: now,
     updatedAt: now,
     ...(credit
-      ? { modeReglement: 'credit', clientNom: credit.clientNom, montantRecu: credit.montantRecu }
+      ? { modeReglement: 'credit', clientNom: credit.clientNom, clientTel: credit.clientTel, montantRecu: credit.montantRecu }
       : { modeReglement: 'comptant' }),
   };
 }

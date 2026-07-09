@@ -30,6 +30,7 @@ export interface Vente {
   deleted?: boolean;
   modeReglement?: 'comptant' | 'credit';
   clientNom?: string;
+  clientTel?: string;
   montantRecu?: number;
 }
 

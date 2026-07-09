@@ -25,7 +25,7 @@ export function useVentes(periode: Periode = 'jour') {
     quantite: number,
     prixVente: number,
     prixAchat: number,
-    credit?: { clientNom: string; montantRecu: number }
+    credit?: { clientNom: string; clientTel?: string; montantRecu: number }
   ) {
     const vente = creerVente(produitId, produitNom, quantite, prixVente, prixAchat, credit);
     await db.ventes.add({ ...vente, id: genId(), deleted: false });
