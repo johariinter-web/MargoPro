@@ -1179,13 +1179,10 @@ export default function StockPage() {
           {/* Bouton Créer un pack */}
           <div style={{ marginBottom: 12 }}>
             <button
-              onClick={() => { if (!plan.isPremium) { setShowUpgradeModal(true); return; } ouvrirCreerPack(); }}
-              style={{ width: '100%', height: 48, borderRadius: 14, background: plan.isPremium ? T.accent : T.border, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: 'white', fontFamily: 'Manrope, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              onClick={ouvrirCreerPack}
+              style={{ width: '100%', height: 48, borderRadius: 14, background: T.accent, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: 'white', fontFamily: 'Manrope, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
             >
-              {!plan.isPremium && (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="white" strokeWidth="1.75"/><path d="M7 11V7a5 5 0 0110 0v4" stroke="white" strokeWidth="1.75" strokeLinecap="round"/></svg>
-              )}
-              {!plan.isPremium ? 'Premium — Créer un pack' : '+ Créer un pack'}
+              + Créer un pack
             </button>
           </div>
 

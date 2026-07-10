@@ -42,7 +42,7 @@ function _Slide0Ill() {
 export default function OnboardingPage() {
   const router = useRouter();
   const { saveConfig } = useConfig();
-  const [phase, setPhase] = useState<'slide' | 'form'>('slide');
+  const [phase, setPhase] = useState<'slide' | 'form'>('form');
   const [etape, setEtape] = useState(1);
   const [nomCommerce, setNomCommerce] = useState('');
   const [deviseCode, setDeviseCode] = useState('');
