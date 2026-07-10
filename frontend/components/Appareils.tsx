@@ -35,7 +35,8 @@ export function Appareils() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
-  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<'block' | 'delete' | null>(null);
   const [currentDeviceId] = useState<string>(() => {
     if (typeof window === 'undefined') return '';
     return getOrCreateDeviceId();
@@ -59,7 +60,7 @@ export function Appareils() {
   useEffect(() => { loadDevices(); }, [loadDevices]);
 
   async function handleBlock(session: DeviceSession) {
-    setConfirmingId(null);
+    setConfirming(null);
     setActionId(session.id);
     try {
       const supabase = createClient();
@@ -69,6 +70,7 @@ export function Appareils() {
       setError('Erreur lors du blocage. Réessayez.');
     } finally {
       setActionId(null);
+      setSelectedId(null);
     }
   }
 
@@ -82,11 +84,12 @@ export function Appareils() {
       setError('Erreur lors du déblocage. Réessayez.');
     } finally {
       setActionId(null);
+      setSelectedId(null);
     }
   }
 
   async function handleDelete(session: DeviceSession) {
-    setConfirmingId(null);
+    setConfirming(null);
     setActionId(session.id);
     try {
       const supabase = createClient();
@@ -96,6 +99,7 @@ export function Appareils() {
       setError('Erreur lors de la suppression. Réessayez.');
     } finally {
       setActionId(null);
+      setSelectedId(null);
     }
   }
 
@@ -132,16 +136,22 @@ export function Appareils() {
         {devices.map((session, idx) => {
           const isCurrent = session.device_id === currentDeviceId;
           const isLast = idx === devices.length - 1;
-          const isConfirming = confirmingId === session.id;
+          const isSelected = selectedId === session.id;
 
           return (
             <div
               key={session.id}
+              onClick={() => {
+                if (isCurrent || actionId) return;
+                setConfirming(null);
+                setSelectedId(id => id === session.id ? null : session.id);
+              }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '12px 16px',
                 borderBottom: isLast ? 'none' : `1px solid ${T.border}`,
-                background: T.surface,
+                background: isSelected ? T.accentLight : T.surface,
+                cursor: isCurrent ? 'default' : 'pointer',
               }}
             >
               <span style={{ fontSize: 22, flexShrink: 0, lineHeight: 1 }}>
@@ -177,73 +187,112 @@ export function Appareils() {
                 </div>
               </div>
 
-              {!isCurrent && (
-                <>
-                  {isConfirming ? (
-                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                      <button
-                        onClick={() => setConfirmingId(null)}
-                        style={{
-                          padding: '6px 10px', borderRadius: 10, height: 44,
-                          border: `1.5px solid ${T.border}`, background: T.bg,
-                          color: T.textMuted, fontSize: 12, fontWeight: 600,
-                          cursor: 'pointer', fontFamily: 'Manrope, sans-serif',
-                        }}
-                      >
-                        Annuler
-                      </button>
-                      <button
-                        onClick={() => handleDelete(session)}
-                        disabled={actionId === session.id}
-                        style={{
-                          padding: '6px 12px', borderRadius: 10, height: 44,
-                          border: `1.5px solid ${T.border}`, background: T.bg,
-                          color: T.textSub, fontSize: 12, fontWeight: 700,
-                          cursor: 'pointer', opacity: actionId === session.id ? 0.5 : 1,
-                          fontFamily: 'Manrope, sans-serif',
-                        }}
-                      >
-                        Supprimer
-                      </button>
-                      <button
-                        onClick={() => handleBlock(session)}
-                        disabled={actionId === session.id}
-                        style={{
-                          padding: '6px 12px', borderRadius: 10, height: 44,
-                          border: `1.5px solid ${T.red}`, background: T.redBg,
-                          color: T.red, fontSize: 12, fontWeight: 700,
-                          cursor: 'pointer', opacity: actionId === session.id ? 0.5 : 1,
-                          fontFamily: 'Manrope, sans-serif',
-                        }}
-                      >
-                        Bloquer
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        if (session.is_blocked) handleUnblock(session);
-                        else setConfirmingId(session.id);
-                      }}
-                      disabled={actionId === session.id}
-                      style={{
-                        padding: '6px 14px', borderRadius: 10, height: 44, flexShrink: 0,
-                        border: `1.5px solid ${session.is_blocked ? T.green : T.border}`,
-                        background: session.is_blocked ? T.greenBg : T.bg,
-                        color: session.is_blocked ? T.green : T.textSub,
-                        fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                        opacity: actionId === session.id ? 0.5 : 1,
-                        fontFamily: 'Manrope, sans-serif',
-                      }}
-                    >
-                      {actionId === session.id ? '…' : session.is_blocked ? 'Débloquer' : 'Gérer'}
-                    </button>
-                  )}
-                </>
+              {isSelected && (
+                <span style={{
+                  fontSize: 18, flexShrink: 0, color: T.accent, fontWeight: 700,
+                }}>
+                  ✓
+                </span>
               )}
             </div>
           );
         })}
+
+        {selectedId && (() => {
+          const session = devices.find(s => s.id === selectedId);
+          if (!session) return null;
+          const busy = actionId === session.id;
+
+          if (confirming) {
+            const isDelete = confirming === 'delete';
+            return (
+              <div style={{
+                padding: '12px 16px', borderTop: `1px solid ${T.border}`,
+                display: 'flex', flexDirection: 'column', gap: 8,
+              }}>
+                <span style={{ fontSize: 13, color: T.textSub, fontFamily: 'Manrope, sans-serif' }}>
+                  {isDelete
+                    ? `Supprimer "${session.device_name}" de la liste ?`
+                    : `Bloquer "${session.device_name}" ? Il sera déconnecté.`}
+                </span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => setConfirming(null)}
+                    style={{
+                      flex: 1, padding: '6px 12px', borderRadius: 10, height: 44,
+                      border: `1.5px solid ${T.border}`, background: T.bg,
+                      color: T.textMuted, fontSize: 13, fontWeight: 600,
+                      cursor: 'pointer', fontFamily: 'Manrope, sans-serif',
+                    }}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={() => isDelete ? handleDelete(session) : handleBlock(session)}
+                    disabled={busy}
+                    style={{
+                      flex: 1, padding: '6px 12px', borderRadius: 10, height: 44,
+                      border: `1.5px solid ${T.red}`, background: T.redBg,
+                      color: T.red, fontSize: 13, fontWeight: 700,
+                      cursor: 'pointer', opacity: busy ? 0.5 : 1,
+                      fontFamily: 'Manrope, sans-serif',
+                    }}
+                  >
+                    {busy ? '…' : isDelete ? 'Supprimer' : 'Bloquer'}
+                  </button>
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div style={{
+              padding: '12px 16px', borderTop: `1px solid ${T.border}`,
+              display: 'flex', gap: 8,
+            }}>
+              {session.is_blocked ? (
+                <button
+                  onClick={() => handleUnblock(session)}
+                  disabled={busy}
+                  style={{
+                    flex: 1, padding: '6px 12px', borderRadius: 10, height: 44,
+                    border: `1.5px solid ${T.green}`, background: T.greenBg,
+                    color: T.green, fontSize: 13, fontWeight: 700,
+                    cursor: 'pointer', opacity: busy ? 0.5 : 1,
+                    fontFamily: 'Manrope, sans-serif',
+                  }}
+                >
+                  {busy ? '…' : 'Débloquer'}
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setConfirming('delete')}
+                    style={{
+                      flex: 1, padding: '6px 12px', borderRadius: 10, height: 44,
+                      border: `1.5px solid ${T.border}`, background: T.bg,
+                      color: T.textSub, fontSize: 13, fontWeight: 700,
+                      cursor: 'pointer', fontFamily: 'Manrope, sans-serif',
+                    }}
+                  >
+                    Supprimer
+                  </button>
+                  <button
+                    onClick={() => setConfirming('block')}
+                    style={{
+                      flex: 1, padding: '6px 12px', borderRadius: 10, height: 44,
+                      border: `1.5px solid ${T.red}`, background: T.redBg,
+                      color: T.red, fontSize: 13, fontWeight: 700,
+                      cursor: 'pointer', fontFamily: 'Manrope, sans-serif',
+                    }}
+                  >
+                    Bloquer
+                  </button>
+                </>
+              )}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
