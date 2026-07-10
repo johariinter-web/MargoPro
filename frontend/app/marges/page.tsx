@@ -252,7 +252,7 @@ export default function MargesPage() {
               </div>
               <div style={{ background: T.bgSubtle, borderRadius: 12, padding: '12px 16px' }}>
                 <input
-                  type="text" inputMode="decimal"
+                  type="number" onFocus={e => e.target.select()}
                   value={prixAchat}
                   onChange={e => setPrixAchat(e.target.value)}
                   placeholder="0"
@@ -276,7 +276,7 @@ export default function MargesPage() {
                   display: 'flex', alignItems: 'center', gap: 3,
                 }}>
                   <input
-                    type="text" inputMode="decimal"
+                    type="number" onFocus={e => e.target.select()}
                     min={0}
                     max={1000}
                     value={margePctStr}
@@ -448,12 +448,12 @@ export default function MargesPage() {
                     <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                       <div style={{ flex: 1 }}>
                         <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Quantité</label>
-                        <input type="text" inputMode="decimal" value={simQte} onChange={e => setSimQte(e.target.value)} placeholder="0" min="1"
+                        <input type="number" onFocus={e => e.target.select()} value={simQte} onChange={e => setSimQte(e.target.value)} placeholder="0" min="1"
                           style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
                       </div>
                       <div style={{ flex: 2 }}>
                         <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Prix gros/unité ({symbole})</label>
-                        <input type="text" inputMode="decimal" value={simPrixGros} onChange={e => setSimPrixGros(e.target.value)} placeholder={fmtF(simProduit.prixVente)} min="0"
+                        <input type="number" onFocus={e => e.target.select()} value={simPrixGros} onChange={e => setSimPrixGros(e.target.value)} placeholder={fmtF(simProduit.prixVente)} min="0"
                           style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
                       </div>
                     </div>

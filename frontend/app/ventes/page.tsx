@@ -44,7 +44,7 @@ export default function VentesPage() {
   const [isCredit, setIsCredit] = useState(false);
   const [clientNomCredit, setClientNomCredit] = useState('');
   const [clientTelCredit, setClientTelCredit] = useState('');
-  const [acompteCredit, setAcompteCredit] = useState('0');
+  const [acompteCredit, setAcompteCredit] = useState('');
   const [venteSelectionnee, setVenteSelectionnee] = useState<typeof ventes[number] | null>(null);
   const [venteSupprimee, setVenteSupprimee] = useState<typeof ventes[number] | null>(null);
   const [showHistorique, setShowHistorique] = useState(false);
@@ -306,7 +306,7 @@ export default function VentesPage() {
             )}
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Montant reçu ({symbole})</label>
             <input
-              type="text" inputMode="decimal"
+              type="number" onFocus={e => e.target.select()}
               value={montantPaiement}
               onChange={e => setMontantPaiement(e.target.value)}
               placeholder={String(resteADoit(ventePaiement))}
@@ -466,7 +466,7 @@ export default function VentesPage() {
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Quantité</label>
                 <input
-                  type="text" inputMode="decimal"
+                  type="number" onFocus={e => e.target.select()}
                   value={quantite}
                   onChange={e => setQuantite(e.target.value)}
                   min="1"
@@ -482,7 +482,7 @@ export default function VentesPage() {
                   Prix unitaire gros (optionnel)
                 </label>
                 <input
-                  type="text" inputMode="decimal"
+                  type="number" onFocus={e => e.target.select()}
                   value={prixGros}
                   onChange={e => setPrixGros(e.target.value)}
                   placeholder={selectedProduit ? `Normal : ${fmtF(selectedProduit.prixVente)} ${symbole}` : 'Prix gros par unité'}
@@ -577,7 +577,7 @@ export default function VentesPage() {
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Acompte reçu maintenant ({symbole})</label>
                 <input
-                  type="text" inputMode="decimal"
+                  type="number" onFocus={e => e.target.select()}
                   value={acompteCredit}
                   onChange={e => setAcompteCredit(e.target.value)}
                   placeholder="0"
@@ -759,6 +759,12 @@ export default function VentesPage() {
                         <div style={{ fontSize: 11, color: T.textMuted }}>
                           {v.produitNom} · {new Date(v.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                         </div>
+                        {v.clientTel && (
+                          <a href={`tel:${v.clientTel}`} onClick={e => e.stopPropagation()}
+                            style={{ fontSize: 12, color: T.accent, fontWeight: 600, textDecoration: 'none', display: 'inline-block', marginTop: 3 }}>
+                            📞 {v.clientTel}
+                          </a>
+                        )}
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: 17, fontWeight: 800, color: '#F97316', fontFamily: '"Space Grotesk", sans-serif' }}>
