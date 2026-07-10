@@ -10,6 +10,9 @@ import BarcodeScanner from '@/components/BarcodeScanner';
 import { usePlan } from '@/lib/hooks/usePlan';
 import { ModalUpgrade } from '@/components/ModalUpgrade';
 import type { Produit } from '@backend/types';
+import { usePacks } from '@/lib/hooks/usePacks';
+import { prixAchatPack, prixVenteSepares } from '@backend/packs';
+import type { Pack } from '@backend/types';
 
 function fmtF(n: number) {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -128,12 +131,21 @@ export default function StockPage() {
   const [produitASupprimer, setProduitASupprimer] = useState<Produit | null>(null);
   const [produitSupprime, setProduitSupprime] = useState<Produit | null>(null);
   const [catsOuvertes, setCatsOuvertes] = useState<Record<string, boolean>>({});
-  const [vueStock, setVueStock] = useState<'produits' | 'mort'>('produits');
+  const [vueStock, setVueStock] = useState<'produits' | 'packs' | 'mort'>('produits');
   const [morteSeuilStr, setMorteSeuilStr] = useState('30');
   const [showGererCats, setShowGererCats] = useState(false);
   const [catASupprimer, setCatASupprimer] = useState<string | null>(null);
   const plan = usePlan();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const { packs, ajouterPack, modifierPack, supprimerPack } = usePacks();
+  const [packEnEdition, setPackEnEdition] = useState<Pack | null>(null);
+  const [showFormPack, setShowFormPack] = useState(false);
+  const [champsPack, setChampsPack] = useState({ nom: '', prixVente: '' });
+  const [composantsPack, setComposantsPack] = useState<Array<{ produitId: string; produitNom: string; quantite: number }>>([]);
+  const [erreurPack, setErreurPack] = useState('');
+  const [packASupprimer, setPackASupprimer] = useState<Pack | null>(null);
+  const [showPickerProduit, setShowPickerProduit] = useState(false);
 
   // Liste des catégories affichées : fusion des catégories enregistrées et de
   // celles réellement portées par des produits — pour n'en oublier aucune
@@ -162,6 +174,54 @@ export default function StockPage() {
     restaurerProduit(produitSupprime.id);
     setProduitSupprime(null);
     if (undoTimer.current) clearTimeout(undoTimer.current);
+  }
+
+  function ouvrirEditerPack(pack: Pack) {
+    setPackEnEdition(pack);
+    setChampsPack({ nom: pack.nom, prixVente: String(pack.prixVente) });
+    setComposantsPack([...pack.composants]);
+    setErreurPack('');
+  }
+
+  function ouvrirCreerPack() {
+    setPackEnEdition(null);
+    setChampsPack({ nom: '', prixVente: '' });
+    setComposantsPack([]);
+    setErreurPack('');
+    setShowFormPack(true);
+  }
+
+  async function handleSauvegarderPack() {
+    setErreurPack('');
+    const data = {
+      nom: champsPack.nom.trim(),
+      composants: composantsPack,
+      prixVente: Number(champsPack.prixVente),
+    };
+    if (packEnEdition) {
+      const err = await modifierPack(packEnEdition.id, data);
+      if (err) { setErreurPack(err); return; }
+      setPackEnEdition(null);
+    } else {
+      const err = await ajouterPack(data);
+      if (err) { setErreurPack(err); return; }
+      setShowFormPack(false);
+    }
+    setChampsPack({ nom: '', prixVente: '' });
+    setComposantsPack([]);
+  }
+
+  function retirerComposant(produitId: string) {
+    setComposantsPack(cs => cs.filter(c => c.produitId !== produitId));
+  }
+
+  function ajouterComposant(produit: { id: string; nom: string }) {
+    setComposantsPack(cs => {
+      const existe = cs.find(c => c.produitId === produit.id);
+      if (existe) return cs.map(c => c.produitId === produit.id ? { ...c, quantite: c.quantite + 1 } : c);
+      return [...cs, { produitId: produit.id, produitNom: produit.nom, quantite: 1 }];
+    });
+    setShowPickerProduit(false);
   }
 
   const symbole = config?.symboleDevise ?? 'FCFA';
@@ -745,6 +805,98 @@ export default function StockPage() {
         </div>
       )}
 
+      {/* BOTTOM SHEET ÉDITION PACK */}
+      {packEnEdition && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'flex-end' }}
+          onClick={() => setPackEnEdition(null)}>
+          <div style={{ background: T.surface, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, margin: '0 auto', padding: '20px 20px 40px', maxHeight: '90dvh', overflowY: 'auto' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border, margin: '0 auto 16px' }} />
+            <div style={{ fontSize: 18, fontWeight: 800, color: T.text, marginBottom: 16 }}>Modifier le pack</div>
+            {erreurPack && <div style={{ fontSize: 13, color: T.red, fontWeight: 600, marginBottom: 10, padding: '8px 12px', background: T.redBg, borderRadius: 8 }}>{erreurPack}</div>}
+            <div style={{ marginBottom: 10 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Nom du pack</label>
+              <input type="text" value={champsPack.nom} onChange={e => setChampsPack(c => ({ ...c, nom: e.target.value }))} placeholder="Ex: Pack Duo Propre"
+                style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Produits du pack</label>
+              {composantsPack.map(c => (
+                <div key={c.produitId} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, background: T.bgSubtle, borderRadius: 10, padding: '8px 10px' }}>
+                  <span style={{ flex: 1, fontSize: 14, color: T.text, fontWeight: 600 }}>{c.produitNom}</span>
+                  <button type="button" onClick={() => setComposantsPack(cs => cs.map(x => x.produitId === c.produitId ? { ...x, quantite: Math.max(1, x.quantite - 1) } : x))}
+                    style={{ width: 28, height: 28, borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', cursor: 'pointer', fontSize: 16, color: T.text, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: T.text, minWidth: 20, textAlign: 'center', fontFamily: '"Space Grotesk", sans-serif' }}>{c.quantite}</span>
+                  <button type="button" onClick={() => setComposantsPack(cs => cs.map(x => x.produitId === c.produitId ? { ...x, quantite: x.quantite + 1 } : x))}
+                    style={{ width: 28, height: 28, borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', cursor: 'pointer', fontSize: 16, color: T.text, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                  <button type="button" onClick={() => retirerComposant(c.produitId)}
+                    style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: T.redBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke={T.red} strokeWidth="2" strokeLinecap="round"/></svg>
+                  </button>
+                </div>
+              ))}
+              <button type="button" onClick={() => setShowPickerProduit(true)}
+                style={{ width: '100%', height: 40, borderRadius: 10, border: `1.5px dashed ${T.border}`, background: 'transparent', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: T.accent, fontFamily: 'Manrope, sans-serif' }}>
+                + Ajouter un produit
+              </button>
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Prix de vente ({symbole})</label>
+              <input type="number" value={champsPack.prixVente} onChange={e => setChampsPack(c => ({ ...c, prixVente: e.target.value }))} placeholder="0" min="0"
+                style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+              <button onClick={() => setPackEnEdition(null)} style={{ flex: 1, height: 44, borderRadius: 12, background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: T.textSub, fontFamily: 'Manrope, sans-serif' }}>Annuler</button>
+              <button onClick={handleSauvegarderPack} style={{ flex: 2, height: 44, borderRadius: 12, background: T.accent, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: 'white', fontFamily: 'Manrope, sans-serif' }}>Enregistrer</button>
+            </div>
+            <button onClick={() => { const p = packEnEdition; setPackEnEdition(null); setPackASupprimer(p); }}
+              style={{ width: '100%', height: 44, borderRadius: 12, background: 'transparent', border: `1.5px solid ${T.redBg}`, cursor: 'pointer', fontSize: 14, fontWeight: 700, color: T.red, fontFamily: 'Manrope, sans-serif' }}>
+              Supprimer ce pack
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* PICKER PRODUIT pour les packs */}
+      {showPickerProduit && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 220, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'flex-end' }}
+          onClick={() => setShowPickerProduit(false)}>
+          <div style={{ background: T.surface, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, margin: '0 auto', padding: '20px 20px 40px', maxHeight: '70dvh', overflowY: 'auto' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border, margin: '0 auto 16px' }} />
+            <div style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 12 }}>Choisir un produit</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {produits.filter(p => !composantsPack.find(c => c.produitId === p.id)).map(p => (
+                <button key={p.id} onClick={() => ajouterComposant({ id: p.id, nom: p.nom })}
+                  style={{ width: '100%', textAlign: 'left', background: T.bgSubtle, borderRadius: 12, padding: '12px 14px', border: 'none', cursor: 'pointer', fontFamily: 'Manrope, sans-serif' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{p.nom}</div>
+                  <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>{p.quantite} unités · {Math.round(p.prixVente).toLocaleString()} {symbole}</div>
+                </button>
+              ))}
+              {produits.filter(p => !composantsPack.find(c => c.produitId === p.id)).length === 0 && (
+                <div style={{ textAlign: 'center', padding: '20px 0', color: T.textMuted, fontSize: 14 }}>Tous les produits sont déjà dans le pack</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRMATION SUPPRESSION PACK */}
+      {packASupprimer && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={() => setPackASupprimer(null)}>
+          <div style={{ background: T.surface, borderRadius: 20, width: '100%', maxWidth: 340, padding: 22 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 17, fontWeight: 800, color: T.text, textAlign: 'center', marginBottom: 6 }}>Supprimer ce pack ?</div>
+            <div style={{ fontSize: 14, color: T.textSub, textAlign: 'center', marginBottom: 20 }}>«&nbsp;<strong>{packASupprimer.nom}</strong>&nbsp;» sera supprimé. Les produits ne sont pas affectés.</div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setPackASupprimer(null)} style={{ flex: 1, height: 46, borderRadius: 12, background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: T.textSub, fontFamily: 'Manrope, sans-serif' }}>Annuler</button>
+              <button onClick={() => { supprimerPack(packASupprimer.id); setPackASupprimer(null); }} style={{ flex: 1, height: 46, borderRadius: 12, background: T.red, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: 'white', fontFamily: 'Manrope, sans-serif' }}>Supprimer</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* HEADER */}
       <div style={{ padding: '12px 16px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: 22, fontWeight: 800, color: T.text }}>Stock</span>
@@ -775,15 +927,16 @@ export default function StockPage() {
         </div>
       </div>
 
-      {/* SÉLECTEUR Mes produits / Stock mort */}
+      {/* SÉLECTEUR Mes produits / Packs / Stock mort */}
       <div style={{ padding: '0 16px 10px' }}>
         <div style={{ display: 'flex', background: T.bgSubtle, borderRadius: 12, padding: 3, gap: 2 }}>
           {([
             { v: 'produits' as const, label: 'Mes produits' },
+            { v: 'packs' as const, label: 'Packs' },
             { v: 'mort' as const, label: 'Stock mort' },
           ]).map(({ v, label }) => (
             <button key={v} onClick={() => setVueStock(v)}
-              style={{ flex: 1, height: 36, border: 'none', cursor: 'pointer', borderRadius: 10, fontSize: 13,
+              style={{ flex: 1, height: 36, border: 'none', cursor: 'pointer', borderRadius: 10, fontSize: 12,
                 fontWeight: vueStock === v ? 700 : 500,
                 color: vueStock === v ? T.text : T.textMuted,
                 background: vueStock === v ? T.surface : 'transparent',
@@ -994,6 +1147,134 @@ export default function StockPage() {
         </div>
       )}
       </>
+      )}
+
+      {/* VUE PACKS */}
+      {vueStock === 'packs' && (
+        <div style={{ padding: '0 16px' }}>
+
+          {/* Bouton Créer un pack */}
+          <div style={{ marginBottom: 12 }}>
+            <button
+              onClick={() => { if (!plan.isPremium) { setShowUpgradeModal(true); return; } ouvrirCreerPack(); }}
+              style={{ width: '100%', height: 48, borderRadius: 14, background: plan.isPremium ? T.accent : '#D1D5DB', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: 'white', fontFamily: 'Manrope, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            >
+              {!plan.isPremium && (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="white" strokeWidth="1.75"/><path d="M7 11V7a5 5 0 0110 0v4" stroke="white" strokeWidth="1.75" strokeLinecap="round"/></svg>
+              )}
+              {!plan.isPremium ? 'Premium — Créer un pack' : '+ Créer un pack'}
+            </button>
+          </div>
+
+          {/* Formulaire création */}
+          {showFormPack && (
+            <div style={{ background: T.surface, borderRadius: 16, padding: 16, boxShadow: T.shadow, marginBottom: 12 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 14 }}>Nouveau pack</div>
+              {erreurPack && <div style={{ fontSize: 13, color: T.red, fontWeight: 600, marginBottom: 10, padding: '8px 12px', background: T.redBg, borderRadius: 8 }}>{erreurPack}</div>}
+              <div style={{ marginBottom: 10 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Nom du pack</label>
+                <input type="text" value={champsPack.nom} onChange={e => setChampsPack(c => ({ ...c, nom: e.target.value }))} placeholder="Ex: Pack Duo Propre"
+                  style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Produits du pack</label>
+                {composantsPack.map(c => (
+                  <div key={c.produitId} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, background: T.bgSubtle, borderRadius: 10, padding: '8px 10px' }}>
+                    <span style={{ flex: 1, fontSize: 14, color: T.text, fontWeight: 600 }}>{c.produitNom}</span>
+                    <button type="button" onClick={() => setComposantsPack(cs => cs.map(x => x.produitId === c.produitId ? { ...x, quantite: Math.max(1, x.quantite - 1) } : x))}
+                      style={{ width: 28, height: 28, borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', cursor: 'pointer', fontSize: 16, color: T.text, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: T.text, minWidth: 20, textAlign: 'center', fontFamily: '"Space Grotesk", sans-serif' }}>{c.quantite}</span>
+                    <button type="button" onClick={() => setComposantsPack(cs => cs.map(x => x.produitId === c.produitId ? { ...x, quantite: x.quantite + 1 } : x))}
+                      style={{ width: 28, height: 28, borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', cursor: 'pointer', fontSize: 16, color: T.text, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                    <button type="button" onClick={() => retirerComposant(c.produitId)}
+                      style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: T.redBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke={T.red} strokeWidth="2" strokeLinecap="round"/></svg>
+                    </button>
+                  </div>
+                ))}
+                <button type="button" onClick={() => setShowPickerProduit(true)}
+                  style={{ width: '100%', height: 40, borderRadius: 10, border: `1.5px dashed ${T.border}`, background: 'transparent', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: T.accent, fontFamily: 'Manrope, sans-serif' }}>
+                  + Ajouter un produit
+                </button>
+              </div>
+              <div style={{ marginBottom: (() => {
+                const produitsMap = new Map(produits.map(p => [p.id, p]));
+                const fakePack = { composants: composantsPack, prixVente: Number(champsPack.prixVente) } as Pack;
+                return prixVenteSepares(fakePack, produitsMap) > 0 ? 4 : 14;
+              })() }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Prix de vente du pack ({symbole})</label>
+                <input type="number" value={champsPack.prixVente} onChange={e => setChampsPack(c => ({ ...c, prixVente: e.target.value }))} placeholder="0" min="0"
+                  style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
+              </div>
+              {(() => {
+                if (composantsPack.length === 0 || !champsPack.prixVente) return null;
+                const produitsMap = new Map(produits.map(p => [p.id, p]));
+                const fakePack = { composants: composantsPack, prixVente: Number(champsPack.prixVente) } as Pack;
+                const separes = prixVenteSepares(fakePack, produitsMap);
+                const achat = prixAchatPack(fakePack, produitsMap);
+                const beneficeNet = Number(champsPack.prixVente) - achat;
+                const remise = separes > 0 ? Math.round((1 - Number(champsPack.prixVente) / separes) * 100) : 0;
+                return (
+                  <div style={{ marginBottom: 14, padding: '10px 12px', background: T.bgSubtle, borderRadius: 10, fontSize: 12, color: T.textSub }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                      <span>Prix séparés</span><span style={{ fontWeight: 700, fontFamily: '"Space Grotesk", sans-serif', color: T.text }}>{Math.round(separes).toLocaleString()} {symbole}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                      <span>Remise perçue</span><span style={{ fontWeight: 700, color: remise > 0 ? T.accent : T.red }}>{remise > 0 ? `−${remise}%` : `+${Math.abs(remise)}%`}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Bénéfice net</span><span style={{ fontWeight: 700, color: beneficeNet >= 0 ? T.green : T.red, fontFamily: '"Space Grotesk", sans-serif' }}>{beneficeNet >= 0 ? '+' : ''}{Math.round(beneficeNet).toLocaleString()} {symbole}</span>
+                    </div>
+                    {remise <= 0 && <div style={{ marginTop: 6, fontSize: 11, color: '#F97316', fontWeight: 600 }}>Le client ne voit pas de bonne affaire — baisse le prix du pack</div>}
+                  </div>
+                );
+              })()}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={() => { setShowFormPack(false); setErreurPack(''); }} style={{ flex: 1, height: 44, borderRadius: 12, background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: T.textSub, fontFamily: 'Manrope, sans-serif' }}>Annuler</button>
+                <button onClick={handleSauvegarderPack} style={{ flex: 2, height: 44, borderRadius: 12, background: T.accent, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: 'white', fontFamily: 'Manrope, sans-serif' }}>Créer le pack</button>
+              </div>
+            </div>
+          )}
+
+          {/* Liste des packs */}
+          {packs.length === 0 && !showFormPack ? (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: T.textMuted }}>
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto 12px', display: 'block' }}>
+                <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke={T.textMuted} strokeWidth="1.5" strokeLinejoin="round"/>
+                <path d="M12 8v4M12 16h.01" stroke={T.textMuted} strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              <div style={{ fontSize: 15, fontWeight: 600, color: T.textSub }}>Aucun pack pour l&apos;instant</div>
+              <div style={{ fontSize: 13, color: T.textMuted, marginTop: 4 }}>Crée un pack pour liquider ton stock mort</div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {packs.map(pack => {
+                const produitsMap = new Map(produits.map(p => [p.id, p]));
+                const achat = prixAchatPack(pack, produitsMap);
+                const beneficeNet = pack.prixVente - achat;
+                return (
+                  <div key={pack.id} onClick={() => ouvrirEditerPack(pack)} style={{ background: T.surface, borderRadius: 14, padding: '12px 14px', boxShadow: T.shadow, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: T.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke={T.accent} strokeWidth="1.75" strokeLinejoin="round"/>
+                        <path d="M3.3 7l8.7 5 8.7-5M12 22V12" stroke={T.accent} strokeWidth="1.75" strokeLinecap="round"/>
+                      </svg>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pack.nom}</div>
+                      <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>{pack.composants.length} produit{pack.composants.length > 1 ? 's' : ''}</div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>{Math.round(pack.prixVente).toLocaleString()} {symbole}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: beneficeNet >= 0 ? T.green : T.red }}>{beneficeNet >= 0 ? '+' : ''}{Math.round(beneficeNet).toLocaleString()} {symbole}</span>
+                    </div>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><path d="M9 6l6 6-6 6" stroke={T.textMuted} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
 
       {/* VUE STOCK MORT */}
