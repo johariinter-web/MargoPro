@@ -61,3 +61,70 @@ export function computeMoisGratuitProgress(
   const moisDus = Math.max(0, Math.floor(filleulsPayants / 4) - moisGratuitsAccordes);
   return { filleulsPayants, moisDus };
 }
+
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+export type RecompenseType = 'mois_gratuit' | 'commission';
+
+export interface Affiliate {
+  id: string;
+  code: string;
+  nom: string;
+  type: 'abonne' | 'non_abonne';
+  recompense: RecompenseType | null;
+  mois_gratuits_accordes: number;
+}
+
+export async function getOrCreateAffiliate(
+  supabase: SupabaseClient,
+  userId: string,
+  nom: string,
+): Promise<Affiliate> {
+  const { data: existant } = await supabase
+    .from('affiliates')
+    .select('id, code, nom, type, recompense, mois_gratuits_accordes')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (existant) return existant as Affiliate;
+
+  for (let tentative = 0; tentative < 5; tentative++) {
+    const code = generateAffiliateCode(nom);
+    const { data, error } = await supabase
+      .from('affiliates')
+      .insert({ user_id: userId, code, nom, type: 'abonne' })
+      .select('id, code, nom, type, recompense, mois_gratuits_accordes')
+      .single();
+    if (!error) return data as Affiliate;
+    if (!error.message.includes('duplicate key')) throw error;
+  }
+  throw new Error("Impossible de générer un code de parrainage unique.");
+}
+
+export async function updateRecompense(
+  supabase: SupabaseClient,
+  affiliateId: string,
+  recompense: RecompenseType,
+): Promise<void> {
+  const { error } = await supabase
+    .from('affiliates')
+    .update({ recompense })
+    .eq('id', affiliateId);
+  if (error) throw error;
+}
+
+interface ParrainageAvecPaiements {
+  id: string;
+  parrainage_paiements: ParrainagePaiement[];
+}
+
+export async function fetchAffiliatePaiements(
+  supabase: SupabaseClient,
+  affiliateId: string,
+): Promise<ParrainagePaiement[]> {
+  const { data, error } = await supabase
+    .from('parrainages')
+    .select('id, parrainage_paiements(parrainage_id, mois, montant_paye, commission_versee)')
+    .eq('affiliate_id', affiliateId);
+  if (error) throw error;
+  return ((data ?? []) as ParrainageAvecPaiements[]).flatMap(p => p.parrainage_paiements ?? []);
+}
