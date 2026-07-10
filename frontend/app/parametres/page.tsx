@@ -8,6 +8,7 @@ import { useColors, setDarkMode, isDarkMode, Colors } from '@/lib/hooks/useColor
 import { useSync } from '@/lib/hooks/useSync';
 import { createClient } from '@/lib/supabase/client';
 import { Appareils } from '@/components/Appareils';
+import { Parrainage } from '@/components/Parrainage';
 
 function tempsRelatif(ts: number | null): string {
   if (!ts) return 'jamais';
@@ -446,6 +447,9 @@ export default function ParametresPage() {
 
       {/* GROUP 4 : Appareils */}
       <Appareils />
+
+      {/* GROUP 4b : Parrainage */}
+      <Parrainage />
 
       {/* GROUP 5 : Abonnement & Aide */}
       <div style={{ margin: '0 16px 12px', background: T.surface, borderRadius: 16, boxShadow: T.shadow, overflow: 'hidden' }}>
