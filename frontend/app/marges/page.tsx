@@ -199,7 +199,7 @@ export default function MargesPage() {
     : 0;
   const beneficeCalc = prixVenteCalc - prixAchatNum;
 
-  const tabs: TabMode[] = ['%Marge', 'Pluriels', 'Catalogue'];
+  const tabs: TabMode[] = ['%Marge', 'Catalogue'];
 
   return (
     <div style={{ minHeight: '100dvh', background: T.bg, paddingBottom: 90, fontFamily: 'Manrope, sans-serif' }}>
