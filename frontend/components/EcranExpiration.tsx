@@ -17,12 +17,7 @@ export function EcranExpiration() {
     () => db.produits.orderBy('nom').filter(p => !p.deleted && !p.archived).toArray()
   ) ?? [];
 
-  // Pendant le chargement Dexie, bloquer l'affichage pour éviter un flash de contenu non autorisé
-  if (plan.isLoading) return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 999, background: '#FAFAF9' }} />
-  );
-
-  if (plan.status !== 'expired' || plan.activeProductCount <= 5) return null;
+  if (plan.isLoading || plan.status !== 'expired' || plan.activeProductCount <= 5) return null;
 
   function toggle(id: string) {
     setSelection(prev => {
