@@ -128,3 +128,48 @@ export async function fetchAffiliatePaiements(
   if (error) throw error;
   return ((data ?? []) as ParrainageAvecPaiements[]).flatMap(p => p.parrainage_paiements ?? []);
 }
+
+const REFERRAL_STORAGE_KEY = 'margo_referral_code';
+
+/** Lit `?ref=CODE` dans l'URL courante et le garde en mémoire jusqu'à l'inscription. */
+export function storeReferralCode(): void {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('ref');
+  if (code) localStorage.setItem(REFERRAL_STORAGE_KEY, code.toUpperCase());
+}
+
+/** Rattache le nouveau compte au code de parrainage stocké, si présent. Échoue silencieusement
+ *  si le code est invalide : ne doit jamais bloquer l'inscription. */
+export async function consumeReferralCode(
+  supabase: SupabaseClient,
+  userId: string,
+  filleulNom: string,
+): Promise<void> {
+  const code = localStorage.getItem(REFERRAL_STORAGE_KEY);
+  if (!code) return;
+
+  try {
+    const { data: dejaParraine } = await supabase
+      .from('parrainages')
+      .select('id')
+      .eq('filleul_user_id', userId)
+      .maybeSingle();
+    if (dejaParraine) return;
+
+    const { data: affiliate } = await supabase
+      .from('affiliates')
+      .select('id')
+      .eq('code', code)
+      .maybeSingle();
+    if (!affiliate) return;
+
+    await supabase.from('parrainages').insert({
+      affiliate_id: affiliate.id,
+      filleul_nom: filleulNom,
+      filleul_user_id: userId,
+      code_utilise: code,
+    });
+  } finally {
+    localStorage.removeItem(REFERRAL_STORAGE_KEY);
+  }
+}
