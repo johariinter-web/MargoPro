@@ -327,19 +327,23 @@ async function pull(userId: string): Promise<void> {
     }
   }
 
-  // --- packs ---
-  const { data: packsRows, error: pkErr } = await supabase
-    .from('packs')
-    .select('*')
-    .eq('user_id', userId);
-  if (pkErr) throw pkErr;
+  // --- packs (non-fatal : si la table n'existe pas encore, on continue) ---
+  try {
+    const { data: packsRows, error: pkErr } = await supabase
+      .from('packs')
+      .select('*')
+      .eq('user_id', userId);
+    if (pkErr) throw pkErr;
 
-  for (const row of (packsRows ?? []) as PackRow[]) {
-    const remote = rowToPack(row);
-    const local = await db.packs.get(remote.id);
-    if (!local || remote.updatedAt > (local.updatedAt ?? 0)) {
-      await db.packs.put(remote);
+    for (const row of (packsRows ?? []) as PackRow[]) {
+      const remote = rowToPack(row);
+      const local = await db.packs.get(remote.id);
+      if (!local || remote.updatedAt > (local.updatedAt ?? 0)) {
+        await db.packs.put(remote);
+      }
     }
+  } catch (err) {
+    console.warn('[sync] pull packs ignoré :', err);
   }
 }
 
@@ -407,12 +411,16 @@ async function push(userId: string): Promise<void> {
     if (error) throw error;
   }
 
-  // --- packs ---
-  const packs = await db.packs.toArray();
-  if (packs.length > 0) {
-    const rows = packs.map((p) => packToRow(p, userId));
-    const { error } = await supabase.from('packs').upsert(rows, { onConflict: 'id' });
-    if (error) throw error;
+  // --- packs (non-fatal : si la table n'existe pas encore, on continue) ---
+  try {
+    const packs = await db.packs.toArray();
+    if (packs.length > 0) {
+      const rows = packs.map((p) => packToRow(p, userId));
+      const { error } = await supabase.from('packs').upsert(rows, { onConflict: 'id' });
+      if (error) throw error;
+    }
+  } catch (err) {
+    console.warn('[sync] push packs ignoré :', err);
   }
 }
 

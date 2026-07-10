@@ -116,7 +116,9 @@ export function startSync(): void {
   // on relance une sync pour peupler l'IndexedDB vide.
   createClient().auth.onAuthStateChange((event) => {
     if (event === 'SIGNED_IN') void runSync();
-    if (event === 'SIGNED_OUT') stopSync();
+    // Ne pas appeler stopSync() sur SIGNED_OUT : iOS peut émettre cet événement
+    // temporairement pendant la restauration de session, ce qui tuerait l'intervalle.
+    // runSync() s'arrête seul quand getUserId() retourne null.
   });
 
   // Sync à la reconnexion réseau.
