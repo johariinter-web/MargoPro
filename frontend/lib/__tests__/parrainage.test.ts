@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateAffiliateCode, computeCommissionSolde, type ParrainagePaiement } from '../parrainage';
+import { generateAffiliateCode, computeCommissionSolde, computeMoisGratuitProgress, type ParrainagePaiement } from '../parrainage';
 
 describe('generateAffiliateCode', () => {
   it('utilise les 3 premières lettres du nom en préfixe', () => {
@@ -66,5 +66,40 @@ describe('computeCommissionSolde', () => {
     }));
     const solde = computeCommissionSolde(paiements);
     expect(solde).toBe(12 * 1000 * 0.15);
+  });
+});
+
+describe('computeMoisGratuitProgress', () => {
+  it('compte les filleuls distincts ayant au moins un paiement', () => {
+    const r = computeMoisGratuitProgress([
+      { parrainage_id: 'f1', mois: '2026-01', montant_paye: 3500, commission_versee: false },
+      { parrainage_id: 'f1', mois: '2026-02', montant_paye: 3500, commission_versee: false },
+      { parrainage_id: 'f2', mois: '2026-01', montant_paye: 3500, commission_versee: false },
+    ], 0);
+    expect(r.filleulsPayants).toBe(2);
+  });
+
+  it('accorde 1 mois gratuit tous les 4 filleuls payants', () => {
+    const paiements = ['f1', 'f2', 'f3', 'f4'].map(id => ({
+      parrainage_id: id, mois: '2026-01', montant_paye: 3500, commission_versee: false,
+    }));
+    const r = computeMoisGratuitProgress(paiements, 0);
+    expect(r.moisDus).toBe(1);
+  });
+
+  it('ne redonne pas un mois déjà accordé', () => {
+    const paiements = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7'].map(id => ({
+      parrainage_id: id, mois: '2026-01', montant_paye: 3500, commission_versee: false,
+    }));
+    const r = computeMoisGratuitProgress(paiements, 1);
+    expect(r.moisDus).toBe(0);
+  });
+
+  it('accorde un 2e mois au 8e filleul payant', () => {
+    const paiements = Array.from({ length: 8 }, (_, i) => ({
+      parrainage_id: `f${i}`, mois: '2026-01', montant_paye: 3500, commission_versee: false,
+    }));
+    const r = computeMoisGratuitProgress(paiements, 1);
+    expect(r.moisDus).toBe(1);
   });
 });

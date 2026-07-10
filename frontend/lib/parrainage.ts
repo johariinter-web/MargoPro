@@ -47,3 +47,17 @@ export function computeCommissionSolde(paiements: ParrainagePaiement[]): number 
   }
   return Math.round(solde);
 }
+
+export interface ProgressionMoisGratuit {
+  filleulsPayants: number;
+  moisDus: number;
+}
+
+export function computeMoisGratuitProgress(
+  paiements: ParrainagePaiement[],
+  moisGratuitsAccordes: number,
+): ProgressionMoisGratuit {
+  const filleulsPayants = new Set(paiements.map(p => p.parrainage_id)).size;
+  const moisDus = Math.max(0, Math.floor(filleulsPayants / 4) - moisGratuitsAccordes);
+  return { filleulsPayants, moisDus };
+}
