@@ -56,6 +56,7 @@ type VenteRow = {
   client_nom: string | null;
   client_tel: string | null;
   montant_recu: number | null;
+  type: string | null;
 };
 
 type ConfigRow = {
@@ -138,6 +139,7 @@ function venteToRow(v: Vente, userId: string): VenteRow {
     client_nom: v.clientNom ?? null,
     client_tel: v.clientTel ?? null,
     montant_recu: v.montantRecu ?? null,
+    type: v.type ?? null,
   };
 }
 
@@ -158,6 +160,7 @@ function rowToVente(r: VenteRow): Vente {
     clientNom: r.client_nom ?? undefined,
     clientTel: r.client_tel ?? undefined,
     montantRecu: r.montant_recu ?? undefined,
+    type: (r.type as 'produit' | 'pack') ?? undefined,
   };
 }
 

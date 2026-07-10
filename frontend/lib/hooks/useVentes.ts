@@ -126,19 +126,21 @@ export function useVentes(periode: Periode = 'jour') {
       }
     }
 
-    // Décrémenter le stock de chaque composant
+    // Calculer la vente avant la transaction (lecture seule, hors transaction)
     const now = Date.now();
-    for (const c of pack.composants) {
-      const p = produitsMap.get(c.produitId)!;
-      await db.produits.update(c.produitId, {
-        quantite: p.quantite - c.quantite,
-        updatedAt: now,
-      });
-    }
-
-    // Enregistrer la vente
     const vente = creerVentePack(pack, produitsMap, credit);
-    await db.ventes.add({ ...vente, id: genId(), deleted: false });
+
+    // Décrémenter le stock + enregistrer la vente dans une transaction atomique
+    await db.transaction('rw', db.produits, db.ventes, async () => {
+      for (const c of pack.composants) {
+        const produit = produitsMap.get(c.produitId)!;
+        await db.produits.update(c.produitId, {
+          quantite: produit.quantite - c.quantite,
+          updatedAt: now,
+        });
+      }
+      await db.ventes.add({ ...vente, id: genId(), deleted: false });
+    });
     requestSync();
     return null;
   }
