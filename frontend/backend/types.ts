@@ -32,6 +32,17 @@ export interface Vente {
   clientNom?: string;
   clientTel?: string;
   montantRecu?: number;
+  type?: 'produit' | 'pack';
+}
+
+export interface Pack {
+  id: string;
+  nom: string;
+  composants: Array<{ produitId: string; produitNom: string; quantite: number }>;
+  prixVente: number;
+  createdAt: number;
+  updatedAt: number;
+  deleted?: boolean;
 }
 
 export interface Config {

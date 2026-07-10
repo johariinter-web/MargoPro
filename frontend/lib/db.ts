@@ -1,12 +1,13 @@
 'use client';
 
 import Dexie, { type EntityTable } from 'dexie';
-import type { Produit, Vente, Config } from '@backend/types';
+import type { Produit, Vente, Config, Pack } from '@backend/types';
 
 class MargoDB extends Dexie {
   produits!: EntityTable<Produit, 'id'>;
   ventes!: EntityTable<Vente, 'id'>;
   config!: EntityTable<Config, 'id'>;
+  packs!: EntityTable<Pack, 'id'>;
 
   constructor() {
     super('MargoPro');
@@ -58,6 +59,13 @@ class MargoDB extends Dexie {
           if (v.modeReglement === undefined) v.modeReglement = 'comptant';
         });
       });
+    // v5 — packs de produits pour liquider le stock mort
+    this.version(5).stores({
+      produits: 'id, nom, quantite, updatedAt, deleted, archived',
+      ventes: 'id, produitId, date, updatedAt, deleted, modeReglement',
+      packs: 'id, nom, updatedAt, deleted',
+      config: 'id',
+    });
   }
 }
 
