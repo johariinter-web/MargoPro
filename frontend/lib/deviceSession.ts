@@ -121,3 +121,14 @@ export async function unblockDevice(
     .eq('id', sessionId);
   if (error) throw error;
 }
+
+export async function deleteDevice(
+  supabase: SupabaseClient,
+  sessionId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('device_sessions')
+    .delete()
+    .eq('id', sessionId);
+  if (error) throw error;
+}

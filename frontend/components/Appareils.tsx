@@ -7,6 +7,7 @@ import {
   fetchDevices,
   blockDevice,
   unblockDevice,
+  deleteDevice,
   getOrCreateDeviceId,
   type DeviceSession,
 } from '@/lib/deviceSession';
@@ -79,6 +80,20 @@ export function Appareils() {
       setDevices(d => d.map(s => s.id === session.id ? { ...s, is_blocked: false } : s));
     } catch {
       setError('Erreur lors du déblocage. Réessayez.');
+    } finally {
+      setActionId(null);
+    }
+  }
+
+  async function handleDelete(session: DeviceSession) {
+    setConfirmingId(null);
+    setActionId(session.id);
+    try {
+      const supabase = createClient();
+      await deleteDevice(supabase, session.id);
+      setDevices(d => d.filter(s => s.id !== session.id));
+    } catch {
+      setError('Erreur lors de la suppression. Réessayez.');
     } finally {
       setActionId(null);
     }
@@ -178,6 +193,19 @@ export function Appareils() {
                         Annuler
                       </button>
                       <button
+                        onClick={() => handleDelete(session)}
+                        disabled={actionId === session.id}
+                        style={{
+                          padding: '6px 12px', borderRadius: 10, height: 44,
+                          border: `1.5px solid ${T.border}`, background: T.bg,
+                          color: T.textSub, fontSize: 12, fontWeight: 700,
+                          cursor: 'pointer', opacity: actionId === session.id ? 0.5 : 1,
+                          fontFamily: 'Manrope, sans-serif',
+                        }}
+                      >
+                        Supprimer
+                      </button>
+                      <button
                         onClick={() => handleBlock(session)}
                         disabled={actionId === session.id}
                         style={{
@@ -188,7 +216,7 @@ export function Appareils() {
                           fontFamily: 'Manrope, sans-serif',
                         }}
                       >
-                        Confirmer
+                        Bloquer
                       </button>
                     </div>
                   ) : (
@@ -200,15 +228,15 @@ export function Appareils() {
                       disabled={actionId === session.id}
                       style={{
                         padding: '6px 14px', borderRadius: 10, height: 44, flexShrink: 0,
-                        border: `1.5px solid ${session.is_blocked ? T.green : T.red}`,
-                        background: session.is_blocked ? T.greenBg : T.redBg,
-                        color: session.is_blocked ? T.green : T.red,
+                        border: `1.5px solid ${session.is_blocked ? T.green : T.border}`,
+                        background: session.is_blocked ? T.greenBg : T.bg,
+                        color: session.is_blocked ? T.green : T.textSub,
                         fontSize: 13, fontWeight: 700, cursor: 'pointer',
                         opacity: actionId === session.id ? 0.5 : 1,
                         fontFamily: 'Manrope, sans-serif',
                       }}
                     >
-                      {actionId === session.id ? '…' : session.is_blocked ? 'Débloquer' : 'Bloquer'}
+                      {actionId === session.id ? '…' : session.is_blocked ? 'Débloquer' : 'Gérer'}
                     </button>
                   )}
                 </>
