@@ -95,7 +95,19 @@ export async function getOrCreateAffiliate(
       .select('id, code, nom, type, recompense, mois_gratuits_accordes')
       .single();
     if (!error) return data as Affiliate;
-    if (!error.message.includes('duplicate key')) throw error;
+    if (error.code === '23505') {
+      // Soit collision sur le code, soit un autre onglet/appareil a créé la
+      // ligne affilié entre-temps (contrainte unique sur user_id) : on relit
+      // la ligne existante plutôt que de réessayer indéfiniment.
+      const { data: courant } = await supabase
+        .from('affiliates')
+        .select('id, code, nom, type, recompense, mois_gratuits_accordes')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (courant) return courant as Affiliate;
+      continue;
+    }
+    throw error;
   }
   throw new Error("Impossible de générer un code de parrainage unique.");
 }
@@ -158,10 +170,10 @@ export async function consumeReferralCode(
 
     const { data: affiliate } = await supabase
       .from('affiliates')
-      .select('id')
+      .select('id, user_id')
       .eq('code', code)
       .maybeSingle();
-    if (!affiliate) return;
+    if (!affiliate || affiliate.user_id === userId) return;
 
     await supabase.from('parrainages').insert({
       affiliate_id: affiliate.id,

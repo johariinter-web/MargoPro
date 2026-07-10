@@ -57,7 +57,7 @@ export default function OnboardingPage() {
         const supabase = createClient();
         const { data } = await supabase.auth.getUser();
         if (active && data.user) {
-          await consumeReferralCode(supabase, data.user.id, data.user.email ?? 'Filleul');
+          await consumeReferralCode(supabase, data.user.id, 'Filleul');
         }
       } catch {
         // Réseau absent ou Supabase indisponible : ne pas bloquer le démarrage.

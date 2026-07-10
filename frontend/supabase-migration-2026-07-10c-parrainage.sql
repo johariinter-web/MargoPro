@@ -21,6 +21,7 @@ create table if not exists public.affiliates (
   created_at   timestamptz not null default now()
 );
 create index if not exists affiliates_user_id_idx on public.affiliates(user_id);
+alter table public.affiliates add constraint affiliates_user_id_key unique (user_id);
 
 create table if not exists public.parrainages (
   id               uuid primary key default gen_random_uuid(),
@@ -52,19 +53,33 @@ drop policy if exists "affiliates_owner" on public.affiliates;
 create policy "affiliates_owner" on public.affiliates
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
--- Lecture publique par code (page de suivi, sans login) — l'app ne
--- sélectionne jamais `contact` depuis ce canal public
+-- Lecture publique (page de suivi, sans login) : remplace les policies
+-- publiques "using(true)" sur les tables de base par des vues restreintes
+-- aux colonnes non sensibles. Sécurité au niveau colonne : une RLS
+-- "using(true)" est au niveau ligne et exposerait sinon TOUTES les
+-- colonnes (contact, user_id, filleul_contact, filleul_user_id...) via la clé
+-- anon publique. Les vues, elles, ne s'exécutent PAS avec les droits de
+-- l'appelant (pas de security_invoker), donc elles peuvent lire les tables de
+-- base même si anon n'y a aucun accès direct.
 drop policy if exists "affiliates_public_read" on public.affiliates;
-create policy "affiliates_public_read" on public.affiliates
-  for select using (true);
-
 drop policy if exists "parrainages_public_read" on public.parrainages;
-create policy "parrainages_public_read" on public.parrainages
-  for select using (true);
-
 drop policy if exists "parrainage_paiements_public_read" on public.parrainage_paiements;
-create policy "parrainage_paiements_public_read" on public.parrainage_paiements
-  for select using (true);
+
+create or replace view public.affiliates_public as
+  select id, code, recompense, mois_gratuits_accordes
+  from public.affiliates;
+
+create or replace view public.parrainages_public as
+  select id, affiliate_id, filleul_nom, date_inscription
+  from public.parrainages;
+
+create or replace view public.parrainage_paiements_public as
+  select parrainage_id, mois, montant_paye, commission_versee
+  from public.parrainage_paiements;
+
+grant select on public.affiliates_public to anon, authenticated;
+grant select on public.parrainages_public to anon, authenticated;
+grant select on public.parrainage_paiements_public to anon, authenticated;
 
 -- Écriture (nouveau filleul) réservée à l'utilisateur qui vient de
 -- s'inscrire, pour rattacher son propre user_id
