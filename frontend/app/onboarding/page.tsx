@@ -53,10 +53,14 @@ export default function OnboardingPage() {
   useEffect(() => {
     let active = true;
     (async () => {
-      const supabase = createClient();
-      const { data } = await supabase.auth.getUser();
-      if (active && data.user) {
-        await consumeReferralCode(supabase, data.user.id, data.user.email ?? 'Filleul');
+      try {
+        const supabase = createClient();
+        const { data } = await supabase.auth.getUser();
+        if (active && data.user) {
+          await consumeReferralCode(supabase, data.user.id, data.user.email ?? 'Filleul');
+        }
+      } catch {
+        // Réseau absent ou Supabase indisponible : ne pas bloquer le démarrage.
       }
     })();
     return () => { active = false; };
