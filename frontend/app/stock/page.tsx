@@ -825,18 +825,18 @@ export default function StockPage() {
                 <div key={c.produitId} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, background: T.bgSubtle, borderRadius: 10, padding: '8px 10px' }}>
                   <span style={{ flex: 1, fontSize: 14, color: T.text, fontWeight: 600 }}>{c.produitNom}</span>
                   <button type="button" onClick={() => setComposantsPack(cs => cs.map(x => x.produitId === c.produitId ? { ...x, quantite: Math.max(1, x.quantite - 1) } : x))}
-                    style={{ width: 28, height: 28, borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', cursor: 'pointer', fontSize: 16, color: T.text, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                    style={{ width: 36, height: 36, borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', cursor: 'pointer', fontSize: 16, color: T.text, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
                   <span style={{ fontSize: 15, fontWeight: 700, color: T.text, minWidth: 20, textAlign: 'center', fontFamily: '"Space Grotesk", sans-serif' }}>{c.quantite}</span>
                   <button type="button" onClick={() => setComposantsPack(cs => cs.map(x => x.produitId === c.produitId ? { ...x, quantite: x.quantite + 1 } : x))}
-                    style={{ width: 28, height: 28, borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', cursor: 'pointer', fontSize: 16, color: T.text, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                    style={{ width: 36, height: 36, borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', cursor: 'pointer', fontSize: 16, color: T.text, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                   <button type="button" onClick={() => retirerComposant(c.produitId)}
-                    style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: T.redBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: T.redBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke={T.red} strokeWidth="2" strokeLinecap="round"/></svg>
                   </button>
                 </div>
               ))}
               <button type="button" onClick={() => setShowPickerProduit(true)}
-                style={{ width: '100%', height: 40, borderRadius: 10, border: `1.5px dashed ${T.border}`, background: 'transparent', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: T.accent, fontFamily: 'Manrope, sans-serif' }}>
+                style={{ width: '100%', height: 44, borderRadius: 10, border: `1.5px dashed ${T.border}`, background: 'transparent', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: T.accent, fontFamily: 'Manrope, sans-serif' }}>
                 + Ajouter un produit
               </button>
             </div>
@@ -845,6 +845,29 @@ export default function StockPage() {
               <input type="number" value={champsPack.prixVente} onChange={e => setChampsPack(c => ({ ...c, prixVente: e.target.value }))} placeholder="0" min="0"
                 style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
             </div>
+            {(() => {
+              if (composantsPack.length === 0 || !champsPack.prixVente) return null;
+              const produitsMap = new Map(produits.map(p => [p.id, p]));
+              const fakePack = { composants: composantsPack, prixVente: Number(champsPack.prixVente) } as Pack;
+              const separes = prixVenteSepares(fakePack, produitsMap);
+              const achat = prixAchatPack(fakePack, produitsMap);
+              const beneficeNet = Number(champsPack.prixVente) - achat;
+              const remise = separes > 0 ? Math.round((1 - Number(champsPack.prixVente) / separes) * 100) : 0;
+              return (
+                <div style={{ marginBottom: 14, padding: '10px 12px', background: T.bgSubtle, borderRadius: 10, fontSize: 12, color: T.textSub }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                    <span>Prix séparés</span><span style={{ fontWeight: 700, fontFamily: '"Space Grotesk", sans-serif', color: T.text }}>{Math.round(separes).toLocaleString()} {symbole}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                    <span>Remise perçue</span><span style={{ fontWeight: 700, color: remise > 0 ? T.accent : T.red }}>{remise > 0 ? `−${remise}%` : `+${Math.abs(remise)}%`}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Bénéfice net</span><span style={{ fontWeight: 700, color: beneficeNet >= 0 ? T.green : T.red, fontFamily: '"Space Grotesk", sans-serif' }}>{beneficeNet >= 0 ? '+' : ''}{Math.round(beneficeNet).toLocaleString()} {symbole}</span>
+                  </div>
+                  {remise <= 0 && <div style={{ marginTop: 6, fontSize: 11, color: '#F97316', fontWeight: 600 }}>Le client ne voit pas de bonne affaire — baisse le prix du pack</div>}
+                </div>
+              );
+            })()}
             <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
               <button onClick={() => setPackEnEdition(null)} style={{ flex: 1, height: 44, borderRadius: 12, background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: T.textSub, fontFamily: 'Manrope, sans-serif' }}>Annuler</button>
               <button onClick={handleSauvegarderPack} style={{ flex: 2, height: 44, borderRadius: 12, background: T.accent, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: 'white', fontFamily: 'Manrope, sans-serif' }}>Enregistrer</button>
@@ -1157,7 +1180,7 @@ export default function StockPage() {
           <div style={{ marginBottom: 12 }}>
             <button
               onClick={() => { if (!plan.isPremium) { setShowUpgradeModal(true); return; } ouvrirCreerPack(); }}
-              style={{ width: '100%', height: 48, borderRadius: 14, background: plan.isPremium ? T.accent : '#D1D5DB', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: 'white', fontFamily: 'Manrope, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              style={{ width: '100%', height: 48, borderRadius: 14, background: plan.isPremium ? T.accent : T.border, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: 'white', fontFamily: 'Manrope, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
             >
               {!plan.isPremium && (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="white" strokeWidth="1.75"/><path d="M7 11V7a5 5 0 0110 0v4" stroke="white" strokeWidth="1.75" strokeLinecap="round"/></svg>
@@ -1182,18 +1205,18 @@ export default function StockPage() {
                   <div key={c.produitId} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, background: T.bgSubtle, borderRadius: 10, padding: '8px 10px' }}>
                     <span style={{ flex: 1, fontSize: 14, color: T.text, fontWeight: 600 }}>{c.produitNom}</span>
                     <button type="button" onClick={() => setComposantsPack(cs => cs.map(x => x.produitId === c.produitId ? { ...x, quantite: Math.max(1, x.quantite - 1) } : x))}
-                      style={{ width: 28, height: 28, borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', cursor: 'pointer', fontSize: 16, color: T.text, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                      style={{ width: 36, height: 36, borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', cursor: 'pointer', fontSize: 16, color: T.text, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
                     <span style={{ fontSize: 15, fontWeight: 700, color: T.text, minWidth: 20, textAlign: 'center', fontFamily: '"Space Grotesk", sans-serif' }}>{c.quantite}</span>
                     <button type="button" onClick={() => setComposantsPack(cs => cs.map(x => x.produitId === c.produitId ? { ...x, quantite: x.quantite + 1 } : x))}
-                      style={{ width: 28, height: 28, borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', cursor: 'pointer', fontSize: 16, color: T.text, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                      style={{ width: 36, height: 36, borderRadius: 8, border: `1.5px solid ${T.border}`, background: 'transparent', cursor: 'pointer', fontSize: 16, color: T.text, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                     <button type="button" onClick={() => retirerComposant(c.produitId)}
-                      style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: T.redBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: T.redBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke={T.red} strokeWidth="2" strokeLinecap="round"/></svg>
                     </button>
                   </div>
                 ))}
                 <button type="button" onClick={() => setShowPickerProduit(true)}
-                  style={{ width: '100%', height: 40, borderRadius: 10, border: `1.5px dashed ${T.border}`, background: 'transparent', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: T.accent, fontFamily: 'Manrope, sans-serif' }}>
+                  style={{ width: '100%', height: 44, borderRadius: 10, border: `1.5px dashed ${T.border}`, background: 'transparent', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: T.accent, fontFamily: 'Manrope, sans-serif' }}>
                   + Ajouter un produit
                 </button>
               </div>
