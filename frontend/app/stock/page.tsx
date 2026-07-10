@@ -141,7 +141,7 @@ export default function StockPage() {
   const { packs, ajouterPack, modifierPack, supprimerPack } = usePacks();
   const [packEnEdition, setPackEnEdition] = useState<Pack | null>(null);
   const [showFormPack, setShowFormPack] = useState(false);
-  const [champsPack, setChampsPack] = useState({ nom: '', prixVente: '' });
+  const [champsPack, setChampsPack] = useState({ nom: '', remise: '' });
   const [composantsPack, setComposantsPack] = useState<Array<{ produitId: string; produitNom: string; quantite: number }>>([]);
   const [erreurPack, setErreurPack] = useState('');
   const [packASupprimer, setPackASupprimer] = useState<Pack | null>(null);
@@ -178,14 +178,17 @@ export default function StockPage() {
 
   function ouvrirEditerPack(pack: Pack) {
     setPackEnEdition(pack);
-    setChampsPack({ nom: pack.nom, prixVente: String(pack.prixVente) });
+    const produitsMap = new Map(produits.map(p => [p.id, p]));
+    const separes = prixVenteSepares(pack, produitsMap);
+    const remiseCalc = separes > 0 ? Math.max(0, Math.round((1 - pack.prixVente / separes) * 100)) : 0;
+    setChampsPack({ nom: pack.nom, remise: String(remiseCalc) });
     setComposantsPack([...pack.composants]);
     setErreurPack('');
   }
 
   function ouvrirCreerPack() {
     setPackEnEdition(null);
-    setChampsPack({ nom: '', prixVente: '' });
+    setChampsPack({ nom: '', remise: '' });
     setComposantsPack([]);
     setErreurPack('');
     setShowFormPack(true);
@@ -193,10 +196,15 @@ export default function StockPage() {
 
   async function handleSauvegarderPack() {
     setErreurPack('');
+    const produitsMap = new Map(produits.map(p => [p.id, p]));
+    const fakePack = { composants: composantsPack, prixVente: 0 } as Pack;
+    const separes = prixVenteSepares(fakePack, produitsMap);
+    const remiseNum = Math.min(100, Math.max(0, Number(champsPack.remise) || 0));
+    const prixVente = Math.round(separes * (1 - remiseNum / 100));
     const data = {
       nom: champsPack.nom.trim(),
       composants: composantsPack,
-      prixVente: Number(champsPack.prixVente),
+      prixVente,
     };
     if (packEnEdition) {
       const err = await modifierPack(packEnEdition.id, data);
@@ -207,7 +215,7 @@ export default function StockPage() {
       if (err) { setErreurPack(err); return; }
       setShowFormPack(false);
     }
-    setChampsPack({ nom: '', prixVente: '' });
+    setChampsPack({ nom: '', remise: '' });
     setComposantsPack([]);
   }
 
@@ -840,32 +848,37 @@ export default function StockPage() {
                 + Ajouter un produit
               </button>
             </div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Prix de vente ({symbole})</label>
-              <input type="number" value={champsPack.prixVente} onChange={e => setChampsPack(c => ({ ...c, prixVente: e.target.value }))} placeholder="0" min="0"
-                style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
-            </div>
             {(() => {
-              if (composantsPack.length === 0 || !champsPack.prixVente) return null;
               const produitsMap = new Map(produits.map(p => [p.id, p]));
-              const fakePack = { composants: composantsPack, prixVente: Number(champsPack.prixVente) } as Pack;
+              const fakePack = { composants: composantsPack, prixVente: 0 } as Pack;
               const separes = prixVenteSepares(fakePack, produitsMap);
               const achat = prixAchatPack(fakePack, produitsMap);
-              const beneficeNet = Number(champsPack.prixVente) - achat;
-              const remise = separes > 0 ? Math.round((1 - Number(champsPack.prixVente) / separes) * 100) : 0;
+              const remiseNum = Math.min(100, Math.max(0, Number(champsPack.remise) || 0));
+              const prixCalc = Math.round(separes * (1 - remiseNum / 100));
+              const beneficeNet = prixCalc - achat;
+              const hasData = composantsPack.length > 0 && separes > 0 && champsPack.remise !== '';
               return (
-                <div style={{ marginBottom: 14, padding: '10px 12px', background: T.bgSubtle, borderRadius: 10, fontSize: 12, color: T.textSub }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <span>Prix séparés</span><span style={{ fontWeight: 700, fontFamily: '"Space Grotesk", sans-serif', color: T.text }}>{Math.round(separes).toLocaleString()} {symbole}</span>
+                <>
+                  <div style={{ marginBottom: hasData ? 4 : 14 }}>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Remise (%)</label>
+                    <input type="number" value={champsPack.remise} onChange={e => setChampsPack(c => ({ ...c, remise: e.target.value }))} placeholder="Ex : 10" min="0" max="100"
+                      style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <span>Remise perçue</span><span style={{ fontWeight: 700, color: remise > 0 ? T.accent : T.red }}>{remise > 0 ? `−${remise}%` : `+${Math.abs(remise)}%`}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Bénéfice net</span><span style={{ fontWeight: 700, color: beneficeNet >= 0 ? T.green : T.red, fontFamily: '"Space Grotesk", sans-serif' }}>{beneficeNet >= 0 ? '+' : ''}{Math.round(beneficeNet).toLocaleString()} {symbole}</span>
-                  </div>
-                  {remise <= 0 && <div style={{ marginTop: 6, fontSize: 11, color: '#F97316', fontWeight: 600 }}>Le client ne voit pas de bonne affaire — baisse le prix du pack</div>}
-                </div>
+                  {hasData && (
+                    <div style={{ marginBottom: 14, padding: '10px 12px', background: T.bgSubtle, borderRadius: 10, fontSize: 12, color: T.textSub }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                        <span>Prix séparés</span><span style={{ fontWeight: 700, fontFamily: '"Space Grotesk", sans-serif', color: T.text }}>{Math.round(separes).toLocaleString()} {symbole}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                        <span>Prix du pack</span><span style={{ fontSize: 14, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>{prixCalc.toLocaleString()} {symbole}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Bénéfice net</span><span style={{ fontWeight: 700, color: beneficeNet >= 0 ? T.green : T.red, fontFamily: '"Space Grotesk", sans-serif' }}>{beneficeNet >= 0 ? '+' : ''}{Math.round(beneficeNet).toLocaleString()} {symbole}</span>
+                      </div>
+                      {remiseNum === 0 && <div style={{ marginTop: 6, fontSize: 11, color: '#F97316', fontWeight: 600 }}>Le client ne voit pas de bonne affaire — mets une remise</div>}
+                    </div>
+                  )}
+                </>
               );
             })()}
             <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
@@ -1217,36 +1230,37 @@ export default function StockPage() {
                   + Ajouter un produit
                 </button>
               </div>
-              <div style={{ marginBottom: (() => {
-                const produitsMap = new Map(produits.map(p => [p.id, p]));
-                const fakePack = { composants: composantsPack, prixVente: Number(champsPack.prixVente) } as Pack;
-                return prixVenteSepares(fakePack, produitsMap) > 0 ? 4 : 14;
-              })() }}>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Prix de vente du pack ({symbole})</label>
-                <input type="number" value={champsPack.prixVente} onChange={e => setChampsPack(c => ({ ...c, prixVente: e.target.value }))} placeholder="0" min="0"
-                  style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
-              </div>
               {(() => {
-                if (composantsPack.length === 0 || !champsPack.prixVente) return null;
                 const produitsMap = new Map(produits.map(p => [p.id, p]));
-                const fakePack = { composants: composantsPack, prixVente: Number(champsPack.prixVente) } as Pack;
+                const fakePack = { composants: composantsPack, prixVente: 0 } as Pack;
                 const separes = prixVenteSepares(fakePack, produitsMap);
                 const achat = prixAchatPack(fakePack, produitsMap);
-                const beneficeNet = Number(champsPack.prixVente) - achat;
-                const remise = separes > 0 ? Math.round((1 - Number(champsPack.prixVente) / separes) * 100) : 0;
+                const remiseNum = Math.min(100, Math.max(0, Number(champsPack.remise) || 0));
+                const prixCalc = Math.round(separes * (1 - remiseNum / 100));
+                const beneficeNet = prixCalc - achat;
+                const hasData = composantsPack.length > 0 && separes > 0 && champsPack.remise !== '';
                 return (
-                  <div style={{ marginBottom: 14, padding: '10px 12px', background: T.bgSubtle, borderRadius: 10, fontSize: 12, color: T.textSub }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                      <span>Prix séparés</span><span style={{ fontWeight: 700, fontFamily: '"Space Grotesk", sans-serif', color: T.text }}>{Math.round(separes).toLocaleString()} {symbole}</span>
+                  <>
+                    <div style={{ marginBottom: hasData ? 4 : 14 }}>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Remise (%)</label>
+                      <input type="number" value={champsPack.remise} onChange={e => setChampsPack(c => ({ ...c, remise: e.target.value }))} placeholder="Ex : 10" min="0" max="100"
+                        style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                      <span>Remise perçue</span><span style={{ fontWeight: 700, color: remise > 0 ? T.accent : T.red }}>{remise > 0 ? `−${remise}%` : `+${Math.abs(remise)}%`}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>Bénéfice net</span><span style={{ fontWeight: 700, color: beneficeNet >= 0 ? T.green : T.red, fontFamily: '"Space Grotesk", sans-serif' }}>{beneficeNet >= 0 ? '+' : ''}{Math.round(beneficeNet).toLocaleString()} {symbole}</span>
-                    </div>
-                    {remise <= 0 && <div style={{ marginTop: 6, fontSize: 11, color: '#F97316', fontWeight: 600 }}>Le client ne voit pas de bonne affaire — baisse le prix du pack</div>}
-                  </div>
+                    {hasData && (
+                      <div style={{ marginBottom: 14, padding: '10px 12px', background: T.bgSubtle, borderRadius: 10, fontSize: 12, color: T.textSub }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                          <span>Prix séparés</span><span style={{ fontWeight: 700, fontFamily: '"Space Grotesk", sans-serif', color: T.text }}>{Math.round(separes).toLocaleString()} {symbole}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                          <span>Prix du pack</span><span style={{ fontSize: 14, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>{prixCalc.toLocaleString()} {symbole}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Bénéfice net</span><span style={{ fontWeight: 700, color: beneficeNet >= 0 ? T.green : T.red, fontFamily: '"Space Grotesk", sans-serif' }}>{beneficeNet >= 0 ? '+' : ''}{Math.round(beneficeNet).toLocaleString()} {symbole}</span>
+                        </div>
+                        {remiseNum === 0 && <div style={{ marginTop: 6, fontSize: 11, color: '#F97316', fontWeight: 600 }}>Le client ne voit pas de bonne affaire — mets une remise</div>}
+                      </div>
+                    )}
+                  </>
                 );
               })()}
               <div style={{ display: 'flex', gap: 10 }}>
