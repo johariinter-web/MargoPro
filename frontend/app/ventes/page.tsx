@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useStock } from '@/lib/hooks/useStock';
 import { useVentes } from '@/lib/hooks/useVentes';
 import { useConfig } from '@/lib/hooks/useConfig';
+import { usePacks } from '@/lib/hooks/usePacks';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import { useColors } from '@/lib/hooks/useColors';
 import type { Periode } from '@backend/types';
@@ -30,7 +31,7 @@ export default function VentesPage() {
   const { config } = useConfig();
   const { produits, deduireStock } = useStock();
   const [periode, setPeriode] = useState<Periode>('jour');
-  const { ventes, ventesSupprimees, stats, credits, soldes, totalDu, enregistrerVente, enregistrerPaiementCredit, supprimerVente, restaurerVente } = useVentes(periode);
+  const { ventes, ventesSupprimees, stats, credits, soldes, totalDu, enregistrerVente, enregistrerVentePack, enregistrerPaiementCredit, supprimerVente, restaurerVente } = useVentes(periode);
   const [voirSoldes, setVoirSoldes] = useState(false);
   const [onglet, setOnglet] = useState<'ventes' | 'carnet'>('ventes');
   const [joursOuverts, setJoursOuverts] = useState<Record<string, boolean>>({});
@@ -51,6 +52,9 @@ export default function VentesPage() {
   const [montantPaiement, setMontantPaiement] = useState('');
   const [erreurPaiement, setErreurPaiement] = useState('');
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [modeProduit, setModeProduit] = useState<'produit' | 'pack'>('produit');
+  const [packSelectionne, setPackSelectionne] = useState<string>('');
+  const { packs } = usePacks();
 
   useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
 
@@ -97,6 +101,31 @@ export default function VentesPage() {
 
   async function handleVente() {
     setErreur('');
+
+    // Vente de pack
+    if (modeProduit === 'pack') {
+      const pack = packs.find(p => p.id === packSelectionne);
+      if (!pack) { setErreur('Choisissez un pack'); return; }
+      if (isCredit && !clientNomCredit.trim()) { setErreur('Nom du client requis pour un crédit'); return; }
+      const creditParams = isCredit
+        ? { clientNom: clientNomCredit.trim(), clientTel: clientTelCredit.trim() || undefined, montantRecu: Math.max(0, Number(acompteCredit) || 0) }
+        : undefined;
+      const erreurPack = await enregistrerVentePack(pack, creditParams);
+      if (erreurPack) { setErreur(erreurPack); return; }
+      setProduitId('');
+      setQuantite('1');
+      setPrixGros('');
+      setIsCredit(false);
+      setClientNomCredit('');
+      setClientTelCredit('');
+      setAcompteCredit('0');
+      setPackSelectionne('');
+      setModeProduit('produit');
+      setShowForm(false);
+      if (isCredit) setOnglet('carnet');
+      return;
+    }
+
     const produit = produits.find(p => p.id === produitId);
     if (!produit) { setErreur('Choisissez un produit'); return; }
     const qte = Number(quantite);
@@ -399,78 +428,120 @@ export default function VentesPage() {
               {erreur}
             </div>
           )}
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Produit</label>
-            <select
-              value={produitId}
-              onChange={e => setProduitId(e.target.value)}
-              style={{
-                width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px',
-                fontSize: 14, color: T.text, background: T.bg, outline: 'none',
-                fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box', cursor: 'pointer',
-              }}
-            >
-              <option value="">Choisir un produit...</option>
-              {produits.filter(p => p.quantite > 0).map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.nom} — {fmtF(p.prixVente)} {symbole} ({p.quantite} dispo)
-                </option>
-              ))}
-            </select>
+          {/* TOGGLE PRODUIT / PACK */}
+          <div style={{ display: 'flex', background: T.bgSubtle, borderRadius: 10, padding: 3, gap: 2, marginBottom: 12 }}>
+            {([
+              { v: 'produit' as const, label: 'Produit' },
+              { v: 'pack' as const, label: 'Pack' },
+            ]).map(({ v, label }) => (
+              <button key={v} onClick={() => { setModeProduit(v); setPackSelectionne(''); }}
+                style={{ flex: 1, height: 34, border: 'none', cursor: 'pointer', borderRadius: 8, fontSize: 13, fontWeight: modeProduit === v ? 700 : 500, color: modeProduit === v ? T.text : T.textMuted, background: modeProduit === v ? T.surface : 'transparent', boxShadow: modeProduit === v ? T.shadow : 'none', fontFamily: 'Manrope, sans-serif' }}>
+                {label}
+              </button>
+            ))}
           </div>
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Quantité</label>
-            <input
-              type="number"
-              value={quantite}
-              onChange={e => setQuantite(e.target.value)}
-              min="1"
-              style={{
-                width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px',
-                fontSize: 15, color: T.text, background: T.bg, outline: 'none',
-                fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box',
-              }}
-            />
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>
-              Prix unitaire gros (optionnel)
-            </label>
-            <input
-              type="number"
-              value={prixGros}
-              onChange={e => setPrixGros(e.target.value)}
-              placeholder={selectedProduit ? `Normal : ${fmtF(selectedProduit.prixVente)} ${symbole}` : 'Prix gros par unité'}
-              min="0"
-              style={{
-                width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px',
-                fontSize: 15, color: T.text, background: T.bg, outline: 'none',
-                fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box',
-              }}
-            />
-          </div>
-          {selectedProduit && (
-            <div style={{ background: T.bgSubtle, borderRadius: 10, padding: '10px 12px', marginBottom: 12 }}>
-              <span style={{ fontSize: 13, color: T.textSub }}>
-                Total : <strong style={{ color: T.text, fontFamily: '"Space Grotesk", sans-serif' }}>{fmtF(prixEffectif * qteNum)} {symbole}</strong>
-                {'  ·  Bénéfice : '}
-                <strong style={{ color: T.green, fontFamily: '"Space Grotesk", sans-serif' }}>+{fmtF((prixEffectif - selectedProduit.prixAchat) * qteNum)} {symbole}</strong>
-              </span>
-              {Number(prixGros) > 0 && (
-                <div style={{ fontSize: 11, color: T.textMuted, marginTop: 4 }}>
-                  Prix gros appliqué ({fmtF(Number(prixGros))} {symbole}/unité)
+
+          {/* SÉLECTEUR PRODUIT */}
+          {modeProduit === 'produit' && (
+            <>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Produit</label>
+                <select
+                  value={produitId}
+                  onChange={e => setProduitId(e.target.value)}
+                  style={{
+                    width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px',
+                    fontSize: 14, color: T.text, background: T.bg, outline: 'none',
+                    fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box', cursor: 'pointer',
+                  }}
+                >
+                  <option value="">Choisir un produit...</option>
+                  {produits.filter(p => p.quantite > 0).map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.nom} — {fmtF(p.prixVente)} {symbole} ({p.quantite} dispo)
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Quantité</label>
+                <input
+                  type="number"
+                  value={quantite}
+                  onChange={e => setQuantite(e.target.value)}
+                  min="1"
+                  style={{
+                    width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px',
+                    fontSize: 15, color: T.text, background: T.bg, outline: 'none',
+                    fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>
+                  Prix unitaire gros (optionnel)
+                </label>
+                <input
+                  type="number"
+                  value={prixGros}
+                  onChange={e => setPrixGros(e.target.value)}
+                  placeholder={selectedProduit ? `Normal : ${fmtF(selectedProduit.prixVente)} ${symbole}` : 'Prix gros par unité'}
+                  min="0"
+                  style={{
+                    width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px',
+                    fontSize: 15, color: T.text, background: T.bg, outline: 'none',
+                    fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+              {selectedProduit && (
+                <div style={{ background: T.bgSubtle, borderRadius: 10, padding: '10px 12px', marginBottom: 12 }}>
+                  <span style={{ fontSize: 13, color: T.textSub }}>
+                    Total : <strong style={{ color: T.text, fontFamily: '"Space Grotesk", sans-serif' }}>{fmtF(prixEffectif * qteNum)} {symbole}</strong>
+                    {'  ·  Bénéfice : '}
+                    <strong style={{ color: T.green, fontFamily: '"Space Grotesk", sans-serif' }}>+{fmtF((prixEffectif - selectedProduit.prixAchat) * qteNum)} {symbole}</strong>
+                  </span>
+                  {Number(prixGros) > 0 && (
+                    <div style={{ fontSize: 11, color: T.textMuted, marginTop: 4 }}>
+                      Prix gros appliqué ({fmtF(Number(prixGros))} {symbole}/unité)
+                    </div>
+                  )}
+                  {Number(prixGros) > 0 && selectedProduit && Number(prixGros) < selectedProduit.prixAchat && (
+                    <div style={{ fontSize: 11, color: T.red, fontWeight: 600, marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                        <path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z" stroke={T.red} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      Prix gros inférieur au prix d&apos;achat — vente à perte
+                    </div>
+                  )}
                 </div>
               )}
-              {Number(prixGros) > 0 && selectedProduit && Number(prixGros) < selectedProduit.prixAchat && (
-                <div style={{ fontSize: 11, color: T.red, fontWeight: 600, marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-                    <path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z" stroke={T.red} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  Prix gros inférieur au prix d&apos;achat — vente à perte
+            </>
+          )}
+
+          {/* SÉLECTEUR PACK */}
+          {modeProduit === 'pack' && (
+            <div style={{ marginBottom: 12 }}>
+              {packs.length === 0 ? (
+                <div style={{ padding: '16px 0', textAlign: 'center', fontSize: 13, color: T.textMuted }}>
+                  Aucun pack créé — va dans Stock → Packs pour en créer un.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {packs.map(pack => (
+                    <button key={pack.id} onClick={() => setPackSelectionne(packSelectionne === pack.id ? '' : pack.id)}
+                      style={{ width: '100%', textAlign: 'left', background: packSelectionne === pack.id ? T.accentLight : T.bgSubtle, borderRadius: 12, padding: '12px 14px', border: `1.5px solid ${packSelectionne === pack.id ? T.accent : 'transparent'}`, cursor: 'pointer', fontFamily: 'Manrope, sans-serif' }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{pack.nom}</div>
+                      <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>
+                        {pack.composants.map(c => `${c.produitNom} ×${c.quantite}`).join(' + ')} · {Math.round(pack.prixVente).toLocaleString()} {symbole}
+                      </div>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
           )}
+
           {/* TOGGLE CRÉDIT */}
           <div
             onClick={() => { setIsCredit(v => !v); setClientNomCredit(''); setClientTelCredit(''); setAcompteCredit('0'); }}
@@ -518,7 +589,7 @@ export default function VentesPage() {
           )}
           <div style={{ display: 'flex', gap: 10 }}>
             <button
-              onClick={() => { setShowForm(false); setErreur(''); setPrixGros(''); setIsCredit(false); setClientNomCredit(''); setClientTelCredit(''); setAcompteCredit('0'); }}
+              onClick={() => { setShowForm(false); setErreur(''); setPrixGros(''); setIsCredit(false); setClientNomCredit(''); setClientTelCredit(''); setAcompteCredit('0'); setModeProduit('produit'); setPackSelectionne(''); }}
               style={{
                 flex: 1, height: 44, borderRadius: 12, background: T.bgSubtle,
                 border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: T.textSub,
@@ -528,9 +599,11 @@ export default function VentesPage() {
             </button>
             <button
               onClick={handleVente}
+              disabled={modeProduit === 'pack' && !packSelectionne}
               style={{
                 flex: 2, height: 44, borderRadius: 12, background: isCredit ? '#F97316' : T.accent,
-                border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: 'white',
+                border: 'none', cursor: modeProduit === 'pack' && !packSelectionne ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 700, color: 'white',
+                opacity: modeProduit === 'pack' && !packSelectionne ? 0.5 : 1,
               }}
             >
               {isCredit ? '📒 Crédit' : 'Confirmer'}

@@ -3,8 +3,9 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, genId } from '../db';
 import { calculerStats, topProduits, creerVente, creditsEnCours, creditsSoldes, totalCredit, resteADoit } from '@backend/ventes';
+import { creerVentePack } from '@backend/packs';
 import { requestSync } from '../syncController';
-import type { Periode } from '@backend/types';
+import type { Periode, Pack } from '@backend/types';
 
 export function useVentes(periode: Periode = 'jour') {
   const ventes = useLiveQuery(
@@ -50,12 +51,29 @@ export function useVentes(periode: Periode = 'jour') {
     if (!vente) return;
     // Soft delete : la suppression se propage entre appareils via la sync.
     await db.ventes.update(id, { deleted: true, updatedAt: Date.now() });
-    const produit = await db.produits.get(vente.produitId);
-    if (produit) {
-      await db.produits.update(vente.produitId, {
-        quantite: produit.quantite + vente.quantite,
-        updatedAt: Date.now(),
-      });
+
+    if (vente.type === 'pack') {
+      // Restaurer le stock de chaque composant du pack
+      const pack = await db.packs.get(vente.produitId);
+      if (pack) {
+        for (const c of pack.composants) {
+          const produit = await db.produits.get(c.produitId);
+          if (produit) {
+            await db.produits.update(c.produitId, {
+              quantite: produit.quantite + c.quantite,
+              updatedAt: Date.now(),
+            });
+          }
+        }
+      }
+    } else {
+      const produit = await db.produits.get(vente.produitId);
+      if (produit) {
+        await db.produits.update(vente.produitId, {
+          quantite: produit.quantite + vente.quantite,
+          updatedAt: Date.now(),
+        });
+      }
     }
     requestSync();
   }
@@ -65,19 +83,69 @@ export function useVentes(periode: Periode = 'jour') {
     if (!vente) return;
     // Annule la suppression : on remet la vente et on redéduit le stock rendu.
     await db.ventes.update(id, { deleted: false, updatedAt: Date.now() });
-    const produit = await db.produits.get(vente.produitId);
-    if (produit) {
-      await db.produits.update(vente.produitId, {
-        quantite: Math.max(0, produit.quantite - vente.quantite),
-        updatedAt: Date.now(),
-      });
+
+    if (vente.type === 'pack') {
+      // Re-déduire le stock de chaque composant
+      const pack = await db.packs.get(vente.produitId);
+      if (pack) {
+        for (const c of pack.composants) {
+          const produit = await db.produits.get(c.produitId);
+          if (produit) {
+            await db.produits.update(c.produitId, {
+              quantite: Math.max(0, produit.quantite - c.quantite),
+              updatedAt: Date.now(),
+            });
+          }
+        }
+      }
+    } else {
+      const produit = await db.produits.get(vente.produitId);
+      if (produit) {
+        await db.produits.update(vente.produitId, {
+          quantite: Math.max(0, produit.quantite - vente.quantite),
+          updatedAt: Date.now(),
+        });
+      }
     }
     requestSync();
+  }
+
+  async function enregistrerVentePack(
+    pack: Pack,
+    credit?: { clientNom: string; clientTel?: string; montantRecu: number }
+  ): Promise<string | null> {
+    // Lire les produits actuels pour calculer le prixAchat
+    const produitsArray = await db.produits.toArray();
+    const produitsMap = new Map(produitsArray.map(p => [p.id, p]));
+
+    // Vérifier le stock de chaque composant
+    for (const c of pack.composants) {
+      const p = produitsMap.get(c.produitId);
+      if (!p || p.quantite < c.quantite) {
+        return `Stock insuffisant pour "${c.produitNom}" (${p?.quantite ?? 0} disponible${(p?.quantite ?? 0) > 1 ? 's' : ''}, ${c.quantite} demandé${c.quantite > 1 ? 's' : ''})`;
+      }
+    }
+
+    // Décrémenter le stock de chaque composant
+    const now = Date.now();
+    for (const c of pack.composants) {
+      const p = produitsMap.get(c.produitId)!;
+      await db.produits.update(c.produitId, {
+        quantite: p.quantite - c.quantite,
+        updatedAt: now,
+      });
+    }
+
+    // Enregistrer la vente
+    const vente = creerVentePack(pack, produitsMap, credit);
+    await db.ventes.add({ ...vente, id: genId(), deleted: false });
+    requestSync();
+    return null;
   }
 
   const credits = creditsEnCours(ventes);
   const soldes = creditsSoldes(ventes);
   const totalDu = totalCredit(ventes);
 
-  return { ventes, ventesSupprimees, stats, top3, credits, soldes, totalDu, enregistrerVente, enregistrerPaiementCredit, supprimerVente, restaurerVente };
+  return { ventes, ventesSupprimees, stats, top3, credits, soldes, totalDu, enregistrerVente, enregistrerVentePack, enregistrerPaiementCredit, supprimerVente, restaurerVente };
 }
