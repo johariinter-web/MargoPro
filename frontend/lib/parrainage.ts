@@ -124,21 +124,25 @@ export async function updateRecompense(
   if (error) throw error;
 }
 
-interface ParrainageAvecPaiements {
-  id: string;
-  parrainage_paiements: ParrainagePaiement[];
-}
-
 export async function fetchAffiliatePaiements(
   supabase: SupabaseClient,
   affiliateId: string,
 ): Promise<ParrainagePaiement[]> {
-  const { data, error } = await supabase
-    .from('parrainages')
-    .select('id, parrainage_paiements(parrainage_id, mois, montant_paye, commission_versee)')
+  const { data: parrainages, error: err1 } = await supabase
+    .from('parrainages_public')
+    .select('id')
     .eq('affiliate_id', affiliateId);
-  if (error) throw error;
-  return ((data ?? []) as ParrainageAvecPaiements[]).flatMap(p => p.parrainage_paiements ?? []);
+  if (err1) throw err1;
+
+  const ids = (parrainages ?? []).map(p => p.id);
+  if (ids.length === 0) return [];
+
+  const { data: paiements, error: err2 } = await supabase
+    .from('parrainage_paiements_public')
+    .select('parrainage_id, mois, montant_paye, commission_versee')
+    .in('parrainage_id', ids);
+  if (err2) throw err2;
+  return (paiements ?? []) as ParrainagePaiement[];
 }
 
 const REFERRAL_STORAGE_KEY = 'margo_referral_code';

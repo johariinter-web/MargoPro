@@ -21,7 +21,10 @@ create table if not exists public.affiliates (
   created_at   timestamptz not null default now()
 );
 create index if not exists affiliates_user_id_idx on public.affiliates(user_id);
-alter table public.affiliates add constraint affiliates_user_id_key unique (user_id);
+do $$ begin
+  alter table public.affiliates add constraint affiliates_user_id_key unique (user_id);
+exception when duplicate_object then null;
+end $$;
 
 create table if not exists public.parrainages (
   id               uuid primary key default gen_random_uuid(),
