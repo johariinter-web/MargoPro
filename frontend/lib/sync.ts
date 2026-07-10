@@ -305,7 +305,11 @@ async function pull(userId: string): Promise<void> {
   for (const row of (ventesRows ?? []) as VenteRow[]) {
     const remote = rowToVente(row);
     const local = await db.ventes.get(remote.id);
-    if (!local || remote.updatedAt > (local.updatedAt ?? local.date)) {
+    // LWW standard, plus : si le cloud dit 'credit' mais le local dit 'comptant',
+    // le local a été corrompu par la migration Dexie v4 avant que la colonne
+    // mode_reglement existe dans Supabase — on prend le cloud.
+    const cloudFixesCredit = remote.modeReglement === 'credit' && local?.modeReglement !== 'credit';
+    if (!local || remote.updatedAt > (local.updatedAt ?? local.date) || cloudFixesCredit) {
       await db.ventes.put(remote);
     }
   }
