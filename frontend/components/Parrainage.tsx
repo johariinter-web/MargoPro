@@ -53,10 +53,11 @@ export function Parrainage() {
 
   async function choisirRecompense(recompense: RecompenseType) {
     if (!affiliate) return;
-    setAffiliate({ ...affiliate, recompense });
     try {
       const supabase = createClient();
       await updateRecompense(supabase, affiliate.id, recompense);
+      setAffiliate({ ...affiliate, recompense });
+      setError(null);
     } catch {
       setError('Erreur lors de la sauvegarde. Réessayez.');
     }
@@ -64,9 +65,12 @@ export function Parrainage() {
 
   function copierCode() {
     if (!affiliate) return;
-    navigator.clipboard.writeText(affiliate.code);
-    setCopie(true);
-    setTimeout(() => setCopie(false), 1500);
+    navigator.clipboard.writeText(affiliate.code).then(() => {
+      setCopie(true);
+      setTimeout(() => setCopie(false), 1500);
+    }).catch(() => {
+      setError('Impossible de copier le code.');
+    });
   }
 
   function partagerWhatsApp() {
