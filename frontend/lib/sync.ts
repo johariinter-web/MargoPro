@@ -2,7 +2,7 @@
 
 import { db } from './db';
 import { createClient } from './supabase/client';
-import type { Produit, Vente, Config } from '@backend/types';
+import type { Produit, Vente, Config, Pack } from '@backend/types';
 import { uploadPhoto, supprimerPhoto, downloadPhoto, peutSyncerPhotos } from './photoSync';
 
 // =====================================================================
@@ -68,6 +68,17 @@ type ConfigRow = {
   trial_start: number | null;
   is_premium: boolean;
   updated_at: number;
+};
+
+type PackRow = {
+  id: string;
+  user_id: string;
+  nom: string;
+  composants: Array<{ produit_id: string; produit_nom: string; quantite: number }>;
+  prix_vente: number;
+  created_at: number;
+  updated_at: number;
+  deleted: boolean;
 };
 
 function produitToRow(p: Produit, userId: string): ProduitRow {
@@ -178,6 +189,40 @@ function rowToConfig(r: ConfigRow): Config {
   };
 }
 
+function packToRow(p: Pack, userId: string): PackRow {
+  return {
+    id: p.id,
+    user_id: userId,
+    nom: p.nom,
+    composants: p.composants.map((c) => ({
+      produit_id: c.produitId,
+      produit_nom: c.produitNom,
+      quantite: c.quantite,
+    })),
+    prix_vente: p.prixVente,
+    created_at: p.createdAt ?? Date.now(),
+    updated_at: p.updatedAt ?? Date.now(),
+    deleted: p.deleted ?? false,
+  };
+}
+
+function rowToPack(r: PackRow): Pack {
+  const composants = Array.isArray(r.composants) ? r.composants : [];
+  return {
+    id: r.id,
+    nom: r.nom,
+    composants: composants.map((c) => ({
+      produitId: c.produit_id,
+      produitNom: c.produit_nom,
+      quantite: Number(c.quantite),
+    })),
+    prixVente: Number(r.prix_vente),
+    createdAt: Number(r.created_at),
+    updatedAt: Number(r.updated_at),
+    deleted: r.deleted ?? false,
+  };
+}
+
 // ---------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------
@@ -276,6 +321,21 @@ async function pull(userId: string): Promise<void> {
       await db.config.put(remote);
     }
   }
+
+  // --- packs ---
+  const { data: packsRows, error: pkErr } = await supabase
+    .from('packs')
+    .select('*')
+    .eq('user_id', userId);
+  if (pkErr) throw pkErr;
+
+  for (const row of (packsRows ?? []) as PackRow[]) {
+    const remote = rowToPack(row);
+    const local = await db.packs.get(remote.id);
+    if (!local || remote.updatedAt > (local.updatedAt ?? 0)) {
+      await db.packs.put(remote);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -339,6 +399,14 @@ async function push(userId: string): Promise<void> {
     const { error } = await supabase
       .from('config')
       .upsert(configToRow(config, userId), { onConflict: 'user_id' });
+    if (error) throw error;
+  }
+
+  // --- packs ---
+  const packs = await db.packs.toArray();
+  if (packs.length > 0) {
+    const rows = packs.map((p) => packToRow(p, userId));
+    const { error } = await supabase.from('packs').upsert(rows, { onConflict: 'id' });
     if (error) throw error;
   }
 }
