@@ -20,8 +20,8 @@ function formatHeure(ts: number) {
 
 const PERIODES: { value: Periode; label: string }[] = [
   { value: 'jour', label: "Aujourd'hui" },
-  { value: 'semaine', label: 'Cette semaine' },
-  { value: 'mois', label: 'Ce mois' },
+  { value: 'semaine', label: 'Semaine' },
+  { value: 'mois', label: 'Mois' },
   { value: 'tout', label: 'Tout' },
 ];
 
