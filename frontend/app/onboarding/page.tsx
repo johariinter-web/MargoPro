@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useConfig } from '@/lib/hooks/useConfig';
+import { createClient } from '@/lib/supabase/client';
+import { consumeReferralCode } from '@/lib/parrainage';
 
 const T = {
   accent: '#D4601A', accentLight: '#FEF0E6',
@@ -47,6 +49,18 @@ export default function OnboardingPage() {
   const [nomCommerce, setNomCommerce] = useState('');
   const [deviseCode, setDeviseCode] = useState('');
   const [cguAccepte, setCguAccepte] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const supabase = createClient();
+      const { data } = await supabase.auth.getUser();
+      if (active && data.user) {
+        await consumeReferralCode(supabase, data.user.id, data.user.email ?? 'Filleul');
+      }
+    })();
+    return () => { active = false; };
+  }, []);
 
   async function terminer() {
     const devise = DEVISES.find(d => d.code === deviseCode)!;
