@@ -145,7 +145,6 @@ export default function StockPage() {
   const [composantsPack, setComposantsPack] = useState<Array<{ produitId: string; produitNom: string; quantite: number }>>([]);
   const [erreurPack, setErreurPack] = useState('');
   const [packASupprimer, setPackASupprimer] = useState<Pack | null>(null);
-  const [showPickerProduit, setShowPickerProduit] = useState(false);
 
   // Liste des catégories affichées : fusion des catégories enregistrées et de
   // celles réellement portées par des produits — pour n'en oublier aucune
@@ -229,7 +228,6 @@ export default function StockPage() {
       if (existe) return cs.map(c => c.produitId === produit.id ? { ...c, quantite: c.quantite + 1 } : c);
       return [...cs, { produitId: produit.id, produitNom: produit.nom, quantite: 1 }];
     });
-    setShowPickerProduit(false);
   }
 
   const symbole = config?.symboleDevise ?? 'FCFA';
@@ -843,10 +841,16 @@ export default function StockPage() {
                   </button>
                 </div>
               ))}
-              <button type="button" onClick={() => setShowPickerProduit(true)}
-                style={{ width: '100%', height: 44, borderRadius: 10, border: `1.5px dashed ${T.border}`, background: 'transparent', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: T.accent, fontFamily: 'Manrope, sans-serif' }}>
-                + Ajouter un produit
-              </button>
+              <select
+                value=""
+                onChange={e => { if (e.target.value) ajouterComposant({ id: e.target.value, nom: produits.find(p => p.id === e.target.value)?.nom ?? '' }); }}
+                style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box', cursor: 'pointer' }}
+              >
+                <option value="">+ Ajouter un produit...</option>
+                {produits.filter(p => !composantsPack.find(c => c.produitId === p.id)).map(p => (
+                  <option key={p.id} value={p.id}>{p.nom} — {Math.round(p.prixVente).toLocaleString()} {symbole} ({p.quantite} dispo)</option>
+                ))}
+              </select>
             </div>
             {(() => {
               const produitsMap = new Map(produits.map(p => [p.id, p]));
@@ -893,29 +897,6 @@ export default function StockPage() {
         </div>
       )}
 
-      {/* PICKER PRODUIT pour les packs */}
-      {showPickerProduit && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 220, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'flex-end' }}
-          onClick={() => setShowPickerProduit(false)}>
-          <div style={{ background: T.surface, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, margin: '0 auto', padding: '20px 20px 40px', maxHeight: '70dvh', overflowY: 'auto' }}
-            onClick={e => e.stopPropagation()}>
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border, margin: '0 auto 16px' }} />
-            <div style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 12 }}>Choisir un produit</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {produits.filter(p => !composantsPack.find(c => c.produitId === p.id)).map(p => (
-                <button key={p.id} onClick={() => ajouterComposant({ id: p.id, nom: p.nom })}
-                  style={{ width: '100%', textAlign: 'left', background: T.bgSubtle, borderRadius: 12, padding: '12px 14px', border: 'none', cursor: 'pointer', fontFamily: 'Manrope, sans-serif' }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{p.nom}</div>
-                  <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>{p.quantite} unités · {Math.round(p.prixVente).toLocaleString()} {symbole}</div>
-                </button>
-              ))}
-              {produits.filter(p => !composantsPack.find(c => c.produitId === p.id)).length === 0 && (
-                <div style={{ textAlign: 'center', padding: '20px 0', color: T.textMuted, fontSize: 14 }}>Tous les produits sont déjà dans le pack</div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* CONFIRMATION SUPPRESSION PACK */}
       {packASupprimer && (
@@ -1225,10 +1206,16 @@ export default function StockPage() {
                     </button>
                   </div>
                 ))}
-                <button type="button" onClick={() => setShowPickerProduit(true)}
-                  style={{ width: '100%', height: 44, borderRadius: 10, border: `1.5px dashed ${T.border}`, background: 'transparent', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: T.accent, fontFamily: 'Manrope, sans-serif' }}>
-                  + Ajouter un produit
-                </button>
+                <select
+                  value=""
+                  onChange={e => { if (e.target.value) ajouterComposant({ id: e.target.value, nom: produits.find(p => p.id === e.target.value)?.nom ?? '' }); }}
+                  style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box', cursor: 'pointer' }}
+                >
+                  <option value="">+ Ajouter un produit...</option>
+                  {produits.filter(p => !composantsPack.find(c => c.produitId === p.id)).map(p => (
+                    <option key={p.id} value={p.id}>{p.nom} — {Math.round(p.prixVente).toLocaleString()} {symbole} ({p.quantite} dispo)</option>
+                  ))}
+                </select>
               </div>
               {(() => {
                 const produitsMap = new Map(produits.map(p => [p.id, p]));
