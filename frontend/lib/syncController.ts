@@ -1,6 +1,7 @@
 'use client';
 
 import { fullSync, getUserId } from './sync';
+import { createClient } from './supabase/client';
 
 // =====================================================================
 // MargoPro — Contrôleur de synchronisation (singleton, hors React)
@@ -107,8 +108,16 @@ export function startSync(): void {
   if (started || typeof window === 'undefined') return;
   started = true;
 
-  // Sync initiale au démarrage.
+  // Sync initiale au démarrage (peut sortir vide si la session Supabase
+  // n'est pas encore restaurée — l'écouteur ci-dessous prend le relais).
   void runSync();
+
+  // Dès que Supabase restaure la session (ex: iOS après le premier mount),
+  // on relance une sync pour peupler l'IndexedDB vide.
+  createClient().auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_IN') void runSync();
+    if (event === 'SIGNED_OUT') stopSync();
+  });
 
   // Sync à la reconnexion réseau.
   window.addEventListener('online', () => void runSync());
