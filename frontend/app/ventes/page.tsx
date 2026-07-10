@@ -306,7 +306,7 @@ export default function VentesPage() {
             )}
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Montant reçu ({symbole})</label>
             <input
-              type="number"
+              type="text" inputMode="decimal"
               value={montantPaiement}
               onChange={e => setMontantPaiement(e.target.value)}
               placeholder={String(resteADoit(ventePaiement))}
@@ -466,7 +466,7 @@ export default function VentesPage() {
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Quantité</label>
                 <input
-                  type="number"
+                  type="text" inputMode="decimal"
                   value={quantite}
                   onChange={e => setQuantite(e.target.value)}
                   min="1"
@@ -482,7 +482,7 @@ export default function VentesPage() {
                   Prix unitaire gros (optionnel)
                 </label>
                 <input
-                  type="number"
+                  type="text" inputMode="decimal"
                   value={prixGros}
                   onChange={e => setPrixGros(e.target.value)}
                   placeholder={selectedProduit ? `Normal : ${fmtF(selectedProduit.prixVente)} ${symbole}` : 'Prix gros par unité'}
@@ -577,7 +577,7 @@ export default function VentesPage() {
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Acompte reçu maintenant ({symbole})</label>
                 <input
-                  type="number"
+                  type="text" inputMode="decimal"
                   value={acompteCredit}
                   onChange={e => setAcompteCredit(e.target.value)}
                   placeholder="0"
