@@ -241,8 +241,10 @@ function getClient() {
 
 export async function getUserId(): Promise<string | null> {
   const supabase = getClient();
-  const { data } = await supabase.auth.getUser();
-  return data.user?.id ?? null;
+  // getSession lit le cache localStorage sans appel réseau — plus robuste sur mobile.
+  // Le token est validé lors de la connexion et auto-rafraîchi par Supabase.
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user?.id ?? null;
 }
 
 // ---------------------------------------------------------------------

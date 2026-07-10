@@ -123,6 +123,11 @@ export function startSync(): void {
   window.addEventListener('online', () => void runSync());
   window.addEventListener('offline', () => setState({ status: 'offline' }));
 
+  // Sync quand l'app revient au premier plan (retour depuis une autre app sur mobile).
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') void runSync();
+  });
+
   // Sync périodique (récupère les changements d'un autre appareil).
   intervalTimer = setInterval(() => void runSync(), INTERVAL_MS);
 }
