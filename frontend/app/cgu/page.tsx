@@ -34,7 +34,7 @@ export default function CguPage() {
       <div style={{ padding: '24px 20px', maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 28 }}>
 
         <div>
-          <p style={{ fontSize: 13, color: T.textMuted, margin: 0 }}>Dernière mise à jour : 30 mai 2026</p>
+          <p style={{ fontSize: 13, color: T.textMuted, margin: 0 }}>Dernière mise à jour : 11 juillet 2026</p>
           <p style={{ fontSize: 14, color: T.textSub, lineHeight: 1.7, marginTop: 12 }}>
             Bienvenue sur <strong style={{ color: T.text }}>MargoPro</strong>. En utilisant cette application, vous acceptez les présentes conditions générales d&apos;utilisation. Veuillez les lire attentivement.
           </p>
@@ -49,8 +49,9 @@ export default function CguPage() {
         </Section>
 
         <Section title="3. Données et vie privée">
-          Vos données commerciales (produits, ventes, stocks) sont stockées localement sur votre appareil. Aucune donnée commerciale n&apos;est transmise à nos serveurs sans votre consentement explicite.{'\n\n'}
-          Seules les données d&apos;authentification (email, mot de passe chiffré) sont gérées via Supabase, un service sécurisé conforme aux standards internationaux de protection des données.{'\n\n'}
+          Vos données commerciales (produits, ventes, stocks) sont stockées en priorité sur votre appareil, ce qui permet à MargoPro de fonctionner sans connexion internet.{'\n\n'}
+          Dès la création de votre compte, ces données sont également sauvegardées automatiquement de façon sécurisée sur nos serveurs (Supabase), afin de vous protéger en cas de perte, de vol ou de panne de votre téléphone, et de vous permettre de les retrouver sur un nouvel appareil.{'\n\n'}
+          Chaque commerçant n&apos;a accès qu&apos;à ses propres données : il est techniquement impossible pour un autre utilisateur de MargoPro de consulter votre stock ou vos ventes. Nous n&apos;accédons pas aux données individuelles de votre compte, sauf à votre demande dans le cadre d&apos;une assistance technique.{'\n\n'}
           Nous ne vendons, ne partageons ni ne louons vos données personnelles à des tiers.
         </Section>
 
@@ -71,7 +72,7 @@ export default function CguPage() {
 
         <Section title="7. Limitation de responsabilité">
           MargoPro est fourni "tel quel". Nous ne sommes pas responsables des pertes de données liées à une réinitialisation d&apos;appareil, une suppression de l&apos;application ou une panne matérielle.{'\n\n'}
-          Nous vous recommandons d&apos;activer la sauvegarde cloud (fonctionnalité Premium) pour protéger vos données.
+          Vos données sont sauvegardées automatiquement en ligne dès la création de votre compte (voir section 3), ce qui limite ce risque.
         </Section>
 
         <Section title="8. Propriété intellectuelle">
@@ -84,7 +85,8 @@ export default function CguPage() {
 
         <Section title="10. Contact">
           Pour toute question relative aux présentes CGU ou à l&apos;utilisation de MargoPro, contactez-nous à :{'\n\n'}
-          Email : support@eidma.co
+          Email : contact@eidma.co{'\n'}
+          WhatsApp : +1 514 552-2214
         </Section>
 
       </div>
