@@ -27,6 +27,7 @@ export function Parrainage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copie, setCopie] = useState(false);
+  const [ouvert, setOuvert] = useState(false);
 
   const charger = useCallback(async () => {
     if (!config?.nomCommerce) return;
@@ -89,7 +90,28 @@ export function Parrainage() {
       }}>
         Parrainage
       </div>
-      <div style={{ background: T.surface, borderRadius: 16, boxShadow: T.shadow, overflow: 'hidden', padding: 16 }}>
+      <div style={{ background: T.surface, borderRadius: 16, boxShadow: T.shadow, overflow: 'hidden' }}>
+
+        <button
+          onClick={() => setOuvert(o => !o)}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: 16, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+          }}
+        >
+          <span style={{ fontSize: 15, fontWeight: 700, color: T.text, fontFamily: 'Manrope, sans-serif' }}>
+            Programme de parrainage
+          </span>
+          <svg
+            width="18" height="18" viewBox="0 0 24 24" fill="none"
+            style={{ flexShrink: 0, transform: ouvert ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
+          >
+            <path d="M6 9l6 6 6-6" stroke={T.textMuted} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+
+        {ouvert && (
+        <div style={{ padding: '0 16px 16px' }}>
 
         {loading && (
           <div style={{ textAlign: 'center', color: T.textMuted, fontSize: 14, fontFamily: 'Manrope, sans-serif' }}>
@@ -98,7 +120,7 @@ export function Parrainage() {
         )}
 
         {error && (
-          <div style={{ padding: '12px 16px', margin: '-16px -16px 12px', color: T.red, fontSize: 13, fontFamily: 'Manrope, sans-serif', background: T.redBg }}>
+          <div style={{ padding: '12px 16px', margin: '0 -16px 12px', color: T.red, fontSize: 13, fontFamily: 'Manrope, sans-serif', background: T.redBg }}>
             {error}
           </div>
         )}
@@ -189,6 +211,8 @@ export function Parrainage() {
               Voir le suivi complet →
             </a>
           </>
+        )}
+        </div>
         )}
       </div>
     </div>
