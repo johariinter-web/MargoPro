@@ -57,8 +57,10 @@ export default function CguPage() {
 
         <Section title="4. Abonnement et paiement">
           MargoPro propose un plan gratuit avec des fonctionnalités limitées et un plan Premium donnant accès à l&apos;ensemble des fonctionnalités.{'\n\n'}
-          Le plan Premium est actuellement en phase de lancement. Les modalités de paiement (Mobile Money, Wave, etc.) seront communiquées lors de l&apos;activation de cette fonctionnalité.{'\n\n'}
-          Aucun paiement ne vous sera prélevé sans votre accord explicite.
+          Le plan Premium est actuellement en phase de lancement. Les modalités de paiement (Mobile Money, etc.) seront communiquées lors de l&apos;activation de cette fonctionnalité.{'\n\n'}
+          Une fois activé, l&apos;abonnement Premium se renouvelle automatiquement chaque mois, par le même moyen de paiement utilisé à la souscription. Vous pouvez annuler ce renouvellement automatique à tout moment depuis l&apos;application, avant la date de renouvellement, sans frais.{'\n\n'}
+          Un renouvellement déjà effectué n&apos;est pas remboursable, y compris en cas d&apos;oubli de désabonnement avant le prélèvement. L&apos;annulation empêche uniquement les prélèvements futurs.{'\n\n'}
+          Aucun paiement ne vous sera prélevé sans votre accord explicite à la souscription initiale.
         </Section>
 
         <Section title="5. Utilisation acceptable">
