@@ -20,7 +20,7 @@ function fmtF(n: number) {
 
 export function Parrainage() {
   const T = useColors();
-  const { config } = useConfig();
+  const { config, isReady } = useConfig();
   const [affiliate, setAffiliate] = useState<Affiliate | null>(null);
   const [solde, setSolde] = useState(0);
   const [progression, setProgression] = useState({ filleulsPayants: 0, moisDus: 0 });
@@ -30,8 +30,9 @@ export function Parrainage() {
   const [ouvert, setOuvert] = useState(false);
 
   const charger = useCallback(async () => {
-    if (!config?.nomCommerce) return;
+    if (!isReady) return;
     try {
+      if (!config?.nomCommerce) return;
       const supabase = createClient();
       const { data } = await supabase.auth.getUser();
       if (!data.user) return;
@@ -48,7 +49,7 @@ export function Parrainage() {
     } finally {
       setLoading(false);
     }
-  }, [config?.nomCommerce]);
+  }, [isReady, config?.nomCommerce]);
 
   useEffect(() => { charger(); }, [charger]);
 
