@@ -294,7 +294,7 @@ export default function VentesPage() {
           >
             <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border, margin: '0 auto 16px' }} />
             <div style={{ fontSize: 17, fontWeight: 800, color: T.text, marginBottom: 4 }}>
-              Paiement — {ventePaiement.clientNom}
+              Paiement - {ventePaiement.clientNom}
             </div>
             <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 16 }}>
               Reste dû : <strong style={{ color: '#F97316' }}>{fmtF(resteADoit(ventePaiement))} {symbole}</strong>
@@ -380,7 +380,7 @@ export default function VentesPage() {
         </button>
       </div>
 
-      {/* FILTER PILLS — visible uniquement sur l'onglet Ventes */}
+      {/* FILTER PILLS - visible uniquement sur l'onglet Ventes */}
       {onglet === 'ventes' && <div style={{ padding: '0 16px 8px', display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none' }}>
         {PERIODES.map(p => (
           <button
@@ -398,7 +398,7 @@ export default function VentesPage() {
         ))}
       </div>}
 
-      {/* STATS CARD — onglet Ventes uniquement */}
+      {/* STATS CARD - onglet Ventes uniquement */}
       {onglet === 'ventes' && <div style={{ margin: '0 16px 12px', background: T.surface, borderRadius: 16, padding: '14px 16px', boxShadow: T.shadow }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
@@ -458,7 +458,7 @@ export default function VentesPage() {
                   <option value="">Choisir un produit...</option>
                   {produits.filter(p => p.quantite > 0).map(p => (
                     <option key={p.id} value={p.id}>
-                      {p.nom} — {fmtF(p.prixVente)} {symbole} ({p.quantite} dispo)
+                      {p.nom} - {fmtF(p.prixVente)} {symbole} ({p.quantite} dispo)
                     </option>
                   ))}
                 </select>
@@ -511,7 +511,7 @@ export default function VentesPage() {
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
                         <path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z" stroke={T.red} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
-                      Prix gros inférieur au prix d&apos;achat — vente à perte
+                      Prix gros inférieur au prix d&apos;achat - vente à perte
                     </div>
                   )}
                 </div>
@@ -524,7 +524,7 @@ export default function VentesPage() {
             <div style={{ marginBottom: 12 }}>
               {packs.length === 0 ? (
                 <div style={{ padding: '16px 0', textAlign: 'center', fontSize: 13, color: T.textMuted }}>
-                  Aucun pack créé — va dans Stock → Packs pour en créer un.
+                  Aucun pack créé - va dans Stock → Packs pour en créer un.
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -612,7 +612,7 @@ export default function VentesPage() {
         </div>
       )}
 
-      {/* LIEN HISTORIQUE DES SUPPRESSIONS — onglet Ventes uniquement */}
+      {/* LIEN HISTORIQUE DES SUPPRESSIONS - onglet Ventes uniquement */}
       {onglet === 'ventes' && <div style={{ padding: '0 16px 8px', display: 'flex', justifyContent: 'flex-end' }}>
         <button
           onClick={() => setShowHistorique(true)}
@@ -643,7 +643,7 @@ export default function VentesPage() {
             const ouvert = isJourOuvert(day, index);
             return (
               <div key={day} style={{ marginBottom: 12 }}>
-                {/* Date group header — tappable pour replier/déplier */}
+                {/* Date group header - tappable pour replier/déplier */}
                 <button
                   onClick={() => toggleJour(day, index)}
                   style={{
@@ -666,7 +666,7 @@ export default function VentesPage() {
                     {fmtF(dayTotal)} {symbole}
                   </span>
                 </button>
-                {/* Liste des ventes du jour — visible seulement si ouvert */}
+                {/* Liste des ventes du jour - visible seulement si ouvert */}
                 {ouvert && <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {dayVentes.map(v => {
                     const photoVente = produits.find(p => p.id === v.produitId)?.photo;
@@ -733,12 +733,12 @@ export default function VentesPage() {
                     {fmtF(totalDu)} {symbole}
                   </div>
                   <div style={{ fontSize: 12, color: '#9A3412', marginTop: 2 }}>
-                    {credits.length} client{credits.length > 1 ? 's' : ''} — tape un nom pour enregistrer un paiement
+                    {credits.length} client{credits.length > 1 ? 's' : ''} - tape un nom pour enregistrer un paiement
                   </div>
                 </div>
               )}
 
-              {/* Liste des créanciers — tap pour ouvrir la fiche paiement */}
+              {/* Liste des créanciers - tap pour ouvrir la fiche paiement */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
                 {credits.map(v => {
                   const urgence = urgenceCredit(v);
@@ -779,7 +779,7 @@ export default function VentesPage() {
                 })}
               </div>
 
-              {/* Crédits soldés — collapsibles avec bouton Supprimer */}
+              {/* Crédits soldés - collapsibles avec bouton Supprimer */}
               {soldes.length > 0 && (
                 <div>
                   <button

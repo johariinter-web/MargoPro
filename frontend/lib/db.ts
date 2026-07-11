@@ -16,7 +16,7 @@ class MargoDB extends Dexie {
       ventes: 'id, produitId, date',
       config: 'id',
     });
-    // v2 — synchronisation cloud : soft-delete + updatedAt sur les ventes.
+    // v2 - synchronisation cloud : soft-delete + updatedAt sur les ventes.
     this.version(2)
       .stores({
         produits: 'id, nom, quantite, updatedAt, deleted',
@@ -35,7 +35,7 @@ class MargoDB extends Dexie {
           if (c.updatedAt === undefined) c.updatedAt = Date.now();
         });
       });
-    // v3 — plan gratuit : champ archived sur les produits
+    // v3 - plan gratuit : champ archived sur les produits
     this.version(3)
       .stores({
         produits: 'id, nom, quantite, updatedAt, deleted, archived',
@@ -47,7 +47,7 @@ class MargoDB extends Dexie {
           if (p.archived === undefined) p.archived = false;
         });
       });
-    // v4 — ventes à crédit : index modeReglement
+    // v4 - ventes à crédit : index modeReglement
     this.version(4)
       .stores({
         produits: 'id, nom, quantite, updatedAt, deleted, archived',
@@ -59,7 +59,7 @@ class MargoDB extends Dexie {
           if (v.modeReglement === undefined) v.modeReglement = 'comptant';
         });
       });
-    // v5 — packs de produits pour liquider le stock mort
+    // v5 - packs de produits pour liquider le stock mort
     this.version(5).stores({
       produits: 'id, nom, quantite, updatedAt, deleted, archived',
       ventes: 'id, produitId, date, updatedAt, deleted, modeReglement',

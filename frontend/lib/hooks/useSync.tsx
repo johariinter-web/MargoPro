@@ -10,7 +10,7 @@ import {
 } from '../syncController';
 
 // =====================================================================
-// MargoPro — Hooks React pour la synchronisation
+// MargoPro - Hooks React pour la synchronisation
 //
 // <SyncStarter/> : monté dans le layout, démarre les déclencheurs auto.
 // useSync()      : expose l'état de sync + un déclencheur manuel à l'UI.

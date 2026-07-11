@@ -116,8 +116,8 @@ export default function ParametresPage() {
 
   const syncSousTitre =
     syncStatus === 'syncing' ? 'Synchronisation en cours…'
-    : syncStatus === 'offline' ? 'Hors ligne — synchro au retour du réseau'
-    : syncStatus === 'error' ? 'Échec — appuyez pour réessayer'
+    : syncStatus === 'offline' ? 'Hors ligne - synchro au retour du réseau'
+    : syncStatus === 'error' ? 'Échec - appuyez pour réessayer'
     : `Synchronisé ${tempsRelatif(lastSyncAt)}`;
 
   const [openPanel, setOpenPanel] = useState<Panel>(null);
@@ -220,7 +220,7 @@ export default function ParametresPage() {
               </span>
             </div>
             <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>
-              {deviseCourante?.nom ?? config?.symboleDevise ?? '—'} · MargoPro
+              {deviseCourante?.nom ?? config?.symboleDevise ?? '-'} · MargoPro
             </div>
           </div>
           <ChevronRight color={T.textMuted} />
@@ -336,7 +336,7 @@ export default function ParametresPage() {
                   }}
                 >
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{d.symbole} — {d.nom}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{d.symbole} - {d.nom}</div>
                     <div style={{ fontSize: 11, color: T.textMuted, marginTop: 1 }}>{d.pays}</div>
                   </div>
                   {deviseCode === d.code && (
@@ -518,7 +518,7 @@ export default function ParametresPage() {
 
       {/* VERSION */}
       <div style={{ textAlign: 'center', padding: '8px 0 12px', fontSize: 12, color: T.textMuted }}>
-        MargoPro — Version bêta 0.1
+        MargoPro - Version bêta 0.1
       </div>
 
     </div>

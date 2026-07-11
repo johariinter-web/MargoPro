@@ -19,7 +19,7 @@ function genererCSV(
 ): string {
   const lignes: string[] = [];
 
-  lignes.push(`RAPPORT MARGOPRO — ${nomCommerce.toUpperCase()}`);
+  lignes.push(`RAPPORT MARGOPRO - ${nomCommerce.toUpperCase()}`);
   lignes.push(`Généré le : ${new Date().toLocaleDateString('fr-FR')}`);
   lignes.push(`Devise : ${symbole}`);
   lignes.push('');
@@ -104,18 +104,18 @@ export default function SauvegardePage() {
   }
 
   function envoyerWhatsApp() {
-    const texte = encodeURIComponent(`Rapport MargoPro — ${nomCommerce}\nVentes : ${ventes.length}\nStock : ${produits.length} produits`);
+    const texte = encodeURIComponent(`Rapport MargoPro - ${nomCommerce}\nVentes : ${ventes.length}\nStock : ${produits.length} produits`);
     window.open(`https://wa.me/?text=${texte}`, '_blank');
   }
 
   function envoyerMail() {
-    const sujet = encodeURIComponent(`Rapport ${nomCommerce} — ${moisLabel}`);
+    const sujet = encodeURIComponent(`Rapport ${nomCommerce} - ${moisLabel}`);
     const corps = encodeURIComponent(genererCSV(nomCommerce, symbole, produits, ventes));
     window.open(`mailto:?subject=${sujet}&body=${corps}`, '_blank');
   }
 
   function envoyerSMS() {
-    const texte = encodeURIComponent(`Rapport MargoPro ${nomCommerce} — ${moisLabel}. Ventes: ${ventes.length}, Bénéfice total: ${fmtF(ventes.reduce((s, v) => s + v.benefice, 0))} ${symbole}`);
+    const texte = encodeURIComponent(`Rapport MargoPro ${nomCommerce} - ${moisLabel}. Ventes: ${ventes.length}, Bénéfice total: ${fmtF(ventes.reduce((s, v) => s + v.benefice, 0))} ${symbole}`);
     window.open(`sms:?body=${texte}`, '_blank');
   }
 

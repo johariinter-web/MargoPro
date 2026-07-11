@@ -4,7 +4,7 @@ import { fullSync, getUserId } from './sync';
 import { createClient } from './supabase/client';
 
 // =====================================================================
-// MargoPro — Contrôleur de synchronisation (singleton, hors React)
+// MargoPro - Contrôleur de synchronisation (singleton, hors React)
 //
 // Centralise l'état de sync et les déclencheurs. Les hooks de données
 // appellent requestSync() après chaque écriture ; l'UI s'abonne via
@@ -94,7 +94,7 @@ export async function runSync(): Promise<void> {
   }
 }
 
-/** Synchronisation debouncée — appelée par les hooks après une écriture locale. */
+/** Synchronisation debouncée - appelée par les hooks après une écriture locale. */
 export function requestSync(): void {
   if (debounceTimer) clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
@@ -109,7 +109,7 @@ export function startSync(): void {
   started = true;
 
   // Sync initiale au démarrage (peut sortir vide si la session Supabase
-  // n'est pas encore restaurée — l'écouteur ci-dessous prend le relais).
+  // n'est pas encore restaurée - l'écouteur ci-dessous prend le relais).
   void runSync();
 
   // Dès que Supabase restaure la session (ex: iOS après le premier mount),

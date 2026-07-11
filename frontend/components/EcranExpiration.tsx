@@ -65,7 +65,7 @@ export function EcranExpiration() {
             Essai terminé
           </div>
           <div style={{ fontSize: 14, color: '#6B7280', lineHeight: 1.7 }}>
-            Votre essai de 30 jours est terminé. Choisissez 5 produits à garder actifs. Les autres seront archivés — pas supprimés. Ils reviennent si vous passez au Premium.
+            Votre essai de 30 jours est terminé. Choisissez 5 produits à garder actifs. Les autres seront archivés - pas supprimés. Ils reviennent si vous passez au Premium.
           </div>
           <div style={{
             marginTop: 14, display: 'inline-block',
@@ -145,7 +145,7 @@ export function EcranExpiration() {
               fontFamily: 'Manrope, sans-serif',
             }}
           >
-            Passer au Premium — tout garder
+            Passer au Premium - tout garder
           </button>
         </div>
       </div>

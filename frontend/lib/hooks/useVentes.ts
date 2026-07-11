@@ -12,7 +12,7 @@ export function useVentes(periode: Periode = 'jour') {
     () => db.ventes.orderBy('date').reverse().filter((v) => !v.deleted).toArray()
   ) ?? [];
 
-  // Ventes supprimées, du plus récent au plus ancien — pour l'historique des suppressions.
+  // Ventes supprimées, du plus récent au plus ancien - pour l'historique des suppressions.
   const ventesSupprimees = useLiveQuery(
     () => db.ventes.orderBy('updatedAt').reverse().filter((v) => !!v.deleted).toArray()
   ) ?? [];

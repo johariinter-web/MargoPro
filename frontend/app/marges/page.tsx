@@ -113,13 +113,13 @@ export default function MargesPage() {
       type NavShare = Navigator & { canShare?: (d: { files: File[] }) => boolean };
       const nav = navigator as NavShare;
       if (nav.canShare && nav.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], text: `${config?.nomCommerce || ''} — Catalogue` });
+        await navigator.share({ files: [file], text: `${config?.nomCommerce || ''} - Catalogue` });
       } else {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url; a.download = 'catalogue.jpg'; a.click();
         URL.revokeObjectURL(url);
-        setCatalogueMsg('Image enregistrée — tu peux l\'envoyer sur WhatsApp.');
+        setCatalogueMsg('Image enregistrée - tu peux l\'envoyer sur WhatsApp.');
         setTimeout(() => setCatalogueMsg(''), 5000);
       }
     } catch { /* partage annulé : on ignore */ }
@@ -173,7 +173,7 @@ export default function MargesPage() {
       type NavShare = Navigator & { canShare?: (d: { files: File[] }) => boolean };
       const nav = navigator as NavShare;
       if (nav.canShare && nav.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], text: `${p.nom} — ${fmtF(p.prixVente)} ${symbole}` });
+        await navigator.share({ files: [file], text: `${p.nom} - ${fmtF(p.prixVente)} ${symbole}` });
       } else {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -438,7 +438,7 @@ export default function MargesPage() {
                     style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box', cursor: 'pointer' }}>
                     <option value="">Choisir un produit...</option>
                     {produits.map(p => (
-                      <option key={p.id} value={p.id}>{p.nom} — {fmtF(p.prixVente)} {symbole}/unité</option>
+                      <option key={p.id} value={p.id}>{p.nom} - {fmtF(p.prixVente)} {symbole}/unité</option>
                     ))}
                   </select>
                 </div>
@@ -475,7 +475,7 @@ export default function MargesPage() {
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
                               <path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z" stroke={T.red} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
                             </svg>
-                            Prix gros inférieur au prix d&apos;achat — vente à perte
+                            Prix gros inférieur au prix d&apos;achat - vente à perte
                           </div>
                         )}
                       </div>

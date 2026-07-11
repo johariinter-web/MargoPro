@@ -147,7 +147,7 @@ export default function StockPage() {
   const [packASupprimer, setPackASupprimer] = useState<Pack | null>(null);
 
   // Liste des catégories affichées : fusion des catégories enregistrées et de
-  // celles réellement portées par des produits — pour n'en oublier aucune
+  // celles réellement portées par des produits - pour n'en oublier aucune
   // (ex. une catégorie tapée à la main comme « Savon »).
   const categoriesAffichees = Array.from(new Set([
     ...categories,
@@ -398,7 +398,7 @@ export default function StockPage() {
     );
   }
 
-  // Regroupement par catégorie (un seul niveau) — utilisé quand on ne recherche pas
+  // Regroupement par catégorie (un seul niveau) - utilisé quand on ne recherche pas
   const groupesStock = (() => {
     const m = new Map<string, Produit[]>();
     for (const p of produitsFiltres) {
@@ -519,7 +519,7 @@ export default function StockPage() {
                 style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
             </div>
 
-            {/* Quantité — toujours en unités */}
+            {/* Quantité - toujours en unités */}
             <div style={{ marginBottom: 10 }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>
                 Quantité en stock (unités)
@@ -534,7 +534,7 @@ export default function StockPage() {
               )}
             </div>
 
-            {/* RÉAPPRO — bouton qui ouvre une fenêtre */}
+            {/* RÉAPPRO - bouton qui ouvre une fenêtre */}
             <button
               onClick={() => { setChampsReappro({ quantite: '', prixAchat: '' }); setShowReappro(true); }}
               style={{ width: '100%', marginBottom: reapproMsg ? 6 : 14, height: 46, borderRadius: 12, border: `1.5px solid ${T.accent}`, background: T.accentLight, cursor: 'pointer', fontSize: 14, fontWeight: 700, color: T.accent, fontFamily: 'Manrope, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
@@ -637,7 +637,7 @@ export default function StockPage() {
             </div>
             <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 14 }}>{produitEnEdition.nom}</div>
 
-            {/* Choix Paquets / Unités — seulement si le produit est conditionné en paquets */}
+            {/* Choix Paquets / Unités - seulement si le produit est conditionné en paquets */}
             {Number(champsEdition.tailleConditionnement) > 0 && (
               <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
                 {([
@@ -691,7 +691,7 @@ export default function StockPage() {
       )}
 
       {/* DÉTAIL MODAL */}
-      {/* POPUP — Gérer les catégories */}
+      {/* POPUP - Gérer les catégories */}
       {showGererCats && (
         <div
           style={{ position: 'fixed', inset: 0, zIndex: 250, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
@@ -738,7 +738,7 @@ export default function StockPage() {
         </div>
       )}
 
-      {/* POPUP — Confirmation suppression catégorie */}
+      {/* POPUP - Confirmation suppression catégorie */}
       {catASupprimer && (
         <div
           style={{ position: 'fixed', inset: 0, zIndex: 260, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
@@ -848,7 +848,7 @@ export default function StockPage() {
               >
                 <option value="">+ Ajouter un produit...</option>
                 {produits.filter(p => !composantsPack.find(c => c.produitId === p.id)).map(p => (
-                  <option key={p.id} value={p.id}>{p.nom} — {Math.round(p.prixVente).toLocaleString()} {symbole} ({p.quantite} dispo)</option>
+                  <option key={p.id} value={p.id}>{p.nom} - {Math.round(p.prixVente).toLocaleString()} {symbole} ({p.quantite} dispo)</option>
                 ))}
               </select>
             </div>
@@ -879,7 +879,7 @@ export default function StockPage() {
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>Bénéfice net</span><span style={{ fontWeight: 700, color: beneficeNet >= 0 ? T.green : T.red, fontFamily: '"Space Grotesk", sans-serif' }}>{beneficeNet >= 0 ? '+' : ''}{Math.round(beneficeNet).toLocaleString()} {symbole}</span>
                       </div>
-                      {remiseNum === 0 && <div style={{ marginTop: 6, fontSize: 11, color: '#F97316', fontWeight: 600 }}>Le client ne voit pas de bonne affaire — mets une remise</div>}
+                      {remiseNum === 0 && <div style={{ marginTop: 6, fontSize: 11, color: '#F97316', fontWeight: 600 }}>Le client ne voit pas de bonne affaire - mets une remise</div>}
                     </div>
                   )}
                 </>
@@ -1011,14 +1011,14 @@ export default function StockPage() {
               style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
           </div>
 
-          {/* Unités par paquet — AVANT quantite pour que le label change en temps réel */}
+          {/* Unités par paquet - AVANT quantite pour que le label change en temps réel */}
           <div style={{ marginBottom: 10 }}>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Unités par paquet (optionnel)</label>
             <input type="number" onFocus={e => e.target.select()} value={champs.tailleConditionnement} onChange={e => setChamps(c => ({ ...c, tailleConditionnement: e.target.value }))} placeholder="Ex: 12 pour un carton de 12" min="1"
               style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
           </div>
 
-          {/* Quantité — label dynamique */}
+          {/* Quantité - label dynamique */}
           <div style={{ marginBottom: 10 }}>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>
               {Number(champs.tailleConditionnement) > 0 ? 'Nombre de paquets reçus' : 'Quantité'}
@@ -1213,7 +1213,7 @@ export default function StockPage() {
                 >
                   <option value="">+ Ajouter un produit...</option>
                   {produits.filter(p => !composantsPack.find(c => c.produitId === p.id)).map(p => (
-                    <option key={p.id} value={p.id}>{p.nom} — {Math.round(p.prixVente).toLocaleString()} {symbole} ({p.quantite} dispo)</option>
+                    <option key={p.id} value={p.id}>{p.nom} - {Math.round(p.prixVente).toLocaleString()} {symbole} ({p.quantite} dispo)</option>
                   ))}
                 </select>
               </div>
@@ -1244,7 +1244,7 @@ export default function StockPage() {
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                           <span>Bénéfice net</span><span style={{ fontWeight: 700, color: beneficeNet >= 0 ? T.green : T.red, fontFamily: '"Space Grotesk", sans-serif' }}>{beneficeNet >= 0 ? '+' : ''}{Math.round(beneficeNet).toLocaleString()} {symbole}</span>
                         </div>
-                        {remiseNum === 0 && <div style={{ marginTop: 6, fontSize: 11, color: '#F97316', fontWeight: 600 }}>Le client ne voit pas de bonne affaire — mets une remise</div>}
+                        {remiseNum === 0 && <div style={{ marginTop: 6, fontSize: 11, color: '#F97316', fontWeight: 600 }}>Le client ne voit pas de bonne affaire - mets une remise</div>}
                       </div>
                     )}
                   </>

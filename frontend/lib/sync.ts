@@ -6,7 +6,7 @@ import type { Produit, Vente, Config, Pack } from '@backend/types';
 import { uploadPhoto, supprimerPhoto, downloadPhoto, peutSyncerPhotos } from './photoSync';
 
 // =====================================================================
-// MargoPro — Engine de synchronisation cloud (local-first)
+// MargoPro - Engine de synchronisation cloud (local-first)
 //
 // Stratégie : sync bidirectionnelle complète.
 //   pull  : récupère toutes les lignes cloud de l'utilisateur -> fusion LWW dans Dexie
@@ -231,7 +231,7 @@ function rowToPack(r: PackRow): Pack {
 // ---------------------------------------------------------------------
 
 // Connexion Supabase partagée : une seule instance pour toute la sync.
-// Crucial — créer une instance fraîche juste avant un upsert enverrait la
+// Crucial - créer une instance fraîche juste avant un upsert enverrait la
 // requête avant que le jeton d'auth soit chargé en mémoire (-> rejet RLS).
 let _client: ReturnType<typeof createClient> | null = null;
 function getClient() {
@@ -241,7 +241,7 @@ function getClient() {
 
 export async function getUserId(): Promise<string | null> {
   const supabase = getClient();
-  // getSession lit le cache localStorage sans appel réseau — plus robuste sur mobile.
+  // getSession lit le cache localStorage sans appel réseau - plus robuste sur mobile.
   // Le token est validé lors de la connexion et auto-rafraîchi par Supabase.
   const { data } = await supabase.auth.getSession();
   return data.session?.user?.id ?? null;
@@ -307,7 +307,7 @@ async function pull(userId: string): Promise<void> {
     const local = await db.ventes.get(remote.id);
     // LWW standard, plus : si le cloud dit 'credit' mais le local dit 'comptant',
     // le local a été corrompu par la migration Dexie v4 avant que la colonne
-    // mode_reglement existe dans Supabase — on prend le cloud.
+    // mode_reglement existe dans Supabase - on prend le cloud.
     const cloudFixesCredit = remote.modeReglement === 'credit' && local?.modeReglement !== 'credit';
     if (!local || remote.updatedAt > (local.updatedAt ?? local.date) || cloudFixesCredit) {
       await db.ventes.put(remote);

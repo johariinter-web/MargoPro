@@ -183,7 +183,7 @@ export default function AidePage() {
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 28, fontSize: 12, color: T.textMuted }}>
-          MargoPro — Version bêta 0.1
+          MargoPro - Version bêta 0.1
         </div>
 
       </div>

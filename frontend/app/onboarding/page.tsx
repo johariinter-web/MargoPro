@@ -15,13 +15,13 @@ const T = {
 };
 
 const DEVISES = [
-  { code: 'XOF', symbole: 'FCFA', nom: "Franc CFA (UEMOA) — Sénégal, Côte d'Ivoire, Mali..." },
-  { code: 'XAF', symbole: 'FCFA', nom: 'Franc CFA (CEMAC) — Cameroun, Gabon, Congo...' },
-  { code: 'GNF', symbole: 'GNF', nom: 'Franc guinéen — Guinée' },
-  { code: 'CDF', symbole: 'FC', nom: 'Franc congolais — RDC' },
-  { code: 'MGA', symbole: 'Ar', nom: 'Ariary — Madagascar' },
-  { code: 'MAD', symbole: 'MAD', nom: 'Dirham — Maroc' },
-  { code: 'TND', symbole: 'TND', nom: 'Dinar — Tunisie' },
+  { code: 'XOF', symbole: 'FCFA', nom: "Franc CFA (UEMOA) - Sénégal, Côte d'Ivoire, Mali..." },
+  { code: 'XAF', symbole: 'FCFA', nom: 'Franc CFA (CEMAC) - Cameroun, Gabon, Congo...' },
+  { code: 'GNF', symbole: 'GNF', nom: 'Franc guinéen - Guinée' },
+  { code: 'CDF', symbole: 'FC', nom: 'Franc congolais - RDC' },
+  { code: 'MGA', symbole: 'Ar', nom: 'Ariary - Madagascar' },
+  { code: 'MAD', symbole: 'MAD', nom: 'Dirham - Maroc' },
+  { code: 'TND', symbole: 'TND', nom: 'Dinar - Tunisie' },
 ];
 
 function _Slide0Ill() {
