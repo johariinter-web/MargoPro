@@ -23,7 +23,9 @@ create table if not exists public.affiliates (
 create index if not exists affiliates_user_id_idx on public.affiliates(user_id);
 do $$ begin
   alter table public.affiliates add constraint affiliates_user_id_key unique (user_id);
-exception when duplicate_object then null;
+exception
+  when duplicate_object then null;
+  when duplicate_table then null;
 end $$;
 
 create table if not exists public.parrainages (
