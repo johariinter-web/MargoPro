@@ -575,7 +575,7 @@ export default function VentesPage() {
                 />
               </div>
               <div style={{ marginBottom: 12 }}>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Acompte reçu maintenant ({symbole})</label>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Combien le client paie maintenant ? ({symbole})</label>
                 <input
                   type="number" onFocus={e => e.target.select()}
                   value={acompteCredit}
@@ -584,6 +584,9 @@ export default function VentesPage() {
                   min="0"
                   style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }}
                 />
+                <div style={{ fontSize: 11, color: T.textMuted, marginTop: 5 }}>
+                  Laisse 0 s&apos;il ne paie rien pour l&apos;instant. Ne mets pas le prix total ici, sinon l&apos;app pensera qu&apos;il a déjà tout payé.
+                </div>
               </div>
             </>
           )}
