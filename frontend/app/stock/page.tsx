@@ -515,7 +515,7 @@ export default function StockPage() {
             {/* Unités par paquet */}
             <div style={{ marginBottom: 10 }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Unités par paquet (optionnel)</label>
-              <input type="number" onFocus={e => e.target.select()} value={champsEdition.tailleConditionnement} onChange={e => setChampsEdition(c => ({ ...c, tailleConditionnement: e.target.value }))} placeholder="Ex: 12" min="1"
+              <input type="number" onWheel={e => e.currentTarget.blur()} onFocus={e => e.target.select()} value={champsEdition.tailleConditionnement} onChange={e => setChampsEdition(c => ({ ...c, tailleConditionnement: e.target.value }))} placeholder="Ex: 12" min="1"
                 style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
             </div>
 
@@ -524,7 +524,7 @@ export default function StockPage() {
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>
                 Quantité en stock (unités)
               </label>
-              <input type="number" onFocus={e => e.target.select()} value={champsEdition.quantite} onChange={e => setChampsEdition(c => ({ ...c, quantite: e.target.value }))} placeholder="0" min="0" step="any"
+              <input type="number" onWheel={e => e.currentTarget.blur()} onFocus={e => e.target.select()} value={champsEdition.quantite} onChange={e => setChampsEdition(c => ({ ...c, quantite: e.target.value }))} placeholder="0" min="0" step="any"
                 style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
               {Number(champsEdition.tailleConditionnement) > 0 && Number(champsEdition.quantite) > 0 && (
                 <div style={{ fontSize: 12, color: T.textMuted, fontWeight: 600, marginTop: 4 }}>
@@ -557,7 +557,7 @@ export default function StockPage() {
             ].map(({ key, label, placeholder }) => (
               <div key={key} style={{ marginBottom: 10 }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>{label}</label>
-                <input type="number" onFocus={e => e.target.select()} value={champsEdition[key as keyof typeof champsEdition]} onChange={e => setChampsEdition(c => ({ ...c, [key]: e.target.value }))} placeholder={placeholder} min="0"
+                <input type="number" onWheel={e => e.currentTarget.blur()} onFocus={e => e.target.select()} value={champsEdition[key as keyof typeof champsEdition]} onChange={e => setChampsEdition(c => ({ ...c, [key]: e.target.value }))} placeholder={placeholder} min="0"
                   style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
               </div>
             ))}
@@ -660,7 +660,7 @@ export default function StockPage() {
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>
                 {Number(champsEdition.tailleConditionnement) > 0 && reapproMode === 'paquets' ? 'Paquets reçus' : 'Unités reçues'}
               </label>
-              <input type="number" onFocus={e => e.target.select()} autoFocus value={champsReappro.quantite} onChange={e => setChampsReappro(c => ({ ...c, quantite: e.target.value }))} placeholder="0" min="0"
+              <input type="number" onWheel={e => e.currentTarget.blur()} onFocus={e => e.target.select()} autoFocus value={champsReappro.quantite} onChange={e => setChampsReappro(c => ({ ...c, quantite: e.target.value }))} placeholder="0" min="0"
                 step={Number(champsEdition.tailleConditionnement) > 0 && reapproMode === 'paquets' ? '1' : 'any'}
                 style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '12px 14px', fontSize: 18, fontWeight: 700, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
               {Number(champsEdition.tailleConditionnement) > 0 && reapproMode === 'paquets' && Number(champsReappro.quantite) > 0 && (
@@ -673,7 +673,7 @@ export default function StockPage() {
             {/* Nouveau prix d'achat optionnel */}
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Nouveau prix d&apos;achat (optionnel)</label>
-              <input type="number" onFocus={e => e.target.select()} value={champsReappro.prixAchat} onChange={e => setChampsReappro(c => ({ ...c, prixAchat: e.target.value }))} placeholder={`Inchangé : ${champsEdition.prixAchat || '0'}`} min="0"
+              <input type="number" onWheel={e => e.currentTarget.blur()} onFocus={e => e.target.select()} value={champsReappro.prixAchat} onChange={e => setChampsReappro(c => ({ ...c, prixAchat: e.target.value }))} placeholder={`Inchangé : ${champsEdition.prixAchat || '0'}`} min="0"
                 style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
             </div>
 
@@ -865,7 +865,7 @@ export default function StockPage() {
                 <>
                   <div style={{ marginBottom: hasData ? 4 : 14 }}>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Remise (%)</label>
-                    <input type="number" onFocus={e => e.target.select()} value={champsPack.remise} onChange={e => setChampsPack(c => ({ ...c, remise: e.target.value }))} placeholder="Ex : 10" min="0" max="100"
+                    <input type="number" onWheel={e => e.currentTarget.blur()} onFocus={e => e.target.select()} value={champsPack.remise} onChange={e => setChampsPack(c => ({ ...c, remise: e.target.value }))} placeholder="Ex : 10" min="0" max="100"
                       style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
                   </div>
                   {hasData && (
@@ -1014,7 +1014,7 @@ export default function StockPage() {
           {/* Unités par paquet - AVANT quantite pour que le label change en temps réel */}
           <div style={{ marginBottom: 10 }}>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Unités par paquet (optionnel)</label>
-            <input type="number" onFocus={e => e.target.select()} value={champs.tailleConditionnement} onChange={e => setChamps(c => ({ ...c, tailleConditionnement: e.target.value }))} placeholder="Ex: 12 pour un carton de 12" min="1"
+            <input type="number" onWheel={e => e.currentTarget.blur()} onFocus={e => e.target.select()} value={champs.tailleConditionnement} onChange={e => setChamps(c => ({ ...c, tailleConditionnement: e.target.value }))} placeholder="Ex: 12 pour un carton de 12" min="1"
               style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
           </div>
 
@@ -1023,7 +1023,7 @@ export default function StockPage() {
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>
               {Number(champs.tailleConditionnement) > 0 ? 'Nombre de paquets reçus' : 'Quantité'}
             </label>
-            <input type="number" onFocus={e => e.target.select()} value={champs.quantite} onChange={e => setChamps(c => ({ ...c, quantite: e.target.value }))} placeholder="0" min="0" step={Number(champs.tailleConditionnement) > 0 ? '1' : 'any'}
+            <input type="number" onWheel={e => e.currentTarget.blur()} onFocus={e => e.target.select()} value={champs.quantite} onChange={e => setChamps(c => ({ ...c, quantite: e.target.value }))} placeholder="0" min="0" step={Number(champs.tailleConditionnement) > 0 ? '1' : 'any'}
               style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
             {Number(champs.tailleConditionnement) > 0 && Number(champs.quantite) > 0 && (
               <div style={{ fontSize: 12, color: T.accent, fontWeight: 600, marginTop: 4 }}>
@@ -1230,7 +1230,7 @@ export default function StockPage() {
                   <>
                     <div style={{ marginBottom: hasData ? 4 : 14 }}>
                       <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Remise (%)</label>
-                      <input type="number" onFocus={e => e.target.select()} value={champsPack.remise} onChange={e => setChampsPack(c => ({ ...c, remise: e.target.value }))} placeholder="Ex : 10" min="0" max="100"
+                      <input type="number" onWheel={e => e.currentTarget.blur()} onFocus={e => e.target.select()} value={champsPack.remise} onChange={e => setChampsPack(c => ({ ...c, remise: e.target.value }))} placeholder="Ex : 10" min="0" max="100"
                         style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
                     </div>
                     {hasData && (
@@ -1326,7 +1326,7 @@ export default function StockPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: T.textSub }}>Sans vente depuis</div>
                 <div style={{ background: T.bgSubtle, borderRadius: 10, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <input type="number" onFocus={e => e.target.select()} min={1} max={365} value={morteSeuilStr}
+                  <input type="number" onWheel={e => e.currentTarget.blur()} onFocus={e => e.target.select()} min={1} max={365} value={morteSeuilStr}
                     onChange={e => setMorteSeuilStr(e.target.value)}
                     style={{ width: 46, border: 'none', background: 'transparent', fontSize: 16, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif', outline: 'none', textAlign: 'right' }} />
                   <span style={{ fontSize: 13, fontWeight: 700, color: T.accent }}>jours</span>

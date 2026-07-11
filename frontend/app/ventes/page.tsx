@@ -306,7 +306,7 @@ export default function VentesPage() {
             )}
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Montant reçu ({symbole})</label>
             <input
-              type="number" onFocus={e => e.target.select()}
+              type="number" onWheel={e => e.currentTarget.blur()} onFocus={e => e.target.select()}
               value={montantPaiement}
               onChange={e => setMontantPaiement(e.target.value)}
               placeholder={String(resteADoit(ventePaiement))}
@@ -466,7 +466,7 @@ export default function VentesPage() {
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Quantité</label>
                 <input
-                  type="number" onFocus={e => e.target.select()}
+                  type="number" onWheel={e => e.currentTarget.blur()} onFocus={e => e.target.select()}
                   value={quantite}
                   onChange={e => setQuantite(e.target.value)}
                   min="1"
@@ -482,7 +482,7 @@ export default function VentesPage() {
                   Prix unitaire gros (optionnel)
                 </label>
                 <input
-                  type="number" onFocus={e => e.target.select()}
+                  type="number" onWheel={e => e.currentTarget.blur()} onFocus={e => e.target.select()}
                   value={prixGros}
                   onChange={e => setPrixGros(e.target.value)}
                   placeholder={selectedProduit ? `Normal : ${fmtF(selectedProduit.prixVente)} ${symbole}` : 'Prix gros par unité'}
@@ -577,7 +577,7 @@ export default function VentesPage() {
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Combien le client paie maintenant ? ({symbole})</label>
                 <input
-                  type="number" onFocus={e => e.target.select()}
+                  type="number" onWheel={e => e.currentTarget.blur()} onFocus={e => e.target.select()}
                   value={acompteCredit}
                   onChange={e => setAcompteCredit(e.target.value)}
                   placeholder="0"
