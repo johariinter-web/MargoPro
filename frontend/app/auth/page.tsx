@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
-type Mode = 'connexion' | 'inscription';
+type Mode = 'connexion' | 'inscription' | 'oubli';
 
 const T = {
   accent: '#D4601A',
@@ -38,12 +38,40 @@ export default function AuthPage() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [oubliEnvoye, setOubliEnvoye] = useState(false);
+  const [oubliLoading, setOubliLoading] = useState(false);
 
   function basculerMode() {
     setMode(mode === 'connexion' ? 'inscription' : 'connexion');
     setErreur('');
     setConfirmPassword('');
     setCguAccepte(false);
+  }
+
+  function voirOubli() {
+    setMode('oubli');
+    setErreur('');
+    setOubliEnvoye(false);
+  }
+
+  function retourConnexion() {
+    setMode('connexion');
+    setErreur('');
+    setOubliEnvoye(false);
+  }
+
+  async function envoyerReinitialisation(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setOubliLoading(true);
+    const supabase = createClient();
+    // Le résultat n'est jamais branché dans l'UI (succès ou email inexistant
+    // affichent le même message) pour ne jamais révéler si un compte existe.
+    await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/auth/nouveau-mot-de-passe`,
+    });
+    setOubliLoading(false);
+    setOubliEnvoye(true);
   }
 
   const formulaireValide =
@@ -120,6 +148,7 @@ export default function AuthPage() {
         </div>
 
         {/* Formulaire */}
+        {mode !== 'oubli' && (
         <form onSubmit={soumettre} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -168,6 +197,16 @@ export default function AuthPage() {
               </button>
             </div>
           </div>
+
+          {mode === 'connexion' && (
+            <button
+              type="button"
+              onClick={voirOubli}
+              style={{ alignSelf: 'flex-end', marginTop: -8, color: T.accent, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontSize: 13, fontFamily: 'Manrope, sans-serif' }}
+            >
+              Mot de passe oublié ?
+            </button>
+          )}
 
           {mode === 'inscription' && (
             <>
@@ -270,8 +309,10 @@ export default function AuthPage() {
               : 'Créer mon compte'}
           </button>
         </form>
+        )}
 
         {/* Basculer mode */}
+        {mode !== 'oubli' && (
         <p style={{ textAlign: 'center', fontSize: 13, color: T.textMuted, margin: 0, fontFamily: 'Manrope, sans-serif' }}>
           {mode === 'connexion' ? "Pas encore de compte ?" : "Déjà un compte ?"}{' '}
           <button
@@ -281,6 +322,63 @@ export default function AuthPage() {
             {mode === 'connexion' ? 'Créer un compte' : 'Se connecter'}
           </button>
         </p>
+        )}
+
+        {mode === 'oubli' && (
+          oubliEnvoye ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, textAlign: 'center' }}>
+              <p style={{ fontSize: 13, color: T.textSub, fontFamily: 'Manrope, sans-serif', lineHeight: 1.6, margin: 0 }}>
+                Si un compte existe avec cet email, un lien de réinitialisation a été envoyé. Vérifie ta boîte de réception (et les spams).
+              </p>
+              <button
+                onClick={retourConnexion}
+                style={{ color: T.accent, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontSize: 13, fontFamily: 'Manrope, sans-serif' }}
+              >
+                Retour à la connexion
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={envoyerReinitialisation} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <p style={{ fontSize: 13, color: T.textSub, fontFamily: 'Manrope, sans-serif', margin: 0, textAlign: 'center' }}>
+                Entre ton email, on t&apos;envoie un lien pour choisir un nouveau mot de passe.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 13, fontWeight: 700, color: T.text, fontFamily: 'Manrope, sans-serif' }}>
+                  Adresse email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="exemple@email.com"
+                  autoComplete="email"
+                  required
+                  style={inputStyle}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={!email.trim() || oubliLoading}
+                style={{
+                  width: '100%', height: 52, borderRadius: 14,
+                  background: T.accent, color: '#fff',
+                  fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer',
+                  opacity: (!email.trim() || oubliLoading) ? 0.4 : 1,
+                  fontFamily: 'Manrope, sans-serif',
+                }}
+              >
+                {oubliLoading ? '...' : 'Envoyer le lien'}
+              </button>
+              <button
+                type="button"
+                onClick={retourConnexion}
+                style={{ color: T.accent, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontSize: 13, fontFamily: 'Manrope, sans-serif', textAlign: 'center' }}
+              >
+                Retour à la connexion
+              </button>
+            </form>
+          )
+        )}
 
       </div>
     </div>
