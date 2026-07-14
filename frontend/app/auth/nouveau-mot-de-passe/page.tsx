@@ -40,12 +40,6 @@ export default function NouveauMotDePasse() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const codePresent = new URLSearchParams(window.location.search).has('code');
-    if (!codePresent) {
-      setVerification(false);
-      return;
-    }
-
     const supabase = createClient();
     let actif = true;
 
@@ -57,15 +51,14 @@ export default function NouveauMotDePasse() {
       }
     });
 
-    // Filet de sécurité : si l'échange du code (PKCE) a déjà eu lieu avant
-    // que ce composant ne monte, onAuthStateChange ne se redéclenchera pas.
-    supabase.auth.getSession().then(({ data }) => {
-      if (!actif) return;
-      if (data.session) setSessionValide(true);
-      setVerification(false);
-    });
+    // Aucun événement PASSWORD_RECOVERY ne se déclenche si le lien est absent,
+    // invalide ou déjà utilisé — après ce délai, on abandonne l'attente plutôt
+    // que de laisser "Vérification du lien..." tourner indéfiniment.
+    const delai = setTimeout(() => {
+      if (actif) setVerification(false);
+    }, 5000);
 
-    return () => { actif = false; subscription.unsubscribe(); };
+    return () => { actif = false; subscription.unsubscribe(); clearTimeout(delai); };
   }, []);
 
   async function soumettre(e: React.FormEvent<HTMLFormElement>) {
