@@ -40,6 +40,12 @@ export default function NouveauMotDePasse() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    const codePresent = new URLSearchParams(window.location.search).has('code');
+    if (!codePresent) {
+      setVerification(false);
+      return;
+    }
+
     const supabase = createClient();
     let actif = true;
 
