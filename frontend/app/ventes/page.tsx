@@ -33,6 +33,7 @@ export default function VentesPage() {
   const [periode, setPeriode] = useState<Periode>('jour');
   const { ventes, ventesSupprimees, stats, credits, soldes, totalDu, enregistrerVente, enregistrerVentePack, enregistrerPaiementCredit, supprimerVente, restaurerVente } = useVentes(periode);
   const [voirSoldes, setVoirSoldes] = useState(false);
+  const [voirNormaux, setVoirNormaux] = useState(false);
   const [onglet, setOnglet] = useState<'ventes' | 'carnet'>('ventes');
   const [joursOuverts, setJoursOuverts] = useState<Record<string, boolean>>({});
   const [showForm, setShowForm] = useState(false);
@@ -742,8 +743,9 @@ export default function VentesPage() {
               )}
 
               {/* Liste des créanciers - tap pour ouvrir la fiche paiement */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-                {credits.map(v => {
+              {/* Urgents (retard 7j+) toujours visibles, les autres repliés pour ne pas faire une liste sans fin */}
+              {(() => {
+                const carteCreancier = (v: typeof credits[number]) => {
                   const urgence = urgenceCredit(v);
                   const reste = resteADoit(v);
                   const borderColor = urgence === 'urgent' ? '#EF4444' : urgence === 'moyen' ? '#F97316' : T.border;
@@ -779,8 +781,34 @@ export default function VentesPage() {
                       </div>
                     </div>
                   );
-                })}
-              </div>
+                };
+                const urgents = credits.filter(v => urgenceCredit(v) !== 'normal');
+                const normaux = credits.filter(v => urgenceCredit(v) === 'normal');
+                return (
+                  <>
+                    {urgents.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: normaux.length > 0 ? 8 : 16 }}>
+                        {urgents.map(carteCreancier)}
+                      </div>
+                    )}
+                    {normaux.length > 0 && (
+                      <div style={{ marginBottom: 16 }}>
+                        <button
+                          onClick={() => setVoirNormaux(v => !v)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: T.textMuted, padding: '4px 0', marginBottom: 8, fontFamily: 'Manrope, sans-serif' }}
+                        >
+                          {voirNormaux ? 'Masquer' : `Voir les ${normaux.length} autre${normaux.length > 1 ? 's' : ''} créance${normaux.length > 1 ? 's' : ''}`}
+                        </button>
+                        {voirNormaux && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {normaux.map(carteCreancier)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
 
               {/* Crédits soldés - collapsibles avec bouton Supprimer */}
               {soldes.length > 0 && (
