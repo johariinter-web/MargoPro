@@ -28,6 +28,7 @@ const inputStyle = {
   outline: 'none',
   fontFamily: 'Manrope, sans-serif',
   boxSizing: 'border-box' as const,
+  transition: 'border-color 0.2s',
 };
 
 export default function NouveauMotDePasse() {
@@ -56,7 +57,7 @@ export default function NouveauMotDePasse() {
     // que de laisser "Vérification du lien..." tourner indéfiniment.
     const delai = setTimeout(() => {
       if (actif) setVerification(false);
-    }, 5000);
+    }, 10000);
 
     return () => { actif = false; subscription.unsubscribe(); clearTimeout(delai); };
   }, []);
@@ -100,7 +101,7 @@ export default function NouveauMotDePasse() {
               Il a peut-être expiré ou déjà été utilisé. Tu peux en demander un nouveau.
             </p>
             <button
-              onClick={() => router.push('/auth')}
+              onClick={() => router.push('/auth?oubli=1')}
               style={{
                 width: '100%', height: 52, borderRadius: 14,
                 background: T.accent, color: '#fff',
@@ -131,6 +132,8 @@ export default function NouveauMotDePasse() {
                 autoComplete="new-password"
                 required
                 style={inputStyle}
+                onFocus={e => (e.target.style.borderColor = T.accent)}
+                onBlur={e => (e.target.style.borderColor = T.border)}
               />
             </div>
 
@@ -146,6 +149,8 @@ export default function NouveauMotDePasse() {
                 autoComplete="new-password"
                 required
                 style={inputStyle}
+                onFocus={e => (e.target.style.borderColor = T.accent)}
+                onBlur={e => (e.target.style.borderColor = T.border)}
               />
             </div>
 

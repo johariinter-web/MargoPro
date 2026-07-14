@@ -21,7 +21,11 @@ const T = {
 
 export default function AuthPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>('connexion');
+  const [mode, setMode] = useState<Mode>(() => {
+    if (typeof window === 'undefined') return 'connexion';
+    const params = new URLSearchParams(window.location.search);
+    return params.get('oubli') ? 'oubli' : 'connexion';
+  });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -65,11 +69,16 @@ export default function AuthPage() {
     if (!email.trim()) return;
     setOubliLoading(true);
     const supabase = createClient();
-    // Le résultat n'est jamais branché dans l'UI (succès ou email inexistant
-    // affichent le même message) pour ne jamais révéler si un compte existe.
-    await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/auth/nouveau-mot-de-passe`,
-    });
+    // Le résultat n'est jamais branché dans l'UI (succès, email inexistant, ou
+    // échec réseau affichent tous le même message) pour ne jamais révéler si
+    // un compte existe.
+    try {
+      await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/auth/nouveau-mot-de-passe`,
+      });
+    } catch {
+      // Ignoré volontairement : même comportement qu'un succès, voir commentaire ci-dessus.
+    }
     setOubliLoading(false);
     setOubliEnvoye(true);
   }
@@ -354,6 +363,8 @@ export default function AuthPage() {
                   autoComplete="email"
                   required
                   style={inputStyle}
+                  onFocus={e => (e.target.style.borderColor = T.accent)}
+                  onBlur={e => (e.target.style.borderColor = T.border)}
                 />
               </div>
               <button
