@@ -74,3 +74,16 @@ export const db = new MargoDB();
 export function genId(): string {
   return crypto.randomUUID();
 }
+
+// À appeler à chaque déconnexion : sans ça, les données du compte précédent
+// restent dans IndexedDB et se retrouvent copiées vers le compte suivant qui
+// se connecte sur le même appareil (le push envoie tout ce qui est en local,
+// peu importe quel compte l'a créé).
+export async function clearLocalData(): Promise<void> {
+  await db.transaction('rw', db.produits, db.ventes, db.packs, db.config, async () => {
+    await db.produits.clear();
+    await db.ventes.clear();
+    await db.packs.clear();
+    await db.config.clear();
+  });
+}

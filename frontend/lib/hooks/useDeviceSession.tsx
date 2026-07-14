@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { checkAndRegisterDevice } from '@/lib/deviceSession';
+import { clearLocalData } from '@/lib/db';
 
 export function DeviceSessionStarter() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export function DeviceSessionStarter() {
         if (active && result === 'blocked') {
           sessionStorage.setItem('margo_bloque', '1');
           await supabase.auth.signOut();
+          await clearLocalData();
           router.replace('/auth');
         }
       } catch {
