@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useConfig } from '@/lib/hooks/useConfig';
 import { useStock } from '@/lib/hooks/useStock';
 import { useVentes } from '@/lib/hooks/useVentes';
+import { useFournisseurs } from '@/lib/hooks/useFournisseurs';
 import { useColors } from '@/lib/hooks/useColors';
 import { createClient } from '@/lib/supabase/client';
 import BarcodeScanner from '@/components/BarcodeScanner';
@@ -20,6 +21,7 @@ export default function Dashboard() {
   const { config, isReady } = useConfig();
   const { produits, alertes, total: totalStock } = useStock();
   const { stats, ventes, totalDu } = useVentes('jour');
+  const { enRetard: commandesEnRetard } = useFournisseurs();
   const [authChecked, setAuthChecked] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
 
@@ -224,6 +226,20 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {commandesEnRetard.length > 0 && (
+          <Link href="/stock" style={{ textDecoration: 'none' }}>
+            <div style={{ background: '#FDECEA', border: '2px solid #EF4444', borderRadius: 14, padding: '12px 16px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 20 }}>🔴</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#C0392B' }}>
+                  {commandesEnRetard.length} livraison{commandesEnRetard.length > 1 ? 's' : ''} en retard
+                </div>
+                <div style={{ fontSize: 11, color: '#C0392B', marginTop: 1 }}>Tape pour voir tes fournisseurs</div>
+              </div>
+            </div>
+          </Link>
+        )}
 
         {/* PIE CHART CARD */}
         <div style={{ background: T.surface, borderRadius: 16, padding: 16, boxShadow: T.shadow, marginBottom: 10 }}>
