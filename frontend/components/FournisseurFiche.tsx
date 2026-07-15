@@ -58,7 +58,8 @@ export function FournisseurFiche({ fournisseur, onFermer }: { fournisseur: Fourn
     setErreurCommande('');
     const delai = Number(delaiJours);
     const mnt = Number(montant);
-    if (!delai || delai <= 0) { setErreurCommande('Délai de livraison invalide'); return; }
+    if (delaiJours.trim() === '') { setErreurCommande('Délai de livraison invalide'); return; }
+    if (delai < 0) { setErreurCommande('Le délai ne peut pas être négatif'); return; }
     if (!mnt || mnt <= 0) { setErreurCommande('Montant invalide'); return; }
     const err = await ajouterCommande({
       fournisseurId: fournisseur.id,

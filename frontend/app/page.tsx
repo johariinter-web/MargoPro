@@ -229,13 +229,13 @@ export default function Dashboard() {
 
         {commandesEnRetard.length > 0 && (
           <Link href="/stock" style={{ textDecoration: 'none' }}>
-            <div style={{ background: '#FDECEA', border: '2px solid #EF4444', borderRadius: 14, padding: '12px 16px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ background: T.redBg, border: '2px solid #EF4444', borderRadius: 14, padding: '12px 16px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: 20 }}>🔴</span>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#C0392B' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.red }}>
                   {commandesEnRetard.length} livraison{commandesEnRetard.length > 1 ? 's' : ''} en retard
                 </div>
-                <div style={{ fontSize: 11, color: '#C0392B', marginTop: 1 }}>Tape pour voir tes fournisseurs</div>
+                <div style={{ fontSize: 11, color: T.red, marginTop: 1 }}>Tape pour voir tes fournisseurs</div>
               </div>
             </div>
           </Link>
