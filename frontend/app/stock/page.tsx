@@ -13,6 +13,7 @@ import type { Produit } from '@backend/types';
 import { usePacks } from '@/lib/hooks/usePacks';
 import { prixAchatPack, prixVenteSepares } from '@backend/packs';
 import type { Pack } from '@backend/types';
+import { Fournisseurs } from '@/components/Fournisseurs';
 
 function fmtF(n: number) {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -131,7 +132,7 @@ export default function StockPage() {
   const [produitASupprimer, setProduitASupprimer] = useState<Produit | null>(null);
   const [produitSupprime, setProduitSupprime] = useState<Produit | null>(null);
   const [catsOuvertes, setCatsOuvertes] = useState<Record<string, boolean>>({});
-  const [vueStock, setVueStock] = useState<'produits' | 'packs' | 'mort'>('produits');
+  const [vueStock, setVueStock] = useState<'produits' | 'packs' | 'mort' | 'fournisseurs'>('produits');
   const [morteSeuilStr, setMorteSeuilStr] = useState('30');
   const [showGererCats, setShowGererCats] = useState(false);
   const [catASupprimer, setCatASupprimer] = useState<string | null>(null);
@@ -948,9 +949,10 @@ export default function StockPage() {
       <div style={{ padding: '0 16px 10px' }}>
         <div style={{ display: 'flex', background: T.bgSubtle, borderRadius: 12, padding: 3, gap: 2 }}>
           {([
-            { v: 'produits' as const, label: 'Mes produits' },
+            { v: 'produits' as const, label: 'Produits' },
             { v: 'packs' as const, label: 'Packs' },
             { v: 'mort' as const, label: 'Stock mort' },
+            { v: 'fournisseurs' as const, label: 'Fournisseurs' },
           ]).map(({ v, label }) => (
             <button key={v} onClick={() => setVueStock(v)}
               style={{ flex: 1, height: 36, border: 'none', cursor: 'pointer', borderRadius: 10, fontSize: 12,
@@ -1389,6 +1391,8 @@ export default function StockPage() {
           </div>
         );
       })()}
+
+      {vueStock === 'fournisseurs' && <Fournisseurs />}
 
       {alertes.length > 0 && <div style={{ display: 'none' }} aria-hidden="true" />}
       {showUpgradeModal && <ModalUpgrade onClose={() => setShowUpgradeModal(false)} />}
