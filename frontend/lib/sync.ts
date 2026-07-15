@@ -2,7 +2,7 @@
 
 import { db } from './db';
 import { createClient } from './supabase/client';
-import type { Produit, Vente, Config, Pack } from '@backend/types';
+import type { Produit, Vente, Config, Pack, Fournisseur, Commande } from '@backend/types';
 import { uploadPhoto, supprimerPhoto, downloadPhoto, peutSyncerPhotos } from './photoSync';
 
 // =====================================================================
@@ -226,6 +226,90 @@ function rowToPack(r: PackRow): Pack {
   };
 }
 
+type FournisseurRow = {
+  id: string;
+  user_id: string;
+  nom: string;
+  contact: string | null;
+  delai_habituel: number | null;
+  montant_minimum: number | null;
+  mode_paiement: string | null;
+  created_at: number;
+  updated_at: number;
+  deleted: boolean;
+};
+
+type CommandeRow = {
+  id: string;
+  user_id: string;
+  fournisseur_id: string;
+  date_commande: number;
+  delai_jours: number;
+  montant: number;
+  recue: boolean;
+  created_at: number;
+  updated_at: number;
+  deleted: boolean;
+};
+
+function fournisseurToRow(f: Fournisseur, userId: string): FournisseurRow {
+  return {
+    id: f.id,
+    user_id: userId,
+    nom: f.nom,
+    contact: f.contact ?? null,
+    delai_habituel: f.delaiHabituel ?? null,
+    montant_minimum: f.montantMinimum ?? null,
+    mode_paiement: f.modePaiement ?? null,
+    created_at: f.createdAt ?? Date.now(),
+    updated_at: f.updatedAt ?? Date.now(),
+    deleted: f.deleted ?? false,
+  };
+}
+
+function rowToFournisseur(r: FournisseurRow): Fournisseur {
+  return {
+    id: r.id,
+    nom: r.nom,
+    contact: r.contact ?? undefined,
+    delaiHabituel: r.delai_habituel ?? undefined,
+    montantMinimum: r.montant_minimum ?? undefined,
+    modePaiement: r.mode_paiement ?? undefined,
+    createdAt: Number(r.created_at),
+    updatedAt: Number(r.updated_at),
+    deleted: r.deleted ?? false,
+  };
+}
+
+function commandeToRow(c: Commande, userId: string): CommandeRow {
+  return {
+    id: c.id,
+    user_id: userId,
+    fournisseur_id: c.fournisseurId,
+    date_commande: c.dateCommande,
+    delai_jours: c.delaiJours,
+    montant: c.montant,
+    recue: c.recue ?? false,
+    created_at: c.createdAt ?? Date.now(),
+    updated_at: c.updatedAt ?? Date.now(),
+    deleted: c.deleted ?? false,
+  };
+}
+
+function rowToCommande(r: CommandeRow): Commande {
+  return {
+    id: r.id,
+    fournisseurId: r.fournisseur_id,
+    dateCommande: Number(r.date_commande),
+    delaiJours: Number(r.delai_jours),
+    montant: Number(r.montant),
+    recue: r.recue ?? false,
+    createdAt: Number(r.created_at),
+    updatedAt: Number(r.updated_at),
+    deleted: r.deleted ?? false,
+  };
+}
+
 // ---------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------
@@ -349,6 +433,44 @@ async function pull(userId: string): Promise<void> {
   } catch (err) {
     console.warn('[sync] pull packs ignoré :', err);
   }
+
+  // --- fournisseurs (non-fatal : si la table n'existe pas encore, on continue) ---
+  try {
+    const { data: fournisseursRows, error: fErr } = await supabase
+      .from('fournisseurs')
+      .select('*')
+      .eq('user_id', userId);
+    if (fErr) throw fErr;
+
+    for (const row of (fournisseursRows ?? []) as FournisseurRow[]) {
+      const remote = rowToFournisseur(row);
+      const local = await db.fournisseurs.get(remote.id);
+      if (!local || remote.updatedAt > (local.updatedAt ?? 0)) {
+        await db.fournisseurs.put(remote);
+      }
+    }
+  } catch (err) {
+    console.warn('[sync] pull fournisseurs ignoré :', err);
+  }
+
+  // --- commandes (non-fatal : si la table n'existe pas encore, on continue) ---
+  try {
+    const { data: commandesRows, error: cmdErr } = await supabase
+      .from('commandes')
+      .select('*')
+      .eq('user_id', userId);
+    if (cmdErr) throw cmdErr;
+
+    for (const row of (commandesRows ?? []) as CommandeRow[]) {
+      const remote = rowToCommande(row);
+      const local = await db.commandes.get(remote.id);
+      if (!local || remote.updatedAt > (local.updatedAt ?? 0)) {
+        await db.commandes.put(remote);
+      }
+    }
+  } catch (err) {
+    console.warn('[sync] pull commandes ignoré :', err);
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -425,6 +547,30 @@ async function push(userId: string): Promise<void> {
     }
   } catch (err) {
     console.warn('[sync] push packs ignoré :', err);
+  }
+
+  // --- fournisseurs (non-fatal : si la table n'existe pas encore, on continue) ---
+  try {
+    const fournisseurs = await db.fournisseurs.toArray();
+    if (fournisseurs.length > 0) {
+      const rows = fournisseurs.map((f) => fournisseurToRow(f, userId));
+      const { error } = await supabase.from('fournisseurs').upsert(rows, { onConflict: 'id' });
+      if (error) throw error;
+    }
+  } catch (err) {
+    console.warn('[sync] push fournisseurs ignoré :', err);
+  }
+
+  // --- commandes (non-fatal : si la table n'existe pas encore, on continue) ---
+  try {
+    const commandes = await db.commandes.toArray();
+    if (commandes.length > 0) {
+      const rows = commandes.map((c) => commandeToRow(c, userId));
+      const { error } = await supabase.from('commandes').upsert(rows, { onConflict: 'id' });
+      if (error) throw error;
+    }
+  } catch (err) {
+    console.warn('[sync] push commandes ignoré :', err);
   }
 }
 
