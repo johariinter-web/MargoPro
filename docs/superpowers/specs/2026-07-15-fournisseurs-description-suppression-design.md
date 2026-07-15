@@ -32,6 +32,8 @@ Ajoute deux champs à celui existant (date de commande, délai, montant) :
 
 Chaque ligne de commande affiche la description (si renseignée) en plus du montant et de la quantité — ex : "Babouches · 50 unités · 150 000 FCFA". Si aucune description n'a été saisie, l'affichage reste comme avant (juste le montant).
 
+**Repliage des commandes reçues** — pour que l'historique ne devienne pas une liste sans fin avec le temps : les commandes **en cours** (pas encore reçues, y compris en retard) restent toujours visibles ; les commandes **déjà reçues** se replient derrière un bouton **"Voir les X commandes reçues"**, exactement le même principe que "Voir les crédits soldés" dans le Carnet (`frontend/app/ventes/page.tsx`). Repli par défaut, un tap pour déplier/replier.
+
 ### Suppression d'une commande — sélection unique
 
 Même pattern que la sélection des appareils connectés dans Paramètres (voir [2026-07-10-appareils-selection-unique-design.md](2026-07-10-appareils-selection-unique-design.md)) : taper une commande dans l'historique la **sélectionne** (état radio, une seule à la fois — retaper la même ligne désélectionne). Un seul bouton **"Supprimer"** apparaît sous la liste quand une commande est sélectionnée, avec confirmation avant l'action. Pas de bouton par ligne — évite d'encombrer visuellement une liste qui peut contenir beaucoup de commandes.
