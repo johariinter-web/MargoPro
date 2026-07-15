@@ -65,3 +65,27 @@ export interface StatsPeriode {
   nombreVentes: number;
   periode: Periode;
 }
+
+export interface Fournisseur {
+  id: string;
+  nom: string;
+  contact?: string;
+  delaiHabituel?: number;   // jours
+  montantMinimum?: number;
+  modePaiement?: string;
+  createdAt: number;
+  updatedAt: number;
+  deleted?: boolean;
+}
+
+export interface Commande {
+  id: string;
+  fournisseurId: string;
+  dateCommande: number;
+  delaiJours: number;
+  montant: number;
+  recue: boolean;
+  createdAt: number;
+  updatedAt: number;
+  deleted?: boolean;
+}
