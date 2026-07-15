@@ -247,6 +247,8 @@ type CommandeRow = {
   delai_jours: number;
   montant: number;
   recue: boolean;
+  description: string | null;
+  quantite: number | null;
   created_at: number;
   updated_at: number;
   deleted: boolean;
@@ -290,6 +292,8 @@ function commandeToRow(c: Commande, userId: string): CommandeRow {
     delai_jours: c.delaiJours,
     montant: c.montant,
     recue: c.recue ?? false,
+    description: c.description ?? null,
+    quantite: c.quantite ?? null,
     created_at: c.createdAt ?? Date.now(),
     updated_at: c.updatedAt ?? Date.now(),
     deleted: c.deleted ?? false,
@@ -304,6 +308,8 @@ function rowToCommande(r: CommandeRow): Commande {
     delaiJours: Number(r.delai_jours),
     montant: Number(r.montant),
     recue: r.recue ?? false,
+    description: r.description ?? undefined,
+    quantite: r.quantite ?? undefined,
     createdAt: Number(r.created_at),
     updatedAt: Number(r.updated_at),
     deleted: r.deleted ?? false,

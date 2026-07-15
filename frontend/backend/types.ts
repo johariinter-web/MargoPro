@@ -85,6 +85,8 @@ export interface Commande {
   delaiJours: number;
   montant: number;
   recue: boolean;
+  description?: string;
+  quantite?: number;
   createdAt: number;
   updatedAt: number;
   deleted?: boolean;
