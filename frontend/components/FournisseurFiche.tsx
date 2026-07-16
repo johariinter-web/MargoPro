@@ -19,6 +19,7 @@ export function FournisseurFiche({ fournisseur, onFermer }: { fournisseur: Fourn
     commandesDuFournisseur,
     ajouterCommande,
     marquerCommandeRecue,
+    supprimerCommande,
     modifierFournisseur,
     supprimerFournisseur,
   } = useFournisseurs();
@@ -40,6 +41,11 @@ export function FournisseurFiche({ fournisseur, onFermer }: { fournisseur: Fourn
   const [erreurCommande, setErreurCommande] = useState('');
 
   const [confirmerSuppression, setConfirmerSuppression] = useState(false);
+  const [description, setDescription] = useState('');
+  const [quantite, setQuantite] = useState('');
+  const [commandeSelectionneeId, setCommandeSelectionneeId] = useState<string | null>(null);
+  const [confirmerSuppressionCommande, setConfirmerSuppressionCommande] = useState(false);
+  const [voirRecues, setVoirRecues] = useState(false);
 
   async function handleModifier() {
     setErreurEdition('');
@@ -66,11 +72,22 @@ export function FournisseurFiche({ fournisseur, onFermer }: { fournisseur: Fourn
       dateCommande: Date.now(),
       delaiJours: delai,
       montant: mnt,
+      description: description.trim() || undefined,
+      quantite: Number(quantite) > 0 ? Number(quantite) : undefined,
     });
     if (err) { setErreurCommande(err); return; }
     setDelaiJours(fournisseur.delaiHabituel ? String(fournisseur.delaiHabituel) : '');
     setMontant('');
+    setDescription('');
+    setQuantite('');
     setShowCommandeForm(false);
+  }
+
+  async function handleSupprimerCommande() {
+    if (!commandeSelectionneeId) return;
+    await supprimerCommande(commandeSelectionneeId);
+    setCommandeSelectionneeId(null);
+    setConfirmerSuppressionCommande(false);
   }
 
   const dateApercu = Number(delaiJours) > 0
@@ -185,6 +202,24 @@ export function FournisseurFiche({ fournisseur, onFermer }: { fournisseur: Fourn
                   </div>
                 )}
                 <div style={{ marginBottom: 10 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Description (optionnel)</label>
+                  <input
+                    type="text" onWheel={e => e.currentTarget.blur()}
+                    value={description} onChange={e => setDescription(e.target.value)}
+                    placeholder="Ex : Babouches"
+                    style={inputStyle}
+                  />
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Quantité (optionnel)</label>
+                  <input
+                    type="text" inputMode="decimal" onWheel={e => e.currentTarget.blur()}
+                    value={quantite} onChange={e => setQuantite(e.target.value)}
+                    placeholder="Ex : 50"
+                    style={inputStyle}
+                  />
+                </div>
+                <div style={{ marginBottom: 10 }}>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Délai de livraison (jours)</label>
                   <input
                     type="text" inputMode="decimal" onWheel={e => e.currentTarget.blur()}
@@ -227,39 +262,97 @@ export function FournisseurFiche({ fournisseur, onFermer }: { fournisseur: Fourn
             </div>
             {commandes.length === 0 ? (
               <div style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: '20px 0' }}>Aucune commande pour l&apos;instant</div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
-                {commandes.map(c => {
-                  const enRetard = estEnRetard(c);
-                  return (
-                    <div key={c.id} style={{
-                      background: T.bgSubtle, borderRadius: 12, padding: '10px 14px',
-                      border: enRetard ? '1.5px solid #EF4444' : `1px solid ${T.border}`,
-                      opacity: c.recue ? 0.6 : 1,
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: T.text, textDecoration: c.recue ? 'line-through' : 'none' }}>
-                          {fmtF(c.montant)} {symbole}
-                        </span>
-                        {enRetard && <span style={{ fontSize: 11, fontWeight: 700, color: '#EF4444' }}>🔴 En retard</span>}
-                        {c.recue && <span style={{ fontSize: 11, fontWeight: 700, color: T.green }}>✓ Reçue</span>}
-                      </div>
-                      <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>
-                        Commandée le {new Date(c.dateCommande).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                        {' · '}Prévue le {new Date(dateLivraisonPrevue(c)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                      </div>
-                      {!c.recue && (
-                        <button
-                          onClick={() => marquerCommandeRecue(c.id)}
-                          style={{ marginTop: 8, height: 32, padding: '0 12px', borderRadius: 8, background: T.greenBg, color: T.green, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
-                        >
-                          Marquer reçue
-                        </button>
+            ) : (() => {
+              const carteCommande = (c: typeof commandes[number]) => {
+                const enRetard = estEnRetard(c);
+                const selectionnee = commandeSelectionneeId === c.id;
+                return (
+                  <div
+                    key={c.id}
+                    onClick={() => { setCommandeSelectionneeId(id => id === c.id ? null : c.id); setConfirmerSuppressionCommande(false); }}
+                    style={{
+                      background: selectionnee ? T.accentLight : T.bgSubtle, borderRadius: 12, padding: '10px 14px',
+                      border: selectionnee ? `1.5px solid ${T.accent}` : enRetard ? '1.5px solid #EF4444' : `1px solid ${T.border}`,
+                      opacity: c.recue ? 0.6 : 1, cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: T.text, textDecoration: c.recue ? 'line-through' : 'none' }}>
+                        {c.description ? `${c.description} · ` : ''}{c.quantite ? `${c.quantite} unités · ` : ''}{fmtF(c.montant)} {symbole}
+                      </span>
+                      {enRetard && <span style={{ fontSize: 11, fontWeight: 700, color: '#EF4444' }}>🔴 En retard</span>}
+                      {c.recue && <span style={{ fontSize: 11, fontWeight: 700, color: T.green }}>✓ Reçue</span>}
+                    </div>
+                    <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>
+                      Commandée le {new Date(c.dateCommande).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                      {' · '}Prévue le {new Date(dateLivraisonPrevue(c)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                    </div>
+                    {!c.recue && (
+                      <button
+                        onClick={e => { e.stopPropagation(); marquerCommandeRecue(c.id); }}
+                        style={{ marginTop: 8, height: 32, padding: '0 12px', borderRadius: 8, background: T.greenBg, color: T.green, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
+                      >
+                        Marquer reçue
+                      </button>
+                    )}
+                  </div>
+                );
+              };
+              const enCours = commandes.filter(c => !c.recue);
+              const recues = commandes.filter(c => c.recue);
+              return (
+                <>
+                  {enCours.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: recues.length > 0 ? 8 : 16 }}>
+                      {enCours.map(carteCommande)}
+                    </div>
+                  )}
+                  {enCours.length === 0 && recues.length > 0 && (
+                    <div style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', padding: '12px 0' }}>Aucune commande en cours</div>
+                  )}
+                  {recues.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <button
+                        onClick={() => setVoirRecues(v => !v)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: T.textMuted, padding: '4px 0', marginBottom: 8, fontFamily: 'Manrope, sans-serif' }}
+                      >
+                        {voirRecues ? 'Masquer' : `Voir les ${recues.length} commande${recues.length > 1 ? 's' : ''} reçue${recues.length > 1 ? 's' : ''}`}
+                      </button>
+                      {voirRecues && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {recues.map(carteCommande)}
+                        </div>
                       )}
                     </div>
-                  );
-                })}
-              </div>
+                  )}
+                </>
+              );
+            })()}
+
+            {commandeSelectionneeId && (
+              confirmerSuppressionCommande ? (
+                <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+                  <button
+                    onClick={() => setConfirmerSuppressionCommande(false)}
+                    style={{ flex: 1, height: 44, borderRadius: 12, background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: T.textSub }}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleSupprimerCommande}
+                    style={{ flex: 2, height: 44, borderRadius: 12, background: T.redBg, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: T.red }}
+                  >
+                    Confirmer la suppression
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmerSuppressionCommande(true)}
+                  style={{ width: '100%', height: 44, borderRadius: 12, background: T.redBg, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: T.red, marginBottom: 20 }}
+                >
+                  Supprimer cette commande
+                </button>
+              )
             )}
 
             {confirmerSuppression ? (
