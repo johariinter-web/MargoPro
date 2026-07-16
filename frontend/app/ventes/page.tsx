@@ -31,7 +31,7 @@ export default function VentesPage() {
   const { config } = useConfig();
   const { produits, deduireStock } = useStock();
   const [periode, setPeriode] = useState<Periode>('jour');
-  const { ventes, ventesSupprimees, stats, credits, soldes, totalDu, enregistrerVente, enregistrerVentePack, enregistrerPaiementCredit, supprimerVente, restaurerVente } = useVentes(periode);
+  const { ventes, ventesSupprimees, stats, credits, soldes, totalDu, enregistrerVente, enregistrerVentePack, enregistrerPaiementCredit, supprimerVente, restaurerVente, supprimerVenteDefinitivement } = useVentes(periode);
   const [voirSoldes, setVoirSoldes] = useState(false);
   const [voirNormaux, setVoirNormaux] = useState(false);
   const [onglet, setOnglet] = useState<'ventes' | 'carnet'>('ventes');
@@ -49,6 +49,9 @@ export default function VentesPage() {
   const [venteSelectionnee, setVenteSelectionnee] = useState<typeof ventes[number] | null>(null);
   const [venteSupprimee, setVenteSupprimee] = useState<typeof ventes[number] | null>(null);
   const [showHistorique, setShowHistorique] = useState(false);
+  const [venteHistoriqueSelectionneeId, setVenteHistoriqueSelectionneeId] = useState<string | null>(null);
+  const [confirmerSuppressionDefinitive, setConfirmerSuppressionDefinitive] = useState(false);
+  const [erreurSuppressionDefinitive, setErreurSuppressionDefinitive] = useState('');
   const [ventePaiement, setVentePaiement] = useState<typeof ventes[number] | null>(null);
   const [montantPaiement, setMontantPaiement] = useState('');
   const [erreurPaiement, setErreurPaiement] = useState('');
@@ -74,6 +77,15 @@ export default function VentesPage() {
     restaurerVente(venteSupprimee.id);
     setVenteSupprimee(null);
     if (undoTimer.current) clearTimeout(undoTimer.current);
+  }
+
+  async function handleSuppressionDefinitive() {
+    if (!venteHistoriqueSelectionneeId) return;
+    setErreurSuppressionDefinitive('');
+    const err = await supprimerVenteDefinitivement(venteHistoriqueSelectionneeId);
+    if (err) { setErreurSuppressionDefinitive(err); return; }
+    setVenteHistoriqueSelectionneeId(null);
+    setConfirmerSuppressionDefinitive(false);
   }
 
   const symbole = config?.symboleDevise ?? 'FCFA';
@@ -232,7 +244,7 @@ export default function VentesPage() {
       {showHistorique && (
         <div
           style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'flex-end' }}
-          onClick={() => setShowHistorique(false)}
+          onClick={() => { setShowHistorique(false); setVenteHistoriqueSelectionneeId(null); setConfirmerSuppressionDefinitive(false); setErreurSuppressionDefinitive(''); }}
         >
           <div
             style={{ background: T.surface, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, margin: '0 auto', padding: '20px 20px 36px', maxHeight: '80dvh', overflowY: 'auto' }}
@@ -241,29 +253,71 @@ export default function VentesPage() {
             <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border, margin: '0 auto 16px' }} />
             <div style={{ fontSize: 18, fontWeight: 800, color: T.text, marginBottom: 4 }}>Historique des suppressions</div>
             <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 16 }}>
-              Toutes les ventes supprimées restent visibles ici, avec leur date.
+              Toutes les ventes supprimées restent visibles ici, avec leur date. Tape une vente pour la supprimer définitivement.
             </div>
+            {erreurSuppressionDefinitive && (
+              <div style={{ fontSize: 13, color: T.red, fontWeight: 600, marginBottom: 12, padding: '8px 12px', background: T.redBg, borderRadius: 8 }}>
+                {erreurSuppressionDefinitive}
+              </div>
+            )}
             {ventesSupprimees.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '30px 0', color: T.textMuted, fontSize: 14 }}>
                 Aucune vente supprimée
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {ventesSupprimees.map(v => (
-                  <div key={v.id} style={{ background: T.bgSubtle, borderRadius: 12, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.produitNom}</div>
-                      <div style={{ fontSize: 11, color: T.textMuted, marginTop: 1 }}>
-                        Vendue le {new Date(v.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                        {v.updatedAt ? ` · supprimée le ${new Date(v.updatedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: venteHistoriqueSelectionneeId ? 12 : 0 }}>
+                {ventesSupprimees.map(v => {
+                  const selectionnee = venteHistoriqueSelectionneeId === v.id;
+                  return (
+                    <div
+                      key={v.id}
+                      onClick={() => { setVenteHistoriqueSelectionneeId(id => id === v.id ? null : v.id); setConfirmerSuppressionDefinitive(false); setErreurSuppressionDefinitive(''); }}
+                      style={{
+                        background: selectionnee ? T.accentLight : T.bgSubtle, borderRadius: 12, padding: '10px 12px',
+                        display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+                        border: selectionnee ? `1.5px solid ${T.accent}` : '1.5px solid transparent',
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.produitNom}</div>
+                        <div style={{ fontSize: 11, color: T.textMuted, marginTop: 1 }}>
+                          Vendue le {new Date(v.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                          {v.updatedAt ? ` · supprimée le ${new Date(v.updatedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: T.textSub, fontFamily: '"Space Grotesk", sans-serif', flexShrink: 0 }}>
+                        {fmtF(v.total)} {symbole}
                       </div>
                     </div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: T.textSub, fontFamily: '"Space Grotesk", sans-serif', flexShrink: 0 }}>
-                      {fmtF(v.total)} {symbole}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
+            )}
+
+            {venteHistoriqueSelectionneeId && (
+              confirmerSuppressionDefinitive ? (
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    onClick={() => setConfirmerSuppressionDefinitive(false)}
+                    style={{ flex: 1, height: 44, borderRadius: 12, background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: T.textSub }}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleSuppressionDefinitive}
+                    style={{ flex: 2, height: 44, borderRadius: 12, background: T.redBg, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: T.red }}
+                  >
+                    Confirmer la suppression
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmerSuppressionDefinitive(true)}
+                  style={{ width: '100%', height: 44, borderRadius: 12, background: T.redBg, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: T.red }}
+                >
+                  Supprimer définitivement
+                </button>
+              )
             )}
           </div>
         </div>
