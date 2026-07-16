@@ -5,6 +5,7 @@ import { db, genId } from '../db';
 import { calculerStats, topProduits, creerVente, creditsEnCours, creditsSoldes, totalCredit, resteADoit } from '@backend/ventes';
 import { creerVentePack } from '@backend/packs';
 import { requestSync } from '../syncController';
+import { purgerVente } from '../sync';
 import type { Periode, Pack } from '@backend/types';
 
 export function useVentes(periode: Periode = 'jour') {
@@ -110,6 +111,16 @@ export function useVentes(periode: Periode = 'jour') {
     requestSync();
   }
 
+  async function supprimerVenteDefinitivement(id: string): Promise<string | null> {
+    try {
+      await purgerVente(id);
+    } catch {
+      return 'Suppression impossible. Vérifiez votre connexion internet et réessayez.';
+    }
+    await db.ventes.delete(id);
+    return null;
+  }
+
   async function enregistrerVentePack(
     pack: Pack,
     credit?: { clientNom: string; clientTel?: string; montantRecu: number }
@@ -149,5 +160,5 @@ export function useVentes(periode: Periode = 'jour') {
   const soldes = creditsSoldes(ventes);
   const totalDu = totalCredit(ventes);
 
-  return { ventes, ventesSupprimees, stats, top3, credits, soldes, totalDu, enregistrerVente, enregistrerVentePack, enregistrerPaiementCredit, supprimerVente, restaurerVente };
+  return { ventes, ventesSupprimees, stats, top3, credits, soldes, totalDu, enregistrerVente, enregistrerVentePack, enregistrerPaiementCredit, supprimerVente, restaurerVente, supprimerVenteDefinitivement };
 }

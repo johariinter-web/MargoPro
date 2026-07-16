@@ -337,6 +337,14 @@ export async function getUserId(): Promise<string | null> {
   return data.session?.user?.id ?? null;
 }
 
+// Suppression definitive (hors du cycle pull/push normal) : utilisee pour
+// purger une vente deja soft-deleted de l'historique des suppressions.
+export async function purgerVente(id: string): Promise<void> {
+  const supabase = getClient();
+  const { error } = await supabase.from('ventes').delete().eq('id', id);
+  if (error) throw error;
+}
+
 // ---------------------------------------------------------------------
 // PULL : cloud -> local (fusion last-write-wins)
 // ---------------------------------------------------------------------
