@@ -278,7 +278,7 @@ export function FournisseurFiche({ fournisseur, onFermer }: { fournisseur: Fourn
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: 14, fontWeight: 700, color: T.text, textDecoration: c.recue ? 'line-through' : 'none' }}>
-                        {c.description ? `${c.description} · ` : ''}{c.quantite ? `${c.quantite} unités · ` : ''}{fmtF(c.montant)} {symbole}
+                        {c.description ? `${c.description} · ` : ''}{c.quantite ? `${c.quantite} unité${c.quantite > 1 ? 's' : ''} · ` : ''}{fmtF(c.montant)} {symbole}
                       </span>
                       {enRetard && <span style={{ fontSize: 11, fontWeight: 700, color: '#EF4444' }}>🔴 En retard</span>}
                       {c.recue && <span style={{ fontSize: 11, fontWeight: 700, color: T.green }}>✓ Reçue</span>}
@@ -289,7 +289,7 @@ export function FournisseurFiche({ fournisseur, onFermer }: { fournisseur: Fourn
                     </div>
                     {!c.recue && (
                       <button
-                        onClick={e => { e.stopPropagation(); marquerCommandeRecue(c.id); }}
+                        onClick={e => { e.stopPropagation(); if (commandeSelectionneeId === c.id) { setCommandeSelectionneeId(null); setConfirmerSuppressionCommande(false); } marquerCommandeRecue(c.id); }}
                         style={{ marginTop: 8, height: 32, padding: '0 12px', borderRadius: 8, background: T.greenBg, color: T.green, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
                       >
                         Marquer reçue
