@@ -8,7 +8,6 @@ import { useStock } from '@/lib/hooks/useStock';
 import { useVentes } from '@/lib/hooks/useVentes';
 import { useFournisseurs } from '@/lib/hooks/useFournisseurs';
 import { useColors } from '@/lib/hooks/useColors';
-import { createClient } from '@/lib/supabase/client';
 import BarcodeScanner from '@/components/BarcodeScanner';
 
 function fmtF(n: number) {
@@ -22,7 +21,6 @@ export default function Dashboard() {
   const { produits, alertes, total: totalStock } = useStock();
   const { stats, ventes, totalDu } = useVentes('jour');
   const { enRetard: commandesEnRetard } = useFournisseurs();
-  const [authChecked, setAuthChecked] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
 
   function handleScanAccueil(barcode: string) {
@@ -32,23 +30,12 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) {
-        router.replace('/auth');
-      } else {
-        setAuthChecked(true);
-      }
-    });
-  }, [router]);
-
-  useEffect(() => {
-    if (authChecked && isReady && (!config || !config.onboardingComplete)) {
+    if (isReady && (!config || !config.onboardingComplete)) {
       router.replace('/onboarding');
     }
-  }, [authChecked, isReady, config, router]);
+  }, [isReady, config, router]);
 
-  if (!authChecked || !isReady || !config) {
+  if (!isReady || !config) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', background: T.bg }}>
         <div style={{
