@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
+import { isAuthRetryableFetchError } from '@supabase/supabase-js';
 import { NextResponse, type NextRequest } from 'next/server';
 import { isPublicPath } from '@/lib/authGate';
 
@@ -24,9 +25,13 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error } = await supabase.auth.getUser();
 
-  if (!user && !isPublicPath(request.nextUrl.pathname)) {
+  // Réseau absent ou Supabase indisponible : ne pas déconnecter un utilisateur
+  // déjà connecté, voir useDeviceSession.tsx / onboarding/page.tsx pour le même principe.
+  const reseauIndisponible = isAuthRetryableFetchError(error) || (error?.status ?? 0) >= 500;
+
+  if (!user && !reseauIndisponible && !isPublicPath(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = '/auth';
     return NextResponse.redirect(url);
