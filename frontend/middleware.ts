@@ -41,5 +41,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|manifest.json|icons).*)'],
+  // Exclut aussi tout fichier statique du dossier public/ (images, favicon,
+  // manifest, icônes...) en se basant sur l'extension plutôt qu'une liste de
+  // noms — sinon une image comme /hero1.jpg ou /logo-margopro.svg déclenche
+  // le verrou et casse son propre affichage sur la page /auth.
+  matcher: ['/((?!_next/static|_next/image|.*\\.[\\w]+$).*)'],
 };
