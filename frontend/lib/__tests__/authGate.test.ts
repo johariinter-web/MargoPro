@@ -30,4 +30,8 @@ describe('isPublicPath', () => {
     expect(isPublicPath('/cguelquechose')).toBe(false);
     expect(isPublicPath('/authentification')).toBe(false);
   });
+
+  it('bloque les sous-pages de /cgu (correspondance exacte seulement)', () => {
+    expect(isPublicPath('/cgu/mentions-legales')).toBe(false);
+  });
 });

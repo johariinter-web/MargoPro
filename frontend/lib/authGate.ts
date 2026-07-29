@@ -1,5 +1,7 @@
-const PUBLIC_PATHS = ['/auth', '/cgu'];
+const WILDCARD_PUBLIC_PATHS = ['/auth'];
+const EXACT_PUBLIC_PATHS = ['/cgu'];
 
 export function isPublicPath(pathname: string): boolean {
-  return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'));
+  if (EXACT_PUBLIC_PATHS.includes(pathname)) return true;
+  return WILDCARD_PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'));
 }
