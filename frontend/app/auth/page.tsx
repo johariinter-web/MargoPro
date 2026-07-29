@@ -44,12 +44,14 @@ export default function AuthPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [oubliEnvoye, setOubliEnvoye] = useState(false);
   const [oubliLoading, setOubliLoading] = useState(false);
+  const [confirmationEmailRequise, setConfirmationEmailRequise] = useState(false);
 
   function basculerMode() {
     setMode(mode === 'connexion' ? 'inscription' : 'connexion');
     setErreur('');
     setConfirmPassword('');
     setCguAccepte(false);
+    setConfirmationEmailRequise(false);
   }
 
   function voirOubli() {
@@ -62,6 +64,7 @@ export default function AuthPage() {
     setMode('connexion');
     setErreur('');
     setOubliEnvoye(false);
+    setConfirmationEmailRequise(false);
   }
 
   async function envoyerReinitialisation(e: React.FormEvent<HTMLFormElement>) {
@@ -111,11 +114,19 @@ export default function AuthPage() {
         setLoading(false);
         return;
       }
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) {
         setErreur(error.message.includes('already registered')
           ? 'Cet email est déjà utilisé. Connectez-vous.'
           : 'Erreur lors de la création du compte. Réessayez.');
+        setLoading(false);
+        return;
+      }
+      if (!data.session) {
+        // Confirmation email activée côté Supabase : aucune session tant que le lien
+        // n'a pas été cliqué. /onboarding est protégé par le middleware, donc on ne
+        // redirige pas : on informe l'utilisateur à la place.
+        setConfirmationEmailRequise(true);
         setLoading(false);
         return;
       }
@@ -157,7 +168,7 @@ export default function AuthPage() {
         </div>
 
         {/* Formulaire */}
-        {mode !== 'oubli' && (
+        {mode !== 'oubli' && !confirmationEmailRequise && (
         <form onSubmit={soumettre} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -321,7 +332,7 @@ export default function AuthPage() {
         )}
 
         {/* Basculer mode */}
-        {mode !== 'oubli' && (
+        {mode !== 'oubli' && !confirmationEmailRequise && (
         <p style={{ textAlign: 'center', fontSize: 13, color: T.textMuted, margin: 0, fontFamily: 'Manrope, sans-serif' }}>
           {mode === 'connexion' ? "Pas encore de compte ?" : "Déjà un compte ?"}{' '}
           <button
@@ -331,6 +342,21 @@ export default function AuthPage() {
             {mode === 'connexion' ? 'Créer un compte' : 'Se connecter'}
           </button>
         </p>
+        )}
+
+        {/* Confirmation email requise après inscription */}
+        {mode === 'inscription' && confirmationEmailRequise && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, textAlign: 'center' }}>
+            <p style={{ fontSize: 13, color: T.textSub, fontFamily: 'Manrope, sans-serif', lineHeight: 1.6, margin: 0 }}>
+              Compte créé ! Vérifie ta boîte de réception (et les spams) pour confirmer ton email, puis connecte-toi.
+            </p>
+            <button
+              onClick={retourConnexion}
+              style={{ color: T.accent, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontSize: 13, fontFamily: 'Manrope, sans-serif' }}
+            >
+              Retour à la connexion
+            </button>
+          </div>
         )}
 
         {mode === 'oubli' && (
