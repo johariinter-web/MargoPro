@@ -5,7 +5,7 @@ import { useColors } from '@/lib/hooks/useColors';
 import { useConfig } from '@/lib/hooks/useConfig';
 import { usePlan } from '@/lib/hooks/usePlan';
 import { requestSync } from '@/lib/syncController';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const FEATURES = [
   { icon: 'box', color: '#B8860B', bg: '#FEF3D8', label: 'Produits illimités', subtitle: 'Gérez tout votre stock sans limites' },
@@ -48,6 +48,8 @@ export default function AbonnementPage() {
   const [paiementEnCours, setPaiementEnCours] = useState(false);
   const [erreurPaiement, setErreurPaiement] = useState('');
   const [verificationRetour, setVerificationRetour] = useState(false);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (config && !config.dateAbonnement) {
@@ -59,18 +61,23 @@ export default function AbonnementPage() {
     if (new URLSearchParams(window.location.search).get('paiement') !== 'retour') return;
     setVerificationRetour(true);
     requestSync();
-    const interval = setInterval(() => requestSync(), 3000);
-    const timeout = setTimeout(() => {
-      clearInterval(interval);
+    pollIntervalRef.current = setInterval(() => requestSync(), 3000);
+    pollTimeoutRef.current = setTimeout(() => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
       setVerificationRetour(false);
     }, 20000);
-    return () => { clearInterval(interval); clearTimeout(timeout); };
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+    };
   }, []);
 
   useEffect(() => {
-    if (verificationRetour && planStatus === 'premium') {
-      setVerificationRetour(false);
-    }
+    if (!verificationRetour || planStatus !== 'premium') return;
+    if (pollIntervalRef.current) { clearInterval(pollIntervalRef.current); pollIntervalRef.current = null; }
+    if (pollTimeoutRef.current) { clearTimeout(pollTimeoutRef.current); pollTimeoutRef.current = null; }
+    setVerificationRetour(false);
   }, [verificationRetour, planStatus]);
 
   async function lancerPaiement() {
