@@ -23,9 +23,12 @@ export function computePlanStatus(
   trialStart: number | undefined,
   isPremium: boolean,
   activeProductCount: number,
-  now: number = Date.now()
+  now: number = Date.now(),
+  premiumExpiresAt?: number
 ): PlanInfo {
-  if (isPremium) {
+  const premiumActif = isPremium && (premiumExpiresAt === undefined || premiumExpiresAt > now);
+
+  if (premiumActif) {
     return { status: 'premium', daysRemaining: 0, isPremium: true, activeProductCount, canAddProduct: true };
   }
 
@@ -55,7 +58,9 @@ export function usePlan(): PlanInfo {
     return computePlanStatus(
       config?.trialStart,
       config?.isPremium ?? false,
-      activeProductCount
+      activeProductCount,
+      Date.now(),
+      config?.premiumExpiresAt
     );
   });
 
