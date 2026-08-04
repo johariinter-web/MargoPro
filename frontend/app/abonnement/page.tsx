@@ -100,22 +100,27 @@ export default function AbonnementPage() {
     // pour ne pas se tromper sur un premier rendu ou config n'est pas
     // encore chargee localement.
     if (!baselineCaptureRef.current) return;
-    if (pollIntervalRef.current) { clearInterval(pollIntervalRef.current); pollIntervalRef.current = null; }
-    if (pollTimeoutRef.current) { clearTimeout(pollTimeoutRef.current); pollTimeoutRef.current = null; }
-    setVerificationRetour(false);
 
     // Un renouvellement pendant que l'utilisateur est deja Premium rend
     // planStatus === 'premium' vrai des le depart, avant meme qu'un
-    // nouveau paiement soit confirme. On ne montre donc la banniere de
-    // succes que si la date d'expiration a reellement avance par rapport
-    // a avant la verification (ou qu'il n'y avait pas de Premium avant du
-    // tout - premier achat).
+    // nouveau paiement soit confirme. Il faut donc verifier AVANT
+    // d'arreter le polling si la date d'expiration a reellement avance
+    // par rapport a avant la verification (ou qu'il n'y avait pas de
+    // Premium avant du tout - premier achat) : sinon, pour un
+    // renouvellement anticipe, le polling s'arreterait des le premier
+    // rendu (planStatus deja 'premium' avant meme que la nouvelle
+    // confirmation arrive du cloud ~1.5-3s plus tard), et ni la banniere
+    // de succes ni le message de repli a 20s ne pourraient jamais
+    // s'afficher pour ce cas.
     const avant = premiumExpiresAtAvantRef.current;
     const maintenant = config?.premiumExpiresAt;
     const aReellementAvance = avant === undefined || (maintenant !== undefined && maintenant > avant);
-    if (aReellementAvance) {
-      setPaiementConfirme(true);
-    }
+    if (!aReellementAvance) return; // le polling continue, rien ne change encore
+
+    if (pollIntervalRef.current) { clearInterval(pollIntervalRef.current); pollIntervalRef.current = null; }
+    if (pollTimeoutRef.current) { clearTimeout(pollTimeoutRef.current); pollTimeoutRef.current = null; }
+    setVerificationRetour(false);
+    setPaiementConfirme(true);
   }, [verificationRetour, planStatus, config?.premiumExpiresAt, isReady]);
 
   useEffect(() => {
