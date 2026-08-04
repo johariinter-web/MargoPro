@@ -48,6 +48,8 @@ export default function AbonnementPage() {
   const [paiementEnCours, setPaiementEnCours] = useState(false);
   const [erreurPaiement, setErreurPaiement] = useState('');
   const [verificationRetour, setVerificationRetour] = useState(false);
+  const [paiementConfirme, setPaiementConfirme] = useState(false);
+  const [paiementEnAttente, setPaiementEnAttente] = useState(false);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -65,7 +67,12 @@ export default function AbonnementPage() {
     pollTimeoutRef.current = setTimeout(() => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       pollIntervalRef.current = null;
+      // Si on arrive ici, c'est que le second useEffect ci-dessous n'a pas
+      // encore annulé ce timeout - donc planStatus n'est toujours pas
+      // 'premium' après 20s. On l'affiche plutôt que de laisser le message
+      // "Vérification..." disparaître sans explication.
       setVerificationRetour(false);
+      setPaiementEnAttente(true);
     }, 20000);
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
@@ -78,11 +85,20 @@ export default function AbonnementPage() {
     if (pollIntervalRef.current) { clearInterval(pollIntervalRef.current); pollIntervalRef.current = null; }
     if (pollTimeoutRef.current) { clearTimeout(pollTimeoutRef.current); pollTimeoutRef.current = null; }
     setVerificationRetour(false);
+    setPaiementConfirme(true);
   }, [verificationRetour, planStatus]);
+
+  useEffect(() => {
+    if (!paiementConfirme) return;
+    const t = setTimeout(() => setPaiementConfirme(false), 6000);
+    return () => clearTimeout(t);
+  }, [paiementConfirme]);
 
   async function lancerPaiement() {
     setPaiementEnCours(true);
     setErreurPaiement('');
+    setPaiementConfirme(false);
+    setPaiementEnAttente(false);
     try {
       const res = await fetch('/api/paiement/creer', { method: 'POST' });
       const data = await res.json();
@@ -98,10 +114,15 @@ export default function AbonnementPage() {
     }
   }
 
-  const dateDebut = config?.dateAbonnement ?? Date.now();
-  const dateExpiry = new Date(dateDebut + 30 * 24 * 60 * 60 * 1000);
-  const joursRestants = Math.max(0, Math.ceil((dateExpiry.getTime() - Date.now()) / (24 * 60 * 60 * 1000)));
-  const expiryLabel = dateExpiry.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  // Statut Premium réel (issu du webhook FedaPay), pas de la fausse date
+  // dateAbonnement posée automatiquement à la première visite de la page.
+  const premiumExpiresAt = config?.premiumExpiresAt;
+  const joursRestants = premiumExpiresAt
+    ? Math.max(0, Math.ceil((premiumExpiresAt - Date.now()) / (24 * 60 * 60 * 1000)))
+    : null;
+  const expiryLabel = premiumExpiresAt
+    ? new Date(premiumExpiresAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    : null;
 
   return (
     <div style={{ minHeight: '100dvh', background: T.bg, fontFamily: 'Manrope, sans-serif', paddingBottom: 40 }}>
@@ -124,29 +145,35 @@ export default function AbonnementPage() {
 
       <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        {/* STATUT PREMIUM */}
-        <div style={{ background: '#FEF9EC', borderRadius: 20, padding: '16px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: '#B8860B', display: 'flex', alignItems: 'center', gap: 7 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-                <path d="M3 7l4.5 4L12 5l4.5 6L21 7l-1.8 11.2a1 1 0 01-1 .8H5.8a1 1 0 01-1-.8L3 7z" stroke="#B8860B" strokeWidth="1.6" strokeLinejoin="round"/>
-              </svg>
-              Premium actif
+        {/* STATUT PREMIUM - affiché uniquement si l'utilisateur est réellement Premium (statut du webhook FedaPay, pas un mock) */}
+        {planStatus === 'premium' && (
+          <div style={{ background: '#FEF9EC', borderRadius: 20, padding: '16px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#B8860B', display: 'flex', alignItems: 'center', gap: 7 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                  <path d="M3 7l4.5 4L12 5l4.5 6L21 7l-1.8 11.2a1 1 0 01-1 .8H5.8a1 1 0 01-1-.8L3 7z" stroke="#B8860B" strokeWidth="1.6" strokeLinejoin="round"/>
+                </svg>
+                Premium actif
+              </div>
+              <div style={{ fontSize: 13, color: T.textMuted, marginTop: 4 }}>
+                {joursRestants !== null
+                  ? `Expire dans ${joursRestants} jour${joursRestants > 1 ? 's' : ''} · ${expiryLabel}`
+                  : 'Actif'}
+              </div>
             </div>
-            <div style={{ fontSize: 13, color: T.textMuted, marginTop: 4 }}>Expire dans {joursRestants} jour{joursRestants > 1 ? 's' : ''} · {expiryLabel}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+              <div style={{ background: 'white', borderRadius: 20, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 5, border: '1px solid #E6DDD3' }}>
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: T.accent }} />
+                <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>1 en attente</span>
+              </div>
+              <div style={{ width: 32, height: 32, borderRadius: 10, background: '#EAF5EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M20 6L9 17l-5-5" stroke="#2E7D46" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-            <div style={{ background: 'white', borderRadius: 20, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 5, border: '1px solid #E6DDD3' }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: T.accent }} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>1 en attente</span>
-            </div>
-            <div style={{ width: 32, height: 32, borderRadius: 10, background: '#EAF5EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M20 6L9 17l-5-5" stroke="#2E7D46" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* FEATURES */}
         <div>
@@ -195,6 +222,16 @@ export default function AbonnementPage() {
         {verificationRetour && (
           <div style={{ textAlign: 'center', fontSize: 13, color: T.textMuted, marginBottom: 8 }}>
             Vérification du paiement...
+          </div>
+        )}
+        {paiementConfirme && (
+          <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: T.green, background: T.greenBg, borderRadius: 12, padding: '10px 14px', marginBottom: 8 }}>
+            Paiement confirmé, Premium activé !
+          </div>
+        )}
+        {paiementEnAttente && (
+          <div style={{ textAlign: 'center', fontSize: 13, color: T.textMuted, marginBottom: 8 }}>
+            Le paiement est en cours de traitement, ça peut prendre un instant. Reviens dans quelques minutes.
           </div>
         )}
         {erreurPaiement && (
