@@ -51,31 +51,19 @@ export async function POST(request: NextRequest) {
 
   const service = createServiceClient();
 
-  // Renouvellement anticipe : le bouton dit "Renouveler (+30 jours)", donc
-  // si l'abonnement en cours a encore des jours devant lui, les 30 jours
-  // doivent s'additionner a la date d'expiration existante - pas repartir
-  // de maintenant (sinon un client qui renouvelle avec 12 jours restants
-  // perdrait ces 12 jours). Si l'abonnement est deja expire (ou qu'il n'y
-  // en avait pas), on part simplement de maintenant.
-  const { data: configActuel, error: lectureError } = await service
-    .from('config')
-    .select('premium_expires_at')
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (lectureError) {
-    console.error('[webhook fedapay] echec lecture config existante pour', userId, ':', lectureError.message);
-    return NextResponse.json({ error: 'Echec de lecture de la config existante' }, { status: 500 });
-  }
-
-  const expirationActuelle = configActuel?.premium_expires_at ?? 0;
-  const nouvelleExpiration = Math.max(Date.now(), expirationActuelle) + TRENTE_JOURS_MS;
-
+  // Calcul simple et fixe ("maintenant + 30 jours"), deliberement non
+  // additif par rapport a une eventuelle date d'expiration existante : un
+  // calcul additif rendrait le webhook non-idempotent (si FedaPay renvoie
+  // deux fois la meme confirmation - comportement standard de nouvelle
+  // tentative en cas de reponse perdue - on ajouterait 30 jours deux fois
+  // pour un seul paiement). Le cas "il reste des jours" est gere cote
+  // interface (page /abonnement), qui avertit l'utilisateur sans bloquer
+  // le paiement.
   const { data, error } = await service
     .from('config')
     .update({
       is_premium: true,
-      premium_expires_at: nouvelleExpiration,
+      premium_expires_at: Date.now() + TRENTE_JOURS_MS,
       updated_at: Date.now(),
     })
     .eq('user_id', userId)
