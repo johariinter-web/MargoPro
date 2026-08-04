@@ -764,7 +764,7 @@ git commit -m "feat: bouton Renouveler branche sur le vrai paiement FedaPay"
 
 ## Étapes manuelles restantes (hors code, après ce plan)
 
-- Juanita exécute la migration de la Task 2 dans Supabase SQL Editor.
+- **⚠️ OBLIGATOIRE AVANT LE DÉPLOIEMENT DE CETTE BRANCHE (pas seulement avant de tester les paiements) : Juanita exécute la migration de la Task 2 dans Supabase SQL Editor.** `configToRow` (dans `frontend/lib/sync.ts`) envoie désormais `premium_expires_at` dans **chaque** upsert de config, pour **tous** les utilisateurs, à chaque synchronisation — pas seulement ceux qui paient. Si la colonne n'existe pas encore côté Supabase au moment où ce code est déployé, Supabase rejette l'upsert de config, et cette erreur est fatale (`throw`) : elle interrompt toute la fonction `push()`, donc la synchronisation cloud des produits, ventes, packs, fournisseurs et commandes s'arrête aussi pour tout le monde, pas seulement les champs liés à Premium. Ordre à respecter impérativement : migration Supabase d'abord, déploiement du code ensuite — jamais l'inverse.
 - Juanita ajoute dans Vercel (variables d'environnement) : `FEDAPAY_SECRET_KEY`, `FEDAPAY_ENVIRONMENT` (`sandbox` ou `live`), `FEDAPAY_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE_KEY` (déjà visible dans Supabase Dashboard → Settings → API, jamais utilisée jusqu'ici dans ce projet).
 - Juanita configure l'URL du webhook dans FedaPay Dashboard (section Webhooks) : `https://margopro.eidma.co/api/webhooks/fedapay`, et copie le secret généré dans `FEDAPAY_WEBHOOK_SECRET`.
 - Test de paiement réel une fois tout branché (voir Task 9 Step 3).
