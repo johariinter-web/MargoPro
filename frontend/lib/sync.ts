@@ -429,6 +429,14 @@ async function pull(userId: string): Promise<void> {
     const local = await db.config.get('singleton');
     if (!local || (remote.updatedAt ?? 0) > (local.updatedAt ?? 0)) {
       await db.config.put(remote);
+    } else if (local.isPremium !== remote.isPremium || local.premiumExpiresAt !== remote.premiumExpiresAt) {
+      // is_premium / premium_expires_at sont geres exclusivement par le
+      // webhook FedaPay (voir migration 2026-08-02) : toujours prendre la
+      // valeur du cloud pour ces deux champs, meme si l'horloge de
+      // l'appareil est en avance et gagnerait la comparaison LWW normale
+      // ci-dessus. Sans ca, un telephone dont l'horloge derive dans le
+      // futur ne recevrait jamais son propre statut Premium apres paiement.
+      await db.config.put({ ...local, isPremium: remote.isPremium, premiumExpiresAt: remote.premiumExpiresAt });
     }
   }
 
