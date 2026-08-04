@@ -43,7 +43,7 @@ const FREE_FEATURES = [
 export default function AbonnementPage() {
   const T = useColors();
   const router = useRouter();
-  const { config, saveConfig } = useConfig();
+  const { config, saveConfig, isReady } = useConfig();
   const { status: planStatus } = usePlan();
   const [paiementEnCours, setPaiementEnCours] = useState(false);
   const [erreurPaiement, setErreurPaiement] = useState('');
@@ -52,6 +52,14 @@ export default function AbonnementPage() {
   const [paiementEnAttente, setPaiementEnAttente] = useState(false);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Date d'expiration Premium telle qu'elle etait AVANT toute verification
+  // de paiement (capturee des que la config locale est chargee, avant que
+  // requestSync ait pu ramener une valeur plus recente du cloud). Sert de
+  // reference pour distinguer un vrai paiement confirme d'un simple retour
+  // sur la page alors que l'utilisateur etait deja Premium (renouvellement
+  // annule/echoue, ou visite avec ?paiement=retour sans paiement reel).
+  const premiumExpiresAtAvantRef = useRef<number | undefined>(undefined);
+  const baselineCaptureRef = useRef(false);
 
   useEffect(() => {
     if (config && !config.dateAbonnement) {
@@ -81,12 +89,34 @@ export default function AbonnementPage() {
   }, []);
 
   useEffect(() => {
+    if (baselineCaptureRef.current || !isReady) return;
+    premiumExpiresAtAvantRef.current = config?.premiumExpiresAt;
+    baselineCaptureRef.current = true;
+  }, [isReady, config]);
+
+  useEffect(() => {
     if (!verificationRetour || planStatus !== 'premium') return;
+    // Attend que la valeur de reference (avant verification) soit capturee
+    // pour ne pas se tromper sur un premier rendu ou config n'est pas
+    // encore chargee localement.
+    if (!baselineCaptureRef.current) return;
     if (pollIntervalRef.current) { clearInterval(pollIntervalRef.current); pollIntervalRef.current = null; }
     if (pollTimeoutRef.current) { clearTimeout(pollTimeoutRef.current); pollTimeoutRef.current = null; }
     setVerificationRetour(false);
-    setPaiementConfirme(true);
-  }, [verificationRetour, planStatus]);
+
+    // Un renouvellement pendant que l'utilisateur est deja Premium rend
+    // planStatus === 'premium' vrai des le depart, avant meme qu'un
+    // nouveau paiement soit confirme. On ne montre donc la banniere de
+    // succes que si la date d'expiration a reellement avance par rapport
+    // a avant la verification (ou qu'il n'y avait pas de Premium avant du
+    // tout - premier achat).
+    const avant = premiumExpiresAtAvantRef.current;
+    const maintenant = config?.premiumExpiresAt;
+    const aReellementAvance = avant === undefined || (maintenant !== undefined && maintenant > avant);
+    if (aReellementAvance) {
+      setPaiementConfirme(true);
+    }
+  }, [verificationRetour, planStatus, config?.premiumExpiresAt, isReady]);
 
   useEffect(() => {
     if (!paiementConfirme) return;
@@ -237,6 +267,11 @@ export default function AbonnementPage() {
         {erreurPaiement && (
           <div style={{ textAlign: 'center', fontSize: 13, color: T.red, marginBottom: 8 }}>
             {erreurPaiement}
+          </div>
+        )}
+        {planStatus === 'premium' && joursRestants !== null && joursRestants > 0 && (
+          <div style={{ textAlign: 'center', fontSize: 13, color: T.textMuted, marginBottom: 8 }}>
+            Il te reste encore {joursRestants} jour{joursRestants > 1 ? 's' : ''}. Si tu renouvelles maintenant, ça repart sur une nouvelle période de 30 jours à partir d'aujourd'hui (les jours restants ne s'additionnent pas).
           </div>
         )}
         <button
