@@ -20,7 +20,15 @@ returns trigger
 language plpgsql
 as $$
 begin
-  if auth.role() = 'service_role' then
+  -- auth.role() est l'assistant historique de Supabase (base sur
+  -- request.jwt.claims) : il renvoie NULL au lieu de 'service_role' pour
+  -- les projets recents utilisant les cles service_role au format
+  -- sb_secret_... (non-JWT), car PostgREST change alors de role Postgres
+  -- directement sans peupler request.jwt.claims. current_user est fixe
+  -- correctement par PostgREST dans les deux cas et ne peut pas renvoyer
+  -- NULL silencieusement : on verifie les deux pour ne jamais bloquer le
+  -- webhook a tort.
+  if current_user = 'service_role' or auth.role() = 'service_role' then
     return new;
   end if;
 
@@ -41,3 +49,9 @@ create trigger config_proteger_premium
   before insert or update on public.config
   for each row
   execute function public.proteger_colonnes_premium();
+
+-- Force PostgREST a recharger son cache de schema : sans ca, l'ajout de
+-- colonne et le nouveau trigger ci-dessus peuvent ne pas etre pris en
+-- compte immediatement par les requetes API (comportement connu de
+-- PostgREST apres une migration DDL).
+notify pgrst, 'reload schema';

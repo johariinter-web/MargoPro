@@ -11,7 +11,10 @@ export async function POST(request: NextRequest) {
   let event;
   try {
     event = verifierSignatureWebhook(rawBody, signature);
-  } catch {
+  } catch (err) {
+    // Ne jamais logger l'erreur brute ici : elle peut contenir des
+    // fragments du corps de la requete. On ne garde que le message.
+    console.error('[webhook fedapay] signature invalide :', err instanceof Error ? err.message : 'erreur inconnue');
     return NextResponse.json({ error: 'Signature invalide' }, { status: 400 });
   }
 
@@ -19,20 +22,26 @@ export async function POST(request: NextRequest) {
   // revenir a l'API FedaPay pour lire le vrai statut, comme recommande
   // par FedaPay elle-meme (une personne malveillante pourrait sinon
   // forger une requete pretendant qu'un paiement a reussi).
-  const transactionId = event.entity?.id;
-  if (typeof transactionId !== 'number') {
-    return NextResponse.json({ error: 'Evenement sans id de transaction' }, { status: 400 });
+  const rawId = event.entity?.id;
+  const transactionId = typeof rawId === 'string' ? Number(rawId) : rawId;
+  if (typeof transactionId !== 'number' || !Number.isFinite(transactionId)) {
+    console.error('[webhook fedapay] evenement sans id de transaction valide :', event?.name);
+    return NextResponse.json({ error: 'Evenement sans id de transaction valide' }, { status: 400 });
   }
 
   let status: string;
   let userId: string | undefined;
   try {
     ({ status, userId } = await verifierTransaction(transactionId));
-  } catch {
+  } catch (err) {
     // Panne reseau, erreur FedaPay, transaction introuvable, etc. On repond
     // en erreur structuree (plutot que de laisser planter la route) pour que
     // FedaPay considere la livraison du webhook comme un echec et reessaie
     // plus tard.
+    // Attention : ne jamais logger l'objet d'erreur complet (err) - le SDK
+    // fedapay y attache la requete HTTP d'origine, en-tete Authorization
+    // (cle secrete FEDAPAY_SECRET_KEY) inclus. Seul err.message est sur.
+    console.error('[webhook fedapay] echec verifierTransaction pour', transactionId, ':', err instanceof Error ? err.message : 'erreur inconnue');
     return NextResponse.json({ error: 'Echec de verification de la transaction' }, { status: 500 });
   }
 
@@ -49,9 +58,10 @@ export async function POST(request: NextRequest) {
       updated_at: Date.now(),
     })
     .eq('user_id', userId)
-    .select('user_id');
+    .select('user_id, is_premium, premium_expires_at');
 
   if (error) {
+    console.error('[webhook fedapay] echec mise a jour Supabase pour', userId, ':', error.message);
     return NextResponse.json({ error: 'Echec de mise a jour Supabase' }, { status: 500 });
   }
 
@@ -60,8 +70,22 @@ export async function POST(request: NextRequest) {
   // creation du compte et l'arrivee du webhook). Sans ce controle, on
   // repondrait 200 a FedaPay (qui ne reessaierait donc jamais) alors que le
   // Premium n'a jamais ete active.
-  if (!data || data.length === 0) {
+  const ligne = data?.[0];
+  if (!ligne) {
+    console.error('[webhook fedapay] aucune ligne config trouvee pour', userId, '(transaction', transactionId, ')');
     return NextResponse.json({ error: 'Aucune ligne config trouvee pour cet utilisateur' }, { status: 500 });
+  }
+
+  // Le trigger Postgres config_proteger_premium peut silencieusement
+  // reverter is_premium/premium_expires_at a leur ancienne valeur si sa
+  // condition de reconnaissance de la cle service_role ne correspond pas
+  // (voir migration 2026-08-02). La ligne serait alors bien affectee (1
+  // ligne, pas d'erreur), mais Premium n'aurait jamais ete accorde. On
+  // verifie donc explicitement la valeur retournee avant de repondre 200 a
+  // FedaPay, pour ne jamais masquer un paiement reussi qui n'active rien.
+  if (ligne.is_premium !== true) {
+    console.error('[webhook fedapay] is_premium non active apres update pour', userId, '(transaction', transactionId, ') - trigger Postgres probablement en cause');
+    return NextResponse.json({ error: "L'activation Premium n'a pas ete confirmee" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });
