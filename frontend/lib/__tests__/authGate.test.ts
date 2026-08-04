@@ -34,4 +34,13 @@ describe('isPublicPath', () => {
   it('bloque les sous-pages de /cgu (correspondance exacte seulement)', () => {
     expect(isPublicPath('/cgu/mentions-legales')).toBe(false);
   });
+
+  it('autorise le webhook FedaPay', () => {
+    expect(isPublicPath('/api/webhooks/fedapay')).toBe(true);
+  });
+
+  it('ne rend pas publiques les autres routes API', () => {
+    expect(isPublicPath('/api/paiement/creer')).toBe(false);
+    expect(isPublicPath('/api/webhooksfoo')).toBe(false);
+  });
 });
