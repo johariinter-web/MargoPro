@@ -63,4 +63,25 @@ describe('computePlanStatus', () => {
     const r = computePlanStatus(now - 31 * DAY, false, 4, now);
     expect(r.canAddProduct).toBe(true);
   });
+
+  it('reste premium si premiumExpiresAt est dans le futur', () => {
+    const now = Date.now();
+    const r = computePlanStatus(undefined, true, 2, now, now + 10 * DAY);
+    expect(r.status).toBe('premium');
+    expect(r.canAddProduct).toBe(true);
+  });
+
+  it('retombe sur le calcul trial/expired si premiumExpiresAt est depasse', () => {
+    const now = Date.now();
+    // isPremium encore true localement (pas resynchronise), mais la date
+    // de fin est passee : ne doit plus etre traite comme premium actif.
+    const r = computePlanStatus(now - 31 * DAY, true, 8, now, now - 1 * DAY);
+    expect(r.status).toBe('expired');
+    expect(r.canAddProduct).toBe(false);
+  });
+
+  it('reste premium si premiumExpiresAt est absent (comportement historique)', () => {
+    const r = computePlanStatus(undefined, true, 100, Date.now());
+    expect(r.status).toBe('premium');
+  });
 });

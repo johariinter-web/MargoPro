@@ -3,7 +3,9 @@
 import { useRouter } from 'next/navigation';
 import { useColors } from '@/lib/hooks/useColors';
 import { useConfig } from '@/lib/hooks/useConfig';
-import { useEffect, useState } from 'react';
+import { usePlan } from '@/lib/hooks/usePlan';
+import { requestSync } from '@/lib/syncController';
+import { useEffect, useRef, useState } from 'react';
 
 const FEATURES = [
   { icon: 'box', color: '#B8860B', bg: '#FEF3D8', label: 'Produits illimités', subtitle: 'Gérez tout votre stock sans limites' },
@@ -41,8 +43,23 @@ const FREE_FEATURES = [
 export default function AbonnementPage() {
   const T = useColors();
   const router = useRouter();
-  const { config, saveConfig } = useConfig();
-  const [showModal, setShowModal] = useState(false);
+  const { config, saveConfig, isReady } = useConfig();
+  const { status: planStatus } = usePlan();
+  const [paiementEnCours, setPaiementEnCours] = useState(false);
+  const [erreurPaiement, setErreurPaiement] = useState('');
+  const [verificationRetour, setVerificationRetour] = useState(false);
+  const [paiementConfirme, setPaiementConfirme] = useState(false);
+  const [paiementEnAttente, setPaiementEnAttente] = useState(false);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Date d'expiration Premium telle qu'elle etait AVANT toute verification
+  // de paiement (capturee des que la config locale est chargee, avant que
+  // requestSync ait pu ramener une valeur plus recente du cloud). Sert de
+  // reference pour distinguer un vrai paiement confirme d'un simple retour
+  // sur la page alors que l'utilisateur etait deja Premium (renouvellement
+  // annule/echoue, ou visite avec ?paiement=retour sans paiement reel).
+  const premiumExpiresAtAvantRef = useRef<number | undefined>(undefined);
+  const baselineCaptureRef = useRef(false);
 
   useEffect(() => {
     if (config && !config.dateAbonnement) {
@@ -50,44 +67,100 @@ export default function AbonnementPage() {
     }
   }, [config]);
 
-  const dateDebut = config?.dateAbonnement ?? Date.now();
-  const dateExpiry = new Date(dateDebut + 30 * 24 * 60 * 60 * 1000);
-  const joursRestants = Math.max(0, Math.ceil((dateExpiry.getTime() - Date.now()) / (24 * 60 * 60 * 1000)));
-  const expiryLabel = dateExpiry.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('paiement') !== 'retour') return;
+    setVerificationRetour(true);
+    requestSync();
+    pollIntervalRef.current = setInterval(() => requestSync(), 3000);
+    pollTimeoutRef.current = setTimeout(() => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+      // Si on arrive ici, c'est que le second useEffect ci-dessous n'a pas
+      // encore annulé ce timeout - donc planStatus n'est toujours pas
+      // 'premium' après 20s. On l'affiche plutôt que de laisser le message
+      // "Vérification..." disparaître sans explication.
+      setVerificationRetour(false);
+      setPaiementEnAttente(true);
+    }, 20000);
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (baselineCaptureRef.current || !isReady) return;
+    premiumExpiresAtAvantRef.current = config?.premiumExpiresAt;
+    baselineCaptureRef.current = true;
+  }, [isReady, config]);
+
+  useEffect(() => {
+    if (!verificationRetour || planStatus !== 'premium') return;
+    // Attend que la valeur de reference (avant verification) soit capturee
+    // pour ne pas se tromper sur un premier rendu ou config n'est pas
+    // encore chargee localement.
+    if (!baselineCaptureRef.current) return;
+
+    // Un renouvellement pendant que l'utilisateur est deja Premium rend
+    // planStatus === 'premium' vrai des le depart, avant meme qu'un
+    // nouveau paiement soit confirme. Il faut donc verifier AVANT
+    // d'arreter le polling si la date d'expiration a reellement avance
+    // par rapport a avant la verification (ou qu'il n'y avait pas de
+    // Premium avant du tout - premier achat) : sinon, pour un
+    // renouvellement anticipe, le polling s'arreterait des le premier
+    // rendu (planStatus deja 'premium' avant meme que la nouvelle
+    // confirmation arrive du cloud ~1.5-3s plus tard), et ni la banniere
+    // de succes ni le message de repli a 20s ne pourraient jamais
+    // s'afficher pour ce cas.
+    const avant = premiumExpiresAtAvantRef.current;
+    const maintenant = config?.premiumExpiresAt;
+    const aReellementAvance = avant === undefined || (maintenant !== undefined && maintenant > avant);
+    if (!aReellementAvance) return; // le polling continue, rien ne change encore
+
+    if (pollIntervalRef.current) { clearInterval(pollIntervalRef.current); pollIntervalRef.current = null; }
+    if (pollTimeoutRef.current) { clearTimeout(pollTimeoutRef.current); pollTimeoutRef.current = null; }
+    setVerificationRetour(false);
+    setPaiementConfirme(true);
+  }, [verificationRetour, planStatus, config?.premiumExpiresAt, isReady]);
+
+  useEffect(() => {
+    if (!paiementConfirme) return;
+    const t = setTimeout(() => setPaiementConfirme(false), 6000);
+    return () => clearTimeout(t);
+  }, [paiementConfirme]);
+
+  async function lancerPaiement() {
+    setPaiementEnCours(true);
+    setErreurPaiement('');
+    setPaiementConfirme(false);
+    setPaiementEnAttente(false);
+    try {
+      const res = await fetch('/api/paiement/creer', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        setErreurPaiement("Impossible de lancer le paiement. Réessaie dans un instant.");
+        setPaiementEnCours(false);
+        return;
+      }
+      window.location.href = data.url;
+    } catch {
+      setErreurPaiement("Impossible de lancer le paiement. Réessaie dans un instant.");
+      setPaiementEnCours(false);
+    }
+  }
+
+  // Statut Premium réel (issu du webhook FedaPay), pas de la fausse date
+  // dateAbonnement posée automatiquement à la première visite de la page.
+  const premiumExpiresAt = config?.premiumExpiresAt;
+  const joursRestants = premiumExpiresAt
+    ? Math.max(0, Math.ceil((premiumExpiresAt - Date.now()) / (24 * 60 * 60 * 1000)))
+    : null;
+  const expiryLabel = premiumExpiresAt
+    ? new Date(premiumExpiresAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    : null;
 
   return (
     <div style={{ minHeight: '100dvh', background: T.bg, fontFamily: 'Manrope, sans-serif', paddingBottom: 40 }}>
-
-      {/* MODAL */}
-      {showModal && (
-        <div
-          onClick={() => setShowModal(false)}
-          style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(28,24,17,0.6)', display: 'flex', alignItems: 'flex-end' }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{ background: T.surface, borderRadius: '24px 24px 0 0', width: '100%', padding: '28px 24px 40px' }}
-          >
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border, margin: '0 auto 20px' }} />
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-                <path d="M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2-.1-2.8a2 2 0 00-2.8-.1zM12 15l-3-3a12 12 0 015-8c1.9-1.1 5-1 5-1s.1 3.1-1 5a12 12 0 01-8 5z" stroke={T.accent} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M9 12H4s.5-2.8 2-4 4-1 4-1M12 15v5s2.8-.5 4-2 1-4 1-4" stroke={T.accent} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: T.text, textAlign: 'center', marginBottom: 8 }}>Bientôt disponible</div>
-            <div style={{ fontSize: 14, color: T.textMuted, textAlign: 'center', lineHeight: 1.6, marginBottom: 24 }}>
-              Le paiement Mobile Money et Wave sera disponible très bientôt. Continue d&apos;utiliser MargoPro gratuitement en attendant.
-            </div>
-            <button
-              onClick={() => setShowModal(false)}
-              style={{ width: '100%', height: 50, borderRadius: 14, background: T.accent, color: 'white', fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'Manrope, sans-serif' }}
-            >
-              Compris
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* HEADER */}
       <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -107,29 +180,35 @@ export default function AbonnementPage() {
 
       <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        {/* STATUT PREMIUM */}
-        <div style={{ background: '#FEF9EC', borderRadius: 20, padding: '16px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: '#B8860B', display: 'flex', alignItems: 'center', gap: 7 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-                <path d="M3 7l4.5 4L12 5l4.5 6L21 7l-1.8 11.2a1 1 0 01-1 .8H5.8a1 1 0 01-1-.8L3 7z" stroke="#B8860B" strokeWidth="1.6" strokeLinejoin="round"/>
-              </svg>
-              Premium actif
+        {/* STATUT PREMIUM - affiché uniquement si l'utilisateur est réellement Premium (statut du webhook FedaPay, pas un mock) */}
+        {planStatus === 'premium' && (
+          <div style={{ background: '#FEF9EC', borderRadius: 20, padding: '16px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#B8860B', display: 'flex', alignItems: 'center', gap: 7 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                  <path d="M3 7l4.5 4L12 5l4.5 6L21 7l-1.8 11.2a1 1 0 01-1 .8H5.8a1 1 0 01-1-.8L3 7z" stroke="#B8860B" strokeWidth="1.6" strokeLinejoin="round"/>
+                </svg>
+                Premium actif
+              </div>
+              <div style={{ fontSize: 13, color: T.textMuted, marginTop: 4 }}>
+                {joursRestants !== null
+                  ? `Expire dans ${joursRestants} jour${joursRestants > 1 ? 's' : ''} · ${expiryLabel}`
+                  : 'Actif'}
+              </div>
             </div>
-            <div style={{ fontSize: 13, color: T.textMuted, marginTop: 4 }}>Expire dans {joursRestants} jour{joursRestants > 1 ? 's' : ''} · {expiryLabel}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+              <div style={{ background: 'white', borderRadius: 20, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 5, border: '1px solid #E6DDD3' }}>
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: T.accent }} />
+                <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>1 en attente</span>
+              </div>
+              <div style={{ width: 32, height: 32, borderRadius: 10, background: '#EAF5EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M20 6L9 17l-5-5" stroke="#2E7D46" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-            <div style={{ background: 'white', borderRadius: 20, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 5, border: '1px solid #E6DDD3' }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: T.accent }} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>1 en attente</span>
-            </div>
-            <div style={{ width: 32, height: 32, borderRadius: 10, background: '#EAF5EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M20 6L9 17l-5-5" stroke="#2E7D46" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* FEATURES */}
         <div>
@@ -175,8 +254,34 @@ export default function AbonnementPage() {
         </div>
 
         {/* BOUTON RENOUVELER */}
+        {verificationRetour && (
+          <div style={{ textAlign: 'center', fontSize: 13, color: T.textMuted, marginBottom: 8 }}>
+            Vérification du paiement...
+          </div>
+        )}
+        {paiementConfirme && (
+          <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: T.green, background: T.greenBg, borderRadius: 12, padding: '10px 14px', marginBottom: 8 }}>
+            Paiement confirmé, Premium activé !
+          </div>
+        )}
+        {paiementEnAttente && (
+          <div style={{ textAlign: 'center', fontSize: 13, color: T.textMuted, marginBottom: 8 }}>
+            Le paiement est en cours de traitement, ça peut prendre un instant. Reviens dans quelques minutes.
+          </div>
+        )}
+        {erreurPaiement && (
+          <div style={{ textAlign: 'center', fontSize: 13, color: T.red, marginBottom: 8 }}>
+            {erreurPaiement}
+          </div>
+        )}
+        {planStatus === 'premium' && joursRestants !== null && joursRestants > 0 && (
+          <div style={{ textAlign: 'center', fontSize: 13, color: T.textMuted, marginBottom: 8 }}>
+            Il te reste encore {joursRestants} jour{joursRestants > 1 ? 's' : ''}. Si tu renouvelles maintenant, ça repart sur une nouvelle période de 30 jours à partir d'aujourd'hui (les jours restants ne s'additionnent pas).
+          </div>
+        )}
         <button
-          onClick={() => setShowModal(true)}
+          onClick={lancerPaiement}
+          disabled={paiementEnCours}
           style={{
             width: '100%', height: 54, borderRadius: 16,
             background: 'transparent', border: `2px solid ${T.accent}`,
@@ -189,7 +294,7 @@ export default function AbonnementPage() {
             <path d="M21 12a9 9 0 01-9 9 9 9 0 01-6.4-2.6L3 16M3 12a9 9 0 019-9 9 9 0 016.4 2.6L21 8" stroke={T.accent} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M21 3v5h-5M3 21v-5h5" stroke={T.accent} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          Renouveler (+30 jours)
+          {paiementEnCours ? 'Redirection...' : 'Renouveler (+30 jours)'}
         </button>
 
       </div>

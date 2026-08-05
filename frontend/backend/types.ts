@@ -53,6 +53,7 @@ export interface Config {
   onboardingComplete: boolean;
   trialStart?: number;  // timestamp ms du premier produit ajouté
   isPremium?: boolean;  // true = plan Premium actif
+  premiumExpiresAt?: number;  // timestamp ms de fin de la periode Premium en cours
   dateAbonnement?: number;
   updatedAt?: number;
 }

@@ -68,6 +68,7 @@ type ConfigRow = {
   date_abonnement: number | null;
   trial_start: number | null;
   is_premium: boolean;
+  premium_expires_at: number | null;
   updated_at: number;
 };
 
@@ -174,6 +175,7 @@ function configToRow(c: Config, userId: string): ConfigRow {
     date_abonnement: c.dateAbonnement ?? null,
     trial_start: c.trialStart ?? null,
     is_premium: c.isPremium ?? false,
+    premium_expires_at: c.premiumExpiresAt ?? null,
     updated_at: c.updatedAt ?? Date.now(),
   };
 }
@@ -188,6 +190,7 @@ function rowToConfig(r: ConfigRow): Config {
     dateAbonnement: r.date_abonnement ?? undefined,
     trialStart: r.trial_start ?? undefined,
     isPremium: r.is_premium ?? false,
+    premiumExpiresAt: r.premium_expires_at ?? undefined,
     updatedAt: Number(r.updated_at),
   };
 }
@@ -426,6 +429,14 @@ async function pull(userId: string): Promise<void> {
     const local = await db.config.get('singleton');
     if (!local || (remote.updatedAt ?? 0) > (local.updatedAt ?? 0)) {
       await db.config.put(remote);
+    } else if (local.isPremium !== remote.isPremium || local.premiumExpiresAt !== remote.premiumExpiresAt) {
+      // is_premium / premium_expires_at sont geres exclusivement par le
+      // webhook FedaPay (voir migration 2026-08-02) : toujours prendre la
+      // valeur du cloud pour ces deux champs, meme si l'horloge de
+      // l'appareil est en avance et gagnerait la comparaison LWW normale
+      // ci-dessus. Sans ca, un telephone dont l'horloge derive dans le
+      // futur ne recevrait jamais son propre statut Premium apres paiement.
+      await db.config.put({ ...local, isPremium: remote.isPremium, premiumExpiresAt: remote.premiumExpiresAt });
     }
   }
 
