@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useConfig } from '@/lib/hooks/useConfig';
 import { useStock } from '@/lib/hooks/useStock';
+import { usePlan } from '@/lib/hooks/usePlan';
 import { useColors, setDarkMode, isDarkMode, Colors } from '@/lib/hooks/useColors';
 import { useSync } from '@/lib/hooks/useSync';
 import { createClient } from '@/lib/supabase/client';
@@ -114,6 +115,20 @@ export default function ParametresPage() {
   const { config, saveConfig } = useConfig();
   const { alertes } = useStock();
   const { status: syncStatus, lastSyncAt, syncNow } = useSync();
+  const plan = usePlan();
+
+  const abonnementSousTitre =
+    plan.status === 'premium' ? 'Premium actif'
+    : plan.status === 'expired' ? 'Essai gratuit terminé'
+    : plan.daysRemaining === 1 ? 'Essai gratuit - expire demain'
+    : `Essai gratuit - ${plan.daysRemaining} jours restants`;
+
+  const abonnementBadge =
+    plan.status === 'premium'
+      ? { texte: 'PREMIUM', bg: T.green }
+      : plan.status === 'expired'
+      ? { texte: 'EXPIRÉ', bg: T.red }
+      : { texte: 'ESSAI', bg: T.accent };
 
   const syncSousTitre =
     syncStatus === 'syncing' ? 'Synchronisation en cours…'
@@ -465,15 +480,15 @@ export default function ParametresPage() {
             </svg>
           }
           label="Abonnement"
-          subtitle="Version bêta gratuite"
+          subtitle={abonnementSousTitre}
           onPress={() => router.push('/abonnement')}
           badge={
             <span style={{
-              background: T.accent, color: 'white',
+              background: abonnementBadge.bg, color: 'white',
               fontSize: 11, fontWeight: 800, borderRadius: 6, padding: '2px 8px',
               fontFamily: '"Space Grotesk", sans-serif', letterSpacing: '0.3px',
             }}>
-              BÊTA
+              {abonnementBadge.texte}
             </span>
           }
         />

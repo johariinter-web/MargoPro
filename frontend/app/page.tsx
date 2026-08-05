@@ -8,6 +8,7 @@ import { useStock } from '@/lib/hooks/useStock';
 import { useVentes } from '@/lib/hooks/useVentes';
 import { useFournisseurs } from '@/lib/hooks/useFournisseurs';
 import { useColors } from '@/lib/hooks/useColors';
+import { useSync } from '@/lib/hooks/useSync';
 import BarcodeScanner from '@/components/BarcodeScanner';
 
 function fmtF(n: number) {
@@ -21,7 +22,17 @@ export default function Dashboard() {
   const { produits, alertes, total: totalStock } = useStock();
   const { stats, ventes, totalDu } = useVentes('jour');
   const { enRetard: commandesEnRetard } = useFournisseurs();
+  const { status: syncStatus, lastSyncAt } = useSync();
   const [showScanner, setShowScanner] = useState(false);
+
+  // Sur un appareil/navigateur jamais synchronise (lastSyncAt encore null),
+  // attendre qu'une premiere synchronisation ait eu la chance de se
+  // terminer (succes, erreur, ou hors-ligne confirme) avant de conclure que
+  // la config locale vide veut dire "nouvel utilisateur, direction
+  // l'onboarding" - sinon un vrai client se fait renvoyer vers l'onboarding
+  // avant meme que ses donnees (dont son statut Premium) n'aient eu le
+  // temps d'arriver du cloud, et les completer ecrase ces donnees.
+  const premiereSyncPasEncoreTentee = lastSyncAt === null && syncStatus !== 'error' && syncStatus !== 'offline';
 
   function handleScanAccueil(barcode: string) {
     setShowScanner(false);
@@ -30,12 +41,12 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
-    if (isReady && (!config || !config.onboardingComplete)) {
+    if (isReady && !premiereSyncPasEncoreTentee && (!config || !config.onboardingComplete)) {
       router.replace('/onboarding');
     }
-  }, [isReady, config, router]);
+  }, [isReady, config, premiereSyncPasEncoreTentee, router]);
 
-  if (!isReady || !config) {
+  if (!isReady || !config || premiereSyncPasEncoreTentee) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', background: T.bg }}>
         <div style={{

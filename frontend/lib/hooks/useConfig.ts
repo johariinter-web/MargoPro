@@ -16,7 +16,12 @@ export function useConfig() {
   const config = result?.data ?? null;
 
   async function saveConfig(data: Omit<Config, 'id'>) {
-    await db.config.put({ id: 'singleton', ...data, updatedAt: Date.now() });
+    // Fusionne avec la config locale existante (ex: isPremium, premiumExpiresAt,
+    // trialStart) au lieu de l'ecraser : un appelant qui ne passe que
+    // nomCommerce/devise (Parametres, Onboarding) ne doit jamais effacer les
+    // champs geres ailleurs (statut Premium recu par synchro cloud).
+    const existant = await db.config.get('singleton');
+    await db.config.put({ ...existant, id: 'singleton', ...data, updatedAt: Date.now() });
     requestSync();
   }
 
