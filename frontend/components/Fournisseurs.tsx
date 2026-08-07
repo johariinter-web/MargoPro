@@ -133,7 +133,7 @@ export function Fournisseurs() {
       )}
 
       {fournisseurOuvert && (
-        <FournisseurFiche fournisseur={fournisseurOuvert} onFermer={() => setFournisseurOuvertId(null)} />
+        <FournisseurFiche fournisseur={fournisseurOuvert} onFermer={() => setFournisseurOuvertId(null)} accesFonctionnalitesPremium={accesFonctionnalitesPremium} />
       )}
     </div>
   );

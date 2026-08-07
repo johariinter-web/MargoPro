@@ -11,7 +11,7 @@ function fmtF(n: number) {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 
-export function FournisseurFiche({ fournisseur, onFermer }: { fournisseur: Fournisseur; onFermer: () => void }) {
+export function FournisseurFiche({ fournisseur, onFermer, accesFonctionnalitesPremium }: { fournisseur: Fournisseur; onFermer: () => void; accesFonctionnalitesPremium: boolean }) {
   const T = useColors();
   const { config } = useConfig();
   const symbole = config?.symboleDevise ?? 'FCFA';
@@ -116,8 +116,9 @@ export function FournisseurFiche({ fournisseur, onFermer }: { fournisseur: Fourn
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
               <div style={{ fontSize: 19, fontWeight: 800, color: T.text }}>{fournisseur.nom}</div>
               <button
-                onClick={() => setModeEdition(true)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: T.accent, fontFamily: 'Manrope, sans-serif' }}
+                onClick={() => accesFonctionnalitesPremium && setModeEdition(true)}
+                disabled={!accesFonctionnalitesPremium}
+                style={{ background: 'none', border: 'none', cursor: accesFonctionnalitesPremium ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 600, color: T.accent, fontFamily: 'Manrope, sans-serif', opacity: accesFonctionnalitesPremium ? 1 : 0.5 }}
               >
                 Modifier
               </button>
@@ -189,8 +190,9 @@ export function FournisseurFiche({ fournisseur, onFermer }: { fournisseur: Fourn
           <>
             {!showCommandeForm ? (
               <button
-                onClick={() => setShowCommandeForm(true)}
-                style={{ width: '100%', height: 48, borderRadius: 12, background: T.accent, color: 'white', fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', marginBottom: 20 }}
+                onClick={() => accesFonctionnalitesPremium && setShowCommandeForm(true)}
+                disabled={!accesFonctionnalitesPremium}
+                style={{ width: '100%', height: 48, borderRadius: 12, background: T.accent, color: 'white', fontSize: 14, fontWeight: 700, border: 'none', cursor: accesFonctionnalitesPremium ? 'pointer' : 'not-allowed', marginBottom: 20, opacity: accesFonctionnalitesPremium ? 1 : 0.5 }}
               >
                 + Nouvelle commande
               </button>
@@ -289,8 +291,9 @@ export function FournisseurFiche({ fournisseur, onFermer }: { fournisseur: Fourn
                     </div>
                     {!c.recue && (
                       <button
-                        onClick={e => { e.stopPropagation(); if (commandeSelectionneeId === c.id) { setCommandeSelectionneeId(null); setConfirmerSuppressionCommande(false); } marquerCommandeRecue(c.id); }}
-                        style={{ marginTop: 8, height: 32, padding: '0 12px', borderRadius: 8, background: T.greenBg, color: T.green, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
+                        onClick={e => { e.stopPropagation(); if (!accesFonctionnalitesPremium) return; if (commandeSelectionneeId === c.id) { setCommandeSelectionneeId(null); setConfirmerSuppressionCommande(false); } marquerCommandeRecue(c.id); }}
+                        disabled={!accesFonctionnalitesPremium}
+                        style={{ marginTop: 8, height: 32, padding: '0 12px', borderRadius: 8, background: T.greenBg, color: T.green, border: 'none', cursor: accesFonctionnalitesPremium ? 'pointer' : 'not-allowed', fontSize: 12, fontWeight: 700, opacity: accesFonctionnalitesPremium ? 1 : 0.5 }}
                       >
                         Marquer reçue
                       </button>
@@ -347,8 +350,9 @@ export function FournisseurFiche({ fournisseur, onFermer }: { fournisseur: Fourn
                 </div>
               ) : (
                 <button
-                  onClick={() => setConfirmerSuppressionCommande(true)}
-                  style={{ width: '100%', height: 44, borderRadius: 12, background: T.redBg, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: T.red, marginBottom: 20 }}
+                  onClick={() => accesFonctionnalitesPremium && setConfirmerSuppressionCommande(true)}
+                  disabled={!accesFonctionnalitesPremium}
+                  style={{ width: '100%', height: 44, borderRadius: 12, background: T.redBg, border: 'none', cursor: accesFonctionnalitesPremium ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 700, color: T.red, marginBottom: 20, opacity: accesFonctionnalitesPremium ? 1 : 0.5 }}
                 >
                   Supprimer cette commande
                 </button>
@@ -372,8 +376,9 @@ export function FournisseurFiche({ fournisseur, onFermer }: { fournisseur: Fourn
               </div>
             ) : (
               <button
-                onClick={() => setConfirmerSuppression(true)}
-                style={{ width: '100%', height: 44, borderRadius: 12, background: 'none', border: `1.5px solid ${T.border}`, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: T.textMuted }}
+                onClick={() => accesFonctionnalitesPremium && setConfirmerSuppression(true)}
+                disabled={!accesFonctionnalitesPremium}
+                style={{ width: '100%', height: 44, borderRadius: 12, background: 'none', border: `1.5px solid ${T.border}`, cursor: accesFonctionnalitesPremium ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 600, color: T.textMuted, opacity: accesFonctionnalitesPremium ? 1 : 0.5 }}
               >
                 Supprimer ce fournisseur
               </button>
