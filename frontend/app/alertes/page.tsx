@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useStock } from '@/lib/hooks/useStock';
 import { useConfig } from '@/lib/hooks/useConfig';
 import { useColors } from '@/lib/hooks/useColors';
+import { usePlan } from '@/lib/hooks/usePlan';
+import { AccesPremiumRequis } from '@/components/AccesPremiumRequis';
 
 function formatMontant(n: number, symbole: string) {
   return `${n.toLocaleString('fr-FR')} ${symbole}`;
@@ -14,6 +16,7 @@ export default function AlertesPage() {
   const T = useColors();
   const { config } = useConfig();
   const { alertes, produits } = useStock();
+  const { accesFonctionnalitesPremium } = usePlan();
   const symbole = config?.symboleDevise ?? 'FCFA';
 
   return (
@@ -29,7 +32,9 @@ export default function AlertesPage() {
         <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-50">Alertes stock</h1>
       </div>
 
-      {alertes.length === 0 ? (
+      {!accesFonctionnalitesPremium ? (
+        <AccesPremiumRequis titre="Alertes de stock bas" description="Sois averti automatiquement quand un produit descend sous son seuil." />
+      ) : alertes.length === 0 ? (
         <div className="text-center py-16 space-y-4">
           <div style={{ width: 72, height: 72, borderRadius: 20, background: T.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
