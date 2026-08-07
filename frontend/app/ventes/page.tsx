@@ -224,8 +224,9 @@ export default function VentesPage() {
               {venteSelectionnee.quantite} unité{venteSelectionnee.quantite > 1 ? 's' : ''} · {fmtF(venteSelectionnee.total)} {symbole} · {new Date(venteSelectionnee.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
             </div>
             <button
-              onClick={confirmerSuppressionVente}
-              style={{ width: '100%', height: 48, borderRadius: 12, background: T.redBg, border: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 700, color: T.red, fontFamily: 'Manrope, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              onClick={accesFonctionnalitesPremium ? confirmerSuppressionVente : undefined}
+              disabled={!accesFonctionnalitesPremium}
+              style={{ width: '100%', height: 48, borderRadius: 12, background: T.redBg, border: 'none', cursor: accesFonctionnalitesPremium ? 'pointer' : 'not-allowed', fontSize: 15, fontWeight: 700, color: T.red, fontFamily: 'Manrope, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: accesFonctionnalitesPremium ? 1 : 0.5 }}
             >
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
                 <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m2 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" stroke={T.red} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
@@ -233,6 +234,9 @@ export default function VentesPage() {
               </svg>
               Supprimer cette vente
             </button>
+            {!accesFonctionnalitesPremium && (
+              <div style={{ fontSize: 11, color: T.textMuted, textAlign: 'center', marginTop: 8 }}>Passe au Premium pour supprimer une vente.</div>
+            )}
             <button
               onClick={() => setVenteSelectionnee(null)}
               style={{ width: '100%', height: 48, marginTop: 10, borderRadius: 12, background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 600, color: T.textSub, fontFamily: 'Manrope, sans-serif' }}
@@ -315,8 +319,9 @@ export default function VentesPage() {
                 </div>
               ) : (
                 <button
-                  onClick={() => setConfirmerSuppressionDefinitive(true)}
-                  style={{ width: '100%', height: 44, borderRadius: 12, background: T.redBg, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: T.red }}
+                  onClick={accesFonctionnalitesPremium ? () => setConfirmerSuppressionDefinitive(true) : undefined}
+                  disabled={!accesFonctionnalitesPremium}
+                  style={{ width: '100%', height: 44, borderRadius: 12, background: T.redBg, border: 'none', cursor: accesFonctionnalitesPremium ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 700, color: T.red, opacity: accesFonctionnalitesPremium ? 1 : 0.5 }}
                 >
                   Supprimer définitivement
                 </button>
@@ -440,20 +445,25 @@ export default function VentesPage() {
 
       {/* FILTER PILLS - visible uniquement sur l'onglet Ventes */}
       {onglet === 'ventes' && <div style={{ padding: '0 16px 8px', display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none' }}>
-        {PERIODES.map(p => (
-          <button
-            key={p.value}
-            onClick={() => setPeriode(p.value)}
-            style={{
-              height: 30, borderRadius: 20, padding: '0 12px', fontSize: 12, fontWeight: 600,
-              border: 'none', cursor: 'pointer', flexShrink: 0,
-              background: periode === p.value ? T.accent : T.bgSubtle,
-              color: periode === p.value ? 'white' : T.textSub,
-            }}
-          >
-            {p.label}
-          </button>
-        ))}
+        {PERIODES.map(p => {
+          const bloque = p.value !== 'jour' && !accesFonctionnalitesPremium;
+          return (
+            <button
+              key={p.value}
+              onClick={() => { if (bloque) return; setPeriode(p.value); }}
+              disabled={bloque}
+              style={{
+                height: 30, borderRadius: 20, padding: '0 12px', fontSize: 12, fontWeight: 600,
+                border: 'none', cursor: bloque ? 'not-allowed' : 'pointer', flexShrink: 0,
+                background: periode === p.value ? T.accent : T.bgSubtle,
+                color: periode === p.value ? 'white' : T.textSub,
+                opacity: bloque ? 0.45 : 1,
+              }}
+            >
+              {p.label}
+            </button>
+          );
+        })}
       </div>}
 
       {/* STATS CARD - onglet Ventes uniquement */}
@@ -890,8 +900,9 @@ export default function VentesPage() {
                             <div style={{ fontSize: 11, color: T.textMuted }}>{fmtF(v.total)} {symbole} · {new Date(v.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</div>
                           </div>
                           <button
-                            onClick={() => supprimerVente(v.id)}
-                            style={{ height: 36, padding: '0 12px', borderRadius: 10, background: T.redBg, color: T.red, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
+                            onClick={accesFonctionnalitesPremium ? () => supprimerVente(v.id) : undefined}
+                            disabled={!accesFonctionnalitesPremium}
+                            style={{ height: 36, padding: '0 12px', borderRadius: 10, background: T.redBg, color: T.red, border: 'none', cursor: accesFonctionnalitesPremium ? 'pointer' : 'not-allowed', fontSize: 12, fontWeight: 700, opacity: accesFonctionnalitesPremium ? 1 : 0.5 }}
                           >
                             Supprimer
                           </button>
