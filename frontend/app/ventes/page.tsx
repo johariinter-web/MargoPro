@@ -7,6 +7,8 @@ import { useConfig } from '@/lib/hooks/useConfig';
 import { usePacks } from '@/lib/hooks/usePacks';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import { useColors } from '@/lib/hooks/useColors';
+import { usePlan } from '@/lib/hooks/usePlan';
+import { AccesPremiumRequis } from '@/components/AccesPremiumRequis';
 import type { Periode } from '@backend/types';
 import { filtrerParPeriode, urgenceCredit, resteADoit } from '@backend/ventes';
 
@@ -29,6 +31,7 @@ const PERIODES: { value: Periode; label: string }[] = [
 export default function VentesPage() {
   const T = useColors();
   const { config } = useConfig();
+  const { accesFonctionnalitesPremium } = usePlan();
   const { produits, deduireStock } = useStock();
   const [periode, setPeriode] = useState<Periode>('jour');
   const { ventes, ventesSupprimees, stats, credits, soldes, totalDu, enregistrerVente, enregistrerVentePack, enregistrerPaiementCredit, supprimerVente, restaurerVente, supprimerVenteDefinitivement } = useVentes(periode);
@@ -599,14 +602,17 @@ export default function VentesPage() {
 
           {/* TOGGLE CRÉDIT */}
           <div
-            onClick={() => { setIsCredit(v => !v); setClientNomCredit(''); setClientTelCredit(''); setAcompteCredit('0'); }}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, cursor: 'pointer', padding: '10px 12px', background: isCredit ? '#FFF7ED' : T.bgSubtle, borderRadius: 10, border: isCredit ? '1.5px solid #F97316' : `1.5px solid ${T.border}` }}
+            onClick={() => { if (!accesFonctionnalitesPremium) return; setIsCredit(v => !v); setClientNomCredit(''); setClientTelCredit(''); setAcompteCredit('0'); }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, cursor: accesFonctionnalitesPremium ? 'pointer' : 'not-allowed', padding: '10px 12px', background: isCredit ? '#FFF7ED' : T.bgSubtle, borderRadius: 10, border: isCredit ? '1.5px solid #F97316' : `1.5px solid ${T.border}`, opacity: accesFonctionnalitesPremium ? 1 : 0.5 }}
           >
             <span style={{ fontSize: 13, fontWeight: 600, color: isCredit ? '#C2410C' : T.textSub }}>Vente à crédit</span>
             <div style={{ width: 36, height: 20, borderRadius: 10, background: isCredit ? '#F97316' : T.border, position: 'relative', transition: 'background .2s' }}>
               <div style={{ position: 'absolute', top: 2, left: isCredit ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: 'white', transition: 'left .2s', boxShadow: '0 1px 4px rgba(0,0,0,.2)' }} />
             </div>
           </div>
+          {!accesFonctionnalitesPremium && (
+            <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 12 }}>Passe au Premium pour vendre à crédit.</div>
+          )}
           {isCredit && (
             <>
               <div style={{ marginBottom: 12 }}>
@@ -775,7 +781,9 @@ export default function VentesPage() {
       {/* VUE CARNET */}
       {onglet === 'carnet' && (
         <div style={{ padding: '0 16px' }}>
-          {credits.length === 0 && soldes.length === 0 ? (
+          {!accesFonctionnalitesPremium && credits.length === 0 && soldes.length === 0 ? (
+            <AccesPremiumRequis titre="Carnet" description="Suis qui te doit de l'argent, sans rien oublier." />
+          ) : credits.length === 0 && soldes.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 0' }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>📒</div>
               <div style={{ fontSize: 16, fontWeight: 600, color: T.textSub }}>Aucun crédit en cours</div>
