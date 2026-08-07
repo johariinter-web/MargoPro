@@ -14,6 +14,7 @@ import { usePacks } from '@/lib/hooks/usePacks';
 import { prixAchatPack, prixVenteSepares } from '@backend/packs';
 import type { Pack } from '@backend/types';
 import { Fournisseurs } from '@/components/Fournisseurs';
+import { AccesPremiumRequis } from '@/components/AccesPremiumRequis';
 
 function fmtF(n: number) {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -888,10 +889,19 @@ export default function StockPage() {
             })()}
             <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
               <button onClick={() => setPackEnEdition(null)} style={{ flex: 1, height: 44, borderRadius: 12, background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: T.textSub, fontFamily: 'Manrope, sans-serif' }}>Annuler</button>
-              <button onClick={handleSauvegarderPack} style={{ flex: 2, height: 44, borderRadius: 12, background: T.accent, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: 'white', fontFamily: 'Manrope, sans-serif' }}>Enregistrer</button>
+              <button
+                onClick={() => plan.accesFonctionnalitesPremium && handleSauvegarderPack()}
+                disabled={!plan.accesFonctionnalitesPremium}
+                style={{ flex: 2, height: 44, borderRadius: 12, background: T.accent, border: 'none', cursor: plan.accesFonctionnalitesPremium ? 'pointer' : 'not-allowed', fontSize: 14, fontWeight: 700, color: 'white', fontFamily: 'Manrope, sans-serif', opacity: plan.accesFonctionnalitesPremium ? 1 : 0.5 }}
+              >
+                Enregistrer
+              </button>
             </div>
-            <button onClick={() => { const p = packEnEdition; setPackEnEdition(null); setPackASupprimer(p); }}
-              style={{ width: '100%', height: 44, borderRadius: 12, background: 'transparent', border: `1.5px solid ${T.redBg}`, cursor: 'pointer', fontSize: 14, fontWeight: 700, color: T.red, fontFamily: 'Manrope, sans-serif' }}>
+            <button
+              onClick={() => { if (!plan.accesFonctionnalitesPremium) return; const p = packEnEdition; setPackEnEdition(null); setPackASupprimer(p); }}
+              disabled={!plan.accesFonctionnalitesPremium}
+              style={{ width: '100%', height: 44, borderRadius: 12, background: 'transparent', border: `1.5px solid ${T.redBg}`, cursor: plan.accesFonctionnalitesPremium ? 'pointer' : 'not-allowed', fontSize: 14, fontWeight: 700, color: T.red, fontFamily: 'Manrope, sans-serif', opacity: plan.accesFonctionnalitesPremium ? 1 : 0.5 }}
+            >
               Supprimer ce pack
             </button>
           </div>
@@ -1169,14 +1179,21 @@ export default function StockPage() {
       )}
 
       {/* VUE PACKS */}
-      {vueStock === 'packs' && (
+      {vueStock === 'packs' && !plan.accesFonctionnalitesPremium && packs.length === 0 && (
+        <div style={{ padding: '0 16px' }}>
+          <AccesPremiumRequis titre="Packs" description="Regroupe plusieurs produits en une seule offre à vendre ensemble." />
+        </div>
+      )}
+
+      {vueStock === 'packs' && !(!plan.accesFonctionnalitesPremium && packs.length === 0) && (
         <div style={{ padding: '0 16px' }}>
 
           {/* Bouton Créer un pack */}
           <div style={{ marginBottom: 12 }}>
             <button
-              onClick={ouvrirCreerPack}
-              style={{ width: '100%', height: 48, borderRadius: 14, background: T.accent, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: 'white', fontFamily: 'Manrope, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              onClick={plan.accesFonctionnalitesPremium ? ouvrirCreerPack : undefined}
+              disabled={!plan.accesFonctionnalitesPremium}
+              style={{ width: '100%', height: 48, borderRadius: 14, background: T.accent, border: 'none', cursor: plan.accesFonctionnalitesPremium ? 'pointer' : 'not-allowed', fontSize: 14, fontWeight: 700, color: 'white', fontFamily: 'Manrope, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: plan.accesFonctionnalitesPremium ? 1 : 0.5 }}
             >
               + Créer un pack
             </button>
@@ -1301,7 +1318,13 @@ export default function StockPage() {
       )}
 
       {/* VUE STOCK MORT */}
-      {vueStock === 'mort' && (() => {
+      {vueStock === 'mort' && !plan.accesFonctionnalitesPremium && (
+        <div style={{ padding: '0 16px' }}>
+          <AccesPremiumRequis titre="Stock mort" description="Repère les produits qui dorment et l'argent immobilisé dans ton stock." />
+        </div>
+      )}
+
+      {vueStock === 'mort' && plan.accesFonctionnalitesPremium && (() => {
         const now = Date.now();
         const JOUR = 86_400_000;
         const derniereVente = new Map<string, number>();

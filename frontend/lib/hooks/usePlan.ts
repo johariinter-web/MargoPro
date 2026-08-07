@@ -13,6 +13,7 @@ export interface PlanInfo {
   isPremium: boolean;
   activeProductCount: number;
   canAddProduct: boolean;
+  accesFonctionnalitesPremium: boolean;  // faux uniquement si l'essai est expire et pas Premium
   isLoading?: boolean;     // true pendant que Dexie charge (< 100ms)
 }
 
@@ -29,11 +30,11 @@ export function computePlanStatus(
   const premiumActif = isPremium && (premiumExpiresAt === undefined || premiumExpiresAt > now);
 
   if (premiumActif) {
-    return { status: 'premium', daysRemaining: 0, isPremium: true, activeProductCount, canAddProduct: true };
+    return { status: 'premium', daysRemaining: 0, isPremium: true, activeProductCount, canAddProduct: true, accesFonctionnalitesPremium: true };
   }
 
   if (trialStart === undefined) {
-    return { status: 'trial', daysRemaining: TRIAL_DAYS, isPremium: false, activeProductCount, canAddProduct: true };
+    return { status: 'trial', daysRemaining: TRIAL_DAYS, isPremium: false, activeProductCount, canAddProduct: true, accesFonctionnalitesPremium: true };
   }
 
   const elapsed = Math.floor((now - trialStart) / (1000 * 60 * 60 * 24));
@@ -45,8 +46,9 @@ export function computePlanStatus(
   else status = 'trial';
 
   const canAddProduct = status !== 'expired' || activeProductCount < 5;
+  const accesFonctionnalitesPremium = status !== 'expired';
 
-  return { status, daysRemaining: remaining, isPremium: false, activeProductCount, canAddProduct };
+  return { status, daysRemaining: remaining, isPremium: false, activeProductCount, canAddProduct, accesFonctionnalitesPremium };
 }
 
 export function usePlan(): PlanInfo {
@@ -80,6 +82,7 @@ export function usePlan(): PlanInfo {
     isPremium: false,
     activeProductCount: 0,
     canAddProduct: true,
+    accesFonctionnalitesPremium: true,
     isLoading: true,
   };
 }
