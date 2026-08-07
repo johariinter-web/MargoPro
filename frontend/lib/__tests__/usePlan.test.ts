@@ -84,4 +84,28 @@ describe('computePlanStatus', () => {
     const r = computePlanStatus(undefined, true, 100, Date.now());
     expect(r.status).toBe('premium');
   });
+
+  it('accesFonctionnalitesPremium = true pendant le premium actif', () => {
+    const r = computePlanStatus(undefined, true, 2, Date.now());
+    expect(r.accesFonctionnalitesPremium).toBe(true);
+  });
+
+  it('accesFonctionnalitesPremium = true pendant l\'essai (trialStart non defini)', () => {
+    const r = computePlanStatus(undefined, false, 0, Date.now());
+    expect(r.accesFonctionnalitesPremium).toBe(true);
+  });
+
+  it('accesFonctionnalitesPremium = true en warning (essai bientot termine)', () => {
+    const now = Date.now();
+    const r = computePlanStatus(now - 23 * DAY, false, 2, now);
+    expect(r.status).toBe('warning');
+    expect(r.accesFonctionnalitesPremium).toBe(true);
+  });
+
+  it('accesFonctionnalitesPremium = false une fois l\'essai expire', () => {
+    const now = Date.now();
+    const r = computePlanStatus(now - 31 * DAY, false, 2, now);
+    expect(r.status).toBe('expired');
+    expect(r.accesFonctionnalitesPremium).toBe(false);
+  });
 });
