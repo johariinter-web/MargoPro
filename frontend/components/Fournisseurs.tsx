@@ -3,13 +3,16 @@
 import { useState } from 'react';
 import { useColors } from '@/lib/hooks/useColors';
 import { useFournisseurs } from '@/lib/hooks/useFournisseurs';
+import { usePlan } from '@/lib/hooks/usePlan';
 import { FournisseurFiche } from './FournisseurFiche';
+import { AccesPremiumRequis } from './AccesPremiumRequis';
 
 const CHAMPS_VIDES = { nom: '', contact: '', delaiHabituel: '', montantMinimum: '', modePaiement: '' };
 
 export function Fournisseurs() {
   const T = useColors();
   const { fournisseurs, ajouterFournisseur, fournisseurEnRetard } = useFournisseurs();
+  const { accesFonctionnalitesPremium } = usePlan();
   const [showForm, setShowForm] = useState(false);
   const [champs, setChamps] = useState(CHAMPS_VIDES);
   const [erreur, setErreur] = useState('');
@@ -38,14 +41,24 @@ export function Fournisseurs() {
     { key: 'modePaiement', label: 'Mode de paiement (optionnel)', placeholder: 'Ex : Mobile Money' },
   ];
 
+  if (!accesFonctionnalitesPremium && fournisseurs.length === 0) {
+    return (
+      <div style={{ padding: '0 16px' }}>
+        <AccesPremiumRequis titre="Fournisseurs" description="Suis tes commandes et sois averti des livraisons en retard." />
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: '0 16px' }}>
       <button
-        onClick={() => setShowForm(true)}
+        onClick={() => accesFonctionnalitesPremium && setShowForm(true)}
+        disabled={!accesFonctionnalitesPremium}
         style={{
           width: '100%', height: 48, borderRadius: 12, background: T.accent, color: 'white',
-          fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', marginBottom: 14,
+          fontSize: 14, fontWeight: 700, border: 'none', cursor: accesFonctionnalitesPremium ? 'pointer' : 'not-allowed', marginBottom: 14,
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          opacity: accesFonctionnalitesPremium ? 1 : 0.5,
         }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
