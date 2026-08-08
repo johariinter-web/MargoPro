@@ -114,7 +114,11 @@ export default function AuthPage() {
         setLoading(false);
         return;
       }
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/` },
+      });
       if (error) {
         setErreur(error.message.includes('already registered')
           ? 'Cet email est déjà utilisé. Connectez-vous.'
