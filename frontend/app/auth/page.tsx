@@ -28,6 +28,8 @@ export default function AuthPage() {
     return params.get('oubli') ? 'oubli' : 'connexion';
   });
   const [email, setEmail] = useState('');
+  const [identifiant, setIdentifiant] = useState<'email' | 'telephone'>('email');
+  const [telephone, setTelephone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [cguAccepte, setCguAccepte] = useState(false);
@@ -46,6 +48,7 @@ export default function AuthPage() {
   const [oubliEnvoye, setOubliEnvoye] = useState(false);
   const [oubliLoading, setOubliLoading] = useState(false);
   const [confirmationEmailRequise, setConfirmationEmailRequise] = useState(false);
+  const [confirmationTelephoneRequise, setConfirmationTelephoneRequise] = useState(false);
   const [sessionActiveEmail, setSessionActiveEmail] = useState<string | null | undefined>(undefined);
   const [deconnexionEnCours, setDeconnexionEnCours] = useState(false);
 
@@ -71,6 +74,8 @@ export default function AuthPage() {
     setConfirmPassword('');
     setCguAccepte(false);
     setConfirmationEmailRequise(false);
+    setTelephone('');
+    setConfirmationTelephoneRequise(false);
   }
 
   function voirOubli() {
@@ -105,8 +110,9 @@ export default function AuthPage() {
     setOubliEnvoye(true);
   }
 
+  const identifiantValide = identifiant === 'email' ? email.trim() !== '' : /^\+[1-9]\d{6,14}$/.test(telephone.trim());
   const formulaireValide =
-    email.trim() !== '' &&
+    identifiantValide &&
     password.length >= 6 &&
     cguAccepte &&
     (mode === 'connexion' || confirmPassword === password);
@@ -120,9 +126,11 @@ export default function AuthPage() {
     const supabase = createClient();
 
     if (mode === 'connexion') {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = identifiant === 'email'
+        ? await supabase.auth.signInWithPassword({ email, password })
+        : await supabase.auth.signInWithPassword({ phone: telephone.trim(), password });
       if (error) {
-        setErreur('Email ou mot de passe incorrect.');
+        setErreur(identifiant === 'email' ? 'Email ou mot de passe incorrect.' : 'Numéro ou mot de passe incorrect.');
         setLoading(false);
         return;
       }
@@ -133,27 +141,46 @@ export default function AuthPage() {
         setLoading(false);
         return;
       }
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: `${window.location.origin}/` },
-      });
-      if (error) {
-        setErreur(error.message.includes('already registered')
-          ? 'Cet email est déjà utilisé. Connectez-vous.'
-          : 'Erreur lors de la création du compte. Réessayez.');
-        setLoading(false);
-        return;
+      if (identifiant === 'email') {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: `${window.location.origin}/` },
+        });
+        if (error) {
+          setErreur(error.message.includes('already registered')
+            ? 'Cet email est déjà utilisé. Connectez-vous.'
+            : 'Erreur lors de la création du compte. Réessayez.');
+          setLoading(false);
+          return;
+        }
+        if (!data.session) {
+          // Confirmation email activée côté Supabase : aucune session tant que le lien
+          // n'a pas été cliqué. /onboarding est protégé par le middleware, donc on ne
+          // redirige pas : on informe l'utilisateur à la place.
+          setConfirmationEmailRequise(true);
+          setLoading(false);
+          return;
+        }
+        router.push('/onboarding');
+      } else {
+        const { data, error } = await supabase.auth.signUp({ phone: telephone.trim(), password });
+        if (error) {
+          setErreur(error.message.includes('already registered') || error.message.includes('already exists')
+            ? 'Ce numéro est déjà utilisé. Connectez-vous.'
+            : 'Erreur lors de la création du compte. Réessayez.');
+          setLoading(false);
+          return;
+        }
+        if (!data.session) {
+          // Meme principe que l'email : aucune session tant que le code SMS
+          // n'a pas ete verifie. Task 4 branche cet ecran.
+          setConfirmationTelephoneRequise(true);
+          setLoading(false);
+          return;
+        }
+        router.push('/onboarding');
       }
-      if (!data.session) {
-        // Confirmation email activée côté Supabase : aucune session tant que le lien
-        // n'a pas été cliqué. /onboarding est protégé par le middleware, donc on ne
-        // redirige pas : on informe l'utilisateur à la place.
-        setConfirmationEmailRequise(true);
-        setLoading(false);
-        return;
-      }
-      router.push('/onboarding');
     }
   }
 
@@ -213,25 +240,63 @@ export default function AuthPage() {
         )}
 
         {/* Formulaire */}
-        {typeof sessionActiveEmail !== 'string' && mode !== 'oubli' && !confirmationEmailRequise && (
+        {typeof sessionActiveEmail !== 'string' && mode !== 'oubli' && !confirmationEmailRequise && !confirmationTelephoneRequise && (
         <form onSubmit={soumettre} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 13, fontWeight: 700, color: T.text, fontFamily: 'Manrope, sans-serif' }}>
-              Adresse email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="exemple@email.com"
-              autoComplete="email"
-              required
-              style={inputStyle}
-              onFocus={e => (e.target.style.borderColor = T.accent)}
-              onBlur={e => (e.target.style.borderColor = T.border)}
-            />
+          <div style={{ display: 'flex', gap: 8, background: T.bg, borderRadius: 12, padding: 4 }}>
+            {(['email', 'telephone'] as const).map(opt => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => { setIdentifiant(opt); setErreur(''); }}
+                style={{
+                  flex: 1, height: 40, borderRadius: 10, border: 'none', cursor: 'pointer',
+                  background: identifiant === opt ? T.accent : 'transparent',
+                  color: identifiant === opt ? '#fff' : T.textSub,
+                  fontSize: 14, fontWeight: 700, fontFamily: 'Manrope, sans-serif',
+                }}
+              >
+                {opt === 'email' ? 'Email' : 'Téléphone'}
+              </button>
+            ))}
           </div>
+
+          {identifiant === 'email' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ fontSize: 13, fontWeight: 700, color: T.text, fontFamily: 'Manrope, sans-serif' }}>
+                Adresse email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="exemple@email.com"
+                autoComplete="email"
+                required
+                style={inputStyle}
+                onFocus={e => (e.target.style.borderColor = T.accent)}
+                onBlur={e => (e.target.style.borderColor = T.border)}
+              />
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ fontSize: 13, fontWeight: 700, color: T.text, fontFamily: 'Manrope, sans-serif' }}>
+                Numéro de téléphone
+              </label>
+              <input
+                type="tel"
+                value={telephone}
+                onChange={(e) => setTelephone(e.target.value)}
+                placeholder="+2250123456789"
+                autoComplete="tel"
+                required
+                style={inputStyle}
+                onFocus={e => (e.target.style.borderColor = T.accent)}
+                onBlur={e => (e.target.style.borderColor = T.border)}
+              />
+              <span style={{ fontSize: 12, color: T.textMuted }}>Avec l&apos;indicatif du pays, ex: +225 pour la Côte d&apos;Ivoire.</span>
+            </div>
+          )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <label style={{ fontSize: 13, fontWeight: 700, color: T.text, fontFamily: 'Manrope, sans-serif' }}>
@@ -377,7 +442,7 @@ export default function AuthPage() {
         )}
 
         {/* Basculer mode */}
-        {typeof sessionActiveEmail !== 'string' && mode !== 'oubli' && !confirmationEmailRequise && (
+        {typeof sessionActiveEmail !== 'string' && mode !== 'oubli' && !confirmationEmailRequise && !confirmationTelephoneRequise && (
         <p style={{ textAlign: 'center', fontSize: 13, color: T.textMuted, margin: 0, fontFamily: 'Manrope, sans-serif' }}>
           {mode === 'connexion' ? "Pas encore de compte ?" : "Déjà un compte ?"}{' '}
           <button
