@@ -5,13 +5,14 @@ import { useColors } from '@/lib/hooks/useColors';
 import { useConfig } from '@/lib/hooks/useConfig';
 import { usePlan } from '@/lib/hooks/usePlan';
 import { requestSync } from '@/lib/syncController';
+import { PRIX_PREMIUM_FCFA } from '@/lib/pricing';
 import { useEffect, useRef, useState } from 'react';
 
 const FEATURES = [
   { icon: 'box', color: '#B8860B', bg: '#FEF3D8', label: 'Produits illimités', subtitle: 'Gérez tout votre stock sans limites' },
-  { icon: 'image', color: '#059669', bg: '#E3F4EC', label: 'Photos & Catalogue', subtitle: 'Vitrine à partager sur WhatsApp' },
-  { icon: 'chart', color: '#2563EB', bg: '#E6F0FE', label: 'Marges & stock mort', subtitle: 'Analysez vos bénéfices' },
-  { icon: 'cloud', color: '#7C3AED', bg: '#F2EBFD', label: 'Sauvegarde cloud', subtitle: 'Vos données sur tous vos appareils' },
+  { icon: 'chart', color: '#2563EB', bg: '#E6F0FE', label: 'Stock mort & Packs', subtitle: 'Identifiez et liquidez ce qui ne se vend plus' },
+  { icon: 'doc', color: '#059669', bg: '#E3F4EC', label: 'Fournisseurs & Carnet', subtitle: 'Suivi des commandes et des crédits clients' },
+  { icon: 'bell', color: '#7C3AED', bg: '#F2EBFD', label: 'Historique complet & Alertes', subtitle: 'Toutes vos ventes passées, alerté en cas de stock bas' },
 ];
 
 function FeatureIcon({ name, color }: { name: string; color: string }) {
@@ -28,6 +29,9 @@ function FeatureIcon({ name, color }: { name: string; color: string }) {
   if (name === 'image') return (
     <svg {...common}><rect x="3" y="3" width="18" height="18" rx="3" stroke={color} strokeWidth="1.75"/><circle cx="8.5" cy="9" r="1.5" stroke={color} strokeWidth="1.5"/><path d="M21 15l-5-4-7 6" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/></svg>
   );
+  if (name === 'bell') return (
+    <svg {...common}><path d="M12 3a6 6 0 00-6 6v3.5L4.3 15.2A1 1 0 005 17h14a1 1 0 00.7-1.8L18 12.5V9a6 6 0 00-6-6z" stroke={color} strokeWidth="1.75" strokeLinejoin="round"/><path d="M9.5 17a2.5 2.5 0 005 0" stroke={color} strokeWidth="1.75" strokeLinecap="round"/></svg>
+  );
   return (
     <svg {...common}><path d="M18 10h-1.3A6 6 0 106 15h11a3.5 3.5 0 001-6.85" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/></svg>
   );
@@ -35,6 +39,8 @@ function FeatureIcon({ name, color }: { name: string; color: string }) {
 
 const FREE_FEATURES = [
   'Stock jusqu\'à 5 produits',
+  'Calcul de marge (%Marge)',
+  'Photos & Catalogue partageable (WhatsApp)',
   'Enregistrer des ventes',
   'Gain du jour (tableau simple)',
   'Fonctionne sans internet',
@@ -152,6 +158,10 @@ export default function AbonnementPage() {
   // Statut Premium réel (issu du webhook FedaPay), pas de la fausse date
   // dateAbonnement posée automatiquement à la première visite de la page.
   const premiumExpiresAt = config?.premiumExpiresAt;
+  // premiumExpiresAt n'est jamais effacé après expiration (reste une date
+  // passée) - sa seule présence suffit à distinguer "a déjà payé une fois"
+  // (même si Premium a expiré depuis) de "n'a jamais payé".
+  const dejaPayeUneFois = premiumExpiresAt !== undefined;
   const joursRestants = premiumExpiresAt
     ? Math.max(0, Math.ceil((premiumExpiresAt - Date.now()) / (24 * 60 * 60 * 1000)))
     : null;
@@ -163,7 +173,7 @@ export default function AbonnementPage() {
     <div style={{ minHeight: '100dvh', background: T.bg, fontFamily: 'Manrope, sans-serif', paddingBottom: 40 }}>
 
       {/* HEADER */}
-      <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center' }}>
         <button
           onClick={() => router.back()}
           style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 600, color: T.text, padding: 0, fontFamily: 'Manrope, sans-serif' }}
@@ -172,9 +182,6 @@ export default function AbonnementPage() {
             <path d="M15 18l-6-6 6-6" stroke={T.text} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           Abonnement
-        </button>
-        <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 500, color: T.textMuted, fontFamily: 'Manrope, sans-serif' }}>
-          Restaurer
         </button>
       </div>
 
@@ -253,6 +260,14 @@ export default function AbonnementPage() {
           </div>
         </div>
 
+        {/* PRIX */}
+        <div style={{ textAlign: 'center' }}>
+          <span style={{ fontSize: 28, fontWeight: 800, color: T.text, fontFamily: '"Space Grotesk", sans-serif' }}>
+            {PRIX_PREMIUM_FCFA.toLocaleString('fr-FR')} FCFA
+          </span>
+          <span style={{ fontSize: 14, color: T.textMuted }}> / mois</span>
+        </div>
+
         {/* BOUTON RENOUVELER */}
         {verificationRetour && (
           <div style={{ textAlign: 'center', fontSize: 13, color: T.textMuted, marginBottom: 8 }}>
@@ -294,7 +309,7 @@ export default function AbonnementPage() {
             <path d="M21 12a9 9 0 01-9 9 9 9 0 01-6.4-2.6L3 16M3 12a9 9 0 019-9 9 9 0 016.4 2.6L21 8" stroke={T.accent} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M21 3v5h-5M3 21v-5h5" stroke={T.accent} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          {paiementEnCours ? 'Redirection...' : 'Renouveler (+30 jours)'}
+          {paiementEnCours ? 'Redirection...' : dejaPayeUneFois ? 'Renouveler (+30 jours)' : "S'abonner (30 jours)"}
         </button>
 
       </div>

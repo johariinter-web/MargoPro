@@ -1,9 +1,10 @@
 import { FedaPay, Transaction, Webhook } from 'fedapay';
+import { PRIX_PREMIUM_FCFA } from './pricing';
 
 FedaPay.setApiKey(process.env.FEDAPAY_SECRET_KEY!);
 FedaPay.setEnvironment((process.env.FEDAPAY_ENVIRONMENT as 'sandbox' | 'live') ?? 'sandbox');
 
-export const PRIX_PREMIUM_FCFA = 3500;
+export { PRIX_PREMIUM_FCFA };
 
 export interface TransactionPayload {
   description: string;
