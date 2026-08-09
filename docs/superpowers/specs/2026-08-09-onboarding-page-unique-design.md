@@ -36,13 +36,13 @@ Les 7 devises actuelles (`DEVISES`) restent toutes, sans exception — y compris
 
 Deux des sept devises (XOF et XAF) partagent le même symbole affiché "FCFA" — pour ne pas les confondre dans un menu déroulant natif (qui n'affiche qu'une ligne par option, contrairement aux cartes actuelles avec description), chaque option précise la région entre parenthèses :
 
-- `FCFA (UEMOA — Sénégal, Côte d'Ivoire, Mali...)`
-- `FCFA (CEMAC — Cameroun, Gabon, Congo...)`
-- `GNF — Guinée`
-- `FC — RDC`
-- `Ar — Madagascar`
-- `MAD — Maroc`
-- `TND — Tunisie`
+- `FCFA (UEMOA - Sénégal, Côte d'Ivoire, Mali...)`
+- `FCFA (CEMAC - Cameroun, Gabon, Congo...)`
+- `GNF - Guinée`
+- `FC - RDC`
+- `Ar - Madagascar`
+- `MAD - Maroc`
+- `TND - Tunisie`
 
 Les 5 devises à symbole unique gardent un format court `SYMBOLE — Pays`, sans ambiguïté possible.
 
