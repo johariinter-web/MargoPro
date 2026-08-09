@@ -97,5 +97,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "L'activation Premium n'a pas ete confirmee" }, { status: 500 });
   }
 
+  console.log('[webhook fedapay] Premium active pour', userId, '(transaction', transactionId, ') jusqu\'au', new Date(ligne.premium_expires_at as number).toISOString());
   return NextResponse.json({ ok: true });
 }
