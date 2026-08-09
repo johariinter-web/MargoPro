@@ -14,13 +14,13 @@ const T = {
 };
 
 const DEVISES = [
-  { code: 'XOF', symbole: 'FCFA', libelle: "FCFA (UEMOA — Sénégal, Côte d'Ivoire, Mali...)" },
-  { code: 'XAF', symbole: 'FCFA', libelle: 'FCFA (CEMAC — Cameroun, Gabon, Congo...)' },
-  { code: 'GNF', symbole: 'GNF', libelle: 'GNF — Guinée' },
-  { code: 'CDF', symbole: 'FC', libelle: 'FC — RDC' },
-  { code: 'MGA', symbole: 'Ar', libelle: 'Ar — Madagascar' },
-  { code: 'MAD', symbole: 'MAD', libelle: 'MAD — Maroc' },
-  { code: 'TND', symbole: 'TND', libelle: 'TND — Tunisie' },
+  { code: 'XOF', symbole: 'FCFA', libelle: "FCFA (UEMOA - Sénégal, Côte d'Ivoire, Mali...)" },
+  { code: 'XAF', symbole: 'FCFA', libelle: 'FCFA (CEMAC - Cameroun, Gabon, Congo...)' },
+  { code: 'GNF', symbole: 'GNF', libelle: 'GNF - Guinée' },
+  { code: 'CDF', symbole: 'FC', libelle: 'FC - RDC' },
+  { code: 'MGA', symbole: 'Ar', libelle: 'Ar - Madagascar' },
+  { code: 'MAD', symbole: 'MAD', libelle: 'MAD - Maroc' },
+  { code: 'TND', symbole: 'TND', libelle: 'TND - Tunisie' },
 ];
 
 export default function OnboardingPage() {
