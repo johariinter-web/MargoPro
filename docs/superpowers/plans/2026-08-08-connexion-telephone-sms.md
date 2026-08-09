@@ -618,5 +618,5 @@ Ces étapes ne peuvent pas être automatisées par un agent (accès à des table
 1. **Africa's Talking** : recharger le portefeuille prépayé d'un petit montant (le solde n'expire jamais) ; récupérer la clé API (`Settings → API Key`) et le nom d'utilisateur (username) du compte.
 2. **Variables d'environnement Vercel** à ajouter : `AFRICASTALKING_API_KEY`, `AFRICASTALKING_USERNAME`, `SEND_SMS_HOOK_SECRET` (cette dernière est générée par Supabase à l'étape suivante, à copier après coup).
 3. **Supabase Dashboard → Authentication → Providers** : activer "Phone".
-4. **Supabase Dashboard → Authentication → Hooks → Send SMS hook** : activer, pointer vers `https://margopro.eidma.co/api/auth/send-sms` (une fois déployé), copier le secret généré (`v1,whsec_...`) dans `SEND_SMS_HOOK_SECRET` sur Vercel.
+4. **Supabase Dashboard → Authentication → Hooks → Send SMS hook** : activer, pointer vers `https://margopro.eidma.co/api/webhooks/send-sms` (une fois déployé), copier le secret généré (`v1,whsec_...`) dans `SEND_SMS_HOOK_SECRET` sur Vercel.
 5. Tester un premier vrai SMS de bout en bout sur la preview Vercel avant de considérer la fonctionnalité prête pour de vrais utilisateurs.
