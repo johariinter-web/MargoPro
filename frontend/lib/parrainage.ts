@@ -172,12 +172,28 @@ export async function consumeReferralCode(
       .maybeSingle();
     if (dejaParraine) return;
 
+    // La RLS de la table de base `affiliates` (for all using (auth.uid() = user_id))
+    // n'autorise un utilisateur qu'à voir SA PROPRE fiche affilié : lire ici la
+    // fiche d'un tiers par son code échouerait silencieusement (0 ligne, pas
+    // d'erreur). La vue `affiliates_public` n'exécute pas avec les droits de
+    // l'appelant et contourne donc cette restriction pour ce lookup légitime.
     const { data: affiliate } = await supabase
-      .from('affiliates')
-      .select('id, user_id')
+      .from('affiliates_public')
+      .select('id')
       .eq('code', code)
       .maybeSingle();
-    if (!affiliate || affiliate.user_id === userId) return;
+    if (!affiliate) return;
+
+    // Empêche l'auto-parrainage : cette requête sur la table de base ne renvoie
+    // une ligne que si l'utilisateur courant est bien le propriétaire de cet
+    // affilié (seul cas autorisé par la RLS ci-dessus).
+    const { data: estProprietaire } = await supabase
+      .from('affiliates')
+      .select('id')
+      .eq('id', affiliate.id)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (estProprietaire) return;
 
     await supabase.from('parrainages').insert({
       affiliate_id: affiliate.id,
