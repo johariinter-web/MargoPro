@@ -49,6 +49,11 @@ export default function AuthPage() {
   const [oubliLoading, setOubliLoading] = useState(false);
   const [confirmationEmailRequise, setConfirmationEmailRequise] = useState(false);
   const [confirmationTelephoneRequise, setConfirmationTelephoneRequise] = useState(false);
+  const [codeSms, setCodeSms] = useState('');
+  const [erreurCode, setErreurCode] = useState('');
+  const [verificationEnCours, setVerificationEnCours] = useState(false);
+  const [renvoiEnCours, setRenvoiEnCours] = useState(false);
+  const [renvoiMessage, setRenvoiMessage] = useState('');
   const [sessionActiveEmail, setSessionActiveEmail] = useState<string | null | undefined>(undefined);
   const [deconnexionEnCours, setDeconnexionEnCours] = useState(false);
 
@@ -89,6 +94,10 @@ export default function AuthPage() {
     setErreur('');
     setOubliEnvoye(false);
     setConfirmationEmailRequise(false);
+    setConfirmationTelephoneRequise(false);
+    setCodeSms('');
+    setErreurCode('');
+    setRenvoiMessage('');
   }
 
   async function envoyerReinitialisation(e: React.FormEvent<HTMLFormElement>) {
@@ -182,6 +191,43 @@ export default function AuthPage() {
         router.push('/onboarding');
       }
     }
+  }
+
+  async function verifierCodeSms(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (codeSms.trim().length !== 6) return;
+    setVerificationEnCours(true);
+    setErreurCode('');
+    const supabase = createClient();
+    const { error } = await supabase.auth.verifyOtp({
+      phone: telephone.trim(),
+      token: codeSms.trim(),
+      type: 'sms',
+    });
+    if (error) {
+      setErreurCode('Code incorrect ou expiré. Réessaie ou demande un nouveau code.');
+      setVerificationEnCours(false);
+      return;
+    }
+    router.push('/onboarding');
+  }
+
+  async function renvoyerCodeSms() {
+    setRenvoiEnCours(true);
+    setRenvoiMessage('');
+    const supabase = createClient();
+    const { error } = await supabase.auth.resend({ type: 'sms', phone: telephone.trim() });
+    setRenvoiEnCours(false);
+    if (error) {
+      // Supabase applique deja sa propre limite de frequence (~60s) et
+      // renvoie une erreur explicite si on redemande trop vite - on
+      // l'affiche telle quelle plutot que de reimplementer une limite.
+      setRenvoiMessage(error.message.includes('security purposes')
+        ? 'Merci de patienter avant de redemander un code.'
+        : "Échec de l'envoi. Réessaie dans un instant.");
+      return;
+    }
+    setRenvoiMessage('Nouveau code envoyé.');
   }
 
   const inputStyle = {
@@ -467,6 +513,69 @@ export default function AuthPage() {
               Retour à la connexion
             </button>
           </div>
+        )}
+
+        {/* Confirmation téléphone requise après inscription */}
+        {typeof sessionActiveEmail !== 'string' && mode === 'inscription' && confirmationTelephoneRequise && (
+          <form onSubmit={verifierCodeSms} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <p style={{ fontSize: 13, color: T.textSub, fontFamily: 'Manrope, sans-serif', lineHeight: 1.6, margin: 0, textAlign: 'center' }}>
+              Un code à 6 chiffres a été envoyé par SMS au {telephone}. Entre-le ci-dessous.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ fontSize: 13, fontWeight: 700, color: T.text, fontFamily: 'Manrope, sans-serif' }}>
+                Code reçu par SMS
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={codeSms}
+                onChange={(e) => setCodeSms(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="123456"
+                required
+                style={{ ...inputStyle, textAlign: 'center', fontSize: 24, letterSpacing: 8, fontFamily: '"Space Grotesk", sans-serif' }}
+                onFocus={e => (e.target.style.borderColor = T.accent)}
+                onBlur={e => (e.target.style.borderColor = T.border)}
+              />
+            </div>
+            {erreurCode && (
+              <p style={{ fontSize: 13, fontWeight: 600, color: T.red, textAlign: 'center', background: T.redBg, borderRadius: 12, padding: '12px 16px', margin: 0, fontFamily: 'Manrope, sans-serif' }}>
+                {erreurCode}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={codeSms.trim().length !== 6 || verificationEnCours}
+              style={{
+                width: '100%', height: 52, borderRadius: 14,
+                background: T.accent, color: '#fff',
+                fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer',
+                opacity: (codeSms.trim().length !== 6 || verificationEnCours) ? 0.4 : 1,
+                fontFamily: 'Manrope, sans-serif',
+              }}
+            >
+              {verificationEnCours ? '...' : 'Vérifier'}
+            </button>
+            <button
+              type="button"
+              onClick={renvoyerCodeSms}
+              disabled={renvoiEnCours}
+              style={{ color: T.accent, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontSize: 13, fontFamily: 'Manrope, sans-serif', textAlign: 'center' }}
+            >
+              {renvoiEnCours ? '...' : "Je n'ai pas reçu le code, renvoyer"}
+            </button>
+            {renvoiMessage && (
+              <p style={{ fontSize: 12, color: T.textMuted, textAlign: 'center', margin: 0, fontFamily: 'Manrope, sans-serif' }}>
+                {renvoiMessage}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={retourConnexion}
+              style={{ color: T.textMuted, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontSize: 13, fontFamily: 'Manrope, sans-serif', textAlign: 'center' }}
+            >
+              Retour à la connexion
+            </button>
+          </form>
         )}
 
         {typeof sessionActiveEmail !== 'string' && mode === 'oubli' && (
