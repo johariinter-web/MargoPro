@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { clearLocalData } from '@/lib/db';
 
 type Mode = 'connexion' | 'inscription' | 'oubli';
 
@@ -46,24 +45,19 @@ export default function AuthPage() {
   const [oubliEnvoye, setOubliEnvoye] = useState(false);
   const [oubliLoading, setOubliLoading] = useState(false);
   const [confirmationEmailRequise, setConfirmationEmailRequise] = useState(false);
-  const [sessionActiveEmail, setSessionActiveEmail] = useState<string | null | undefined>(undefined);
-  const [deconnexionEnCours, setDeconnexionEnCours] = useState(false);
 
   useEffect(() => {
+    // Une session active sur /auth arrive surtout juste apres avoir confirme
+    // un nouveau compte par email (le lien de confirmation atterrit ici avant
+    // que le middleware ne reconnaisse la session) : on continue simplement
+    // vers l'appli plutot que d'afficher un ecran "deja connectee" qui fait
+    // peur pour rien. Changer de compte reste possible via Parametres > Se
+    // deconnecter, qui vide deja la session avant de revenir ici.
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => {
-      setSessionActiveEmail(data.user?.email ?? null);
+      if (data.user) router.replace('/');
     });
-  }, []);
-
-  async function seDeconnecterEtContinuer() {
-    setDeconnexionEnCours(true);
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    await clearLocalData();
-    setSessionActiveEmail(null);
-    setDeconnexionEnCours(false);
-  }
+  }, [router]);
 
   function basculerMode() {
     setMode(mode === 'connexion' ? 'inscription' : 'connexion');
@@ -190,30 +184,8 @@ export default function AuthPage() {
           <img src="/logo-margopro.svg" alt="MargoPro" style={{ width: 72, height: 72, borderRadius: 18, boxShadow: '0 4px 16px rgba(212,96,26,0.18)' }} />
         </div>
 
-        {/* Déjà connectée : bloque le formulaire pour éviter de continuer sur l'ancienne session */}
-        {typeof sessionActiveEmail === 'string' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, textAlign: 'center' }}>
-            <p style={{ fontSize: 13, color: T.textSub, fontFamily: 'Manrope, sans-serif', lineHeight: 1.6, margin: 0 }}>
-              Tu es déjà connectée avec <strong>{sessionActiveEmail}</strong>. Déconnecte-toi d&apos;abord pour te connecter à un autre compte.
-            </p>
-            <button
-              onClick={seDeconnecterEtContinuer}
-              disabled={deconnexionEnCours}
-              style={{
-                width: '100%', height: 52, borderRadius: 14,
-                background: T.accent, color: '#fff',
-                fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer',
-                opacity: deconnexionEnCours ? 0.4 : 1,
-                fontFamily: 'Manrope, sans-serif',
-              }}
-            >
-              {deconnexionEnCours ? '...' : 'Se déconnecter'}
-            </button>
-          </div>
-        )}
-
         {/* Formulaire */}
-        {typeof sessionActiveEmail !== 'string' && mode !== 'oubli' && !confirmationEmailRequise && (
+        {mode !== 'oubli' && !confirmationEmailRequise && (
         <form onSubmit={soumettre} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -377,7 +349,7 @@ export default function AuthPage() {
         )}
 
         {/* Basculer mode */}
-        {typeof sessionActiveEmail !== 'string' && mode !== 'oubli' && !confirmationEmailRequise && (
+        {mode !== 'oubli' && !confirmationEmailRequise && (
         <p style={{ textAlign: 'center', fontSize: 13, color: T.textMuted, margin: 0, fontFamily: 'Manrope, sans-serif' }}>
           {mode === 'connexion' ? "Pas encore de compte ?" : "Déjà un compte ?"}{' '}
           <button
@@ -390,7 +362,7 @@ export default function AuthPage() {
         )}
 
         {/* Confirmation email requise après inscription */}
-        {typeof sessionActiveEmail !== 'string' && mode === 'inscription' && confirmationEmailRequise && (
+        {mode === 'inscription' && confirmationEmailRequise && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, textAlign: 'center' }}>
             <p style={{ fontSize: 13, color: T.textSub, fontFamily: 'Manrope, sans-serif', lineHeight: 1.6, margin: 0 }}>
               Compte créé ! Vérifie ta boîte de réception (et les spams) pour confirmer ton email, puis connecte-toi.
@@ -404,7 +376,7 @@ export default function AuthPage() {
           </div>
         )}
 
-        {typeof sessionActiveEmail !== 'string' && mode === 'oubli' && (
+        {mode === 'oubli' && (
           oubliEnvoye ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, textAlign: 'center' }}>
               <p style={{ fontSize: 13, color: T.textSub, fontFamily: 'Manrope, sans-serif', lineHeight: 1.6, margin: 0 }}>
