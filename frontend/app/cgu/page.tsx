@@ -45,7 +45,7 @@ export default function CguPage() {
         </Section>
 
         <Section title="2. Accès au service">
-          L&apos;accès à MargoPro nécessite la création d&apos;un compte via une adresse email et un mot de passe. Vous êtes responsable de la confidentialité de vos identifiants de connexion. Toute utilisation effectuée depuis votre compte vous est attribuée.
+          L&apos;accès à MargoPro nécessite la création d&apos;un compte via une adresse email ou un numéro de téléphone, et un mot de passe. Vous êtes responsable de la confidentialité de vos identifiants de connexion. Toute utilisation effectuée depuis votre compte vous est attribuée.
         </Section>
 
         <Section title="3. Données et vie privée">
