@@ -69,6 +69,7 @@ type ConfigRow = {
   trial_start: number | null;
   is_premium: boolean;
   premium_expires_at: number | null;
+  essai_etendu: boolean;
   updated_at: number;
 };
 
@@ -176,6 +177,7 @@ function configToRow(c: Config, userId: string): ConfigRow {
     trial_start: c.trialStart ?? null,
     is_premium: c.isPremium ?? false,
     premium_expires_at: c.premiumExpiresAt ?? null,
+    essai_etendu: c.essaiEtendu ?? false,
     updated_at: c.updatedAt ?? Date.now(),
   };
 }
@@ -191,6 +193,7 @@ function rowToConfig(r: ConfigRow): Config {
     trialStart: r.trial_start ?? undefined,
     isPremium: r.is_premium ?? false,
     premiumExpiresAt: r.premium_expires_at ?? undefined,
+    essaiEtendu: r.essai_etendu ?? false,
     updatedAt: Number(r.updated_at),
   };
 }

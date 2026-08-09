@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useConfig } from '@/lib/hooks/useConfig';
 import { createClient } from '@/lib/supabase/client';
 import { consumeReferralCode } from '@/lib/parrainage';
+import { consumePlanPromis } from '@/lib/planPromis';
 
 const T = {
   accent: '#D4601A',
@@ -47,7 +48,13 @@ export default function OnboardingPage() {
 
   async function terminer() {
     const devise = DEVISES.find(d => d.code === deviseCode)!;
-    await saveConfig({ nomCommerce: nomCommerce.trim(), devise: devise.code, symboleDevise: devise.symbole, onboardingComplete: true });
+    await saveConfig({
+      nomCommerce: nomCommerce.trim(),
+      devise: devise.code,
+      symboleDevise: devise.symbole,
+      onboardingComplete: true,
+      essaiEtendu: consumePlanPromis(),
+    });
     router.push('/');
   }
 
