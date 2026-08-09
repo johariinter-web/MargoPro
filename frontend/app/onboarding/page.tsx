@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { consumeReferralCode } from '@/lib/parrainage';
 
 const T = {
-  accent: '#D4601A', accentLight: '#FEF0E6',
+  accent: '#D4601A',
   bg: '#FAF7F3', surface: '#FFFFFF',
   text: '#1C1811', textSub: '#6A5D52',
   border: '#E6DDD3',
@@ -47,7 +47,7 @@ export default function OnboardingPage() {
 
   async function terminer() {
     const devise = DEVISES.find(d => d.code === deviseCode)!;
-    await saveConfig({ nomCommerce, devise: devise.code, symboleDevise: devise.symbole, onboardingComplete: true });
+    await saveConfig({ nomCommerce: nomCommerce.trim(), devise: devise.code, symboleDevise: devise.symbole, onboardingComplete: true });
     router.push('/');
   }
 
@@ -82,7 +82,7 @@ export default function OnboardingPage() {
               onChange={e => setDeviseCode(e.target.value)}
               style={{ width: '100%', border: `2px solid ${deviseCode ? T.accent : T.border}`, borderRadius: 14, padding: '14px 16px', fontSize: 16, fontWeight: 600, color: deviseCode ? T.text : T.textSub, background: T.surface, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' as const, transition: 'border-color 0.2s' }}
             >
-              <option value="" disabled>Choisis ta devise</option>
+              <option value="" disabled hidden>Choisis ta devise</option>
               {DEVISES.map(d => (
                 <option key={d.code} value={d.code}>{d.libelle}</option>
               ))}
