@@ -1,9 +1,21 @@
 import AfricasTalking from 'africastalking';
 
-const client = AfricasTalking({
-  apiKey: process.env.AFRICASTALKING_API_KEY!,
-  username: process.env.AFRICASTALKING_USERNAME!,
-});
+// Instancie a la demande plutot qu'au chargement du module : sinon Next.js
+// fait planter tout le build en collectant les donnees de la route (import
+// du module) des que AFRICASTALKING_API_KEY/USERNAME sont absents, meme si
+// aucun SMS n'est jamais envoye (ex: avant que les variables Vercel soient
+// configurees).
+let client: ReturnType<typeof AfricasTalking> | undefined;
+
+function getClient() {
+  if (!client) {
+    client = AfricasTalking({
+      apiKey: process.env.AFRICASTALKING_API_KEY!,
+      username: process.env.AFRICASTALKING_USERNAME!,
+    });
+  }
+  return client;
+}
 
 export function buildSmsOptions(phone: string, message: string): { to: string; message: string } {
   return { to: phone, message };
@@ -18,7 +30,7 @@ export async function envoyerSms(phone: string, message: string): Promise<void> 
   const options = buildSmsOptions(phone, message);
   let reponse;
   try {
-    reponse = await client.SMS.send(options);
+    reponse = await getClient().SMS.send(options);
   } catch (err) {
     // Ne jamais logger l'objet d'erreur complet : peut contenir la cle API
     // dans la requete HTTP d'origine attachee par le SDK. Seul err.message
