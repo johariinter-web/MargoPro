@@ -29,12 +29,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: { http_code: 401, message: 'Signature invalide' } }, { status: 401 });
   }
 
-  const phone = payload.user.phone;
   const otp = payload.sms.otp;
-  if (!phone || !otp) {
+  if (!payload.user.phone || !otp) {
     console.error('[send-sms-hook] payload sans numero ou code');
     return NextResponse.json({ error: { http_code: 400, message: 'Payload incomplet' } }, { status: 400 });
   }
+  // Supabase transmet le numero au format E.164 SANS le "+" (ex: "2290196116003"),
+  // mais le SDK Africa's Talking exige le "+" pour reconnaitre l'indicatif pays.
+  const phone = payload.user.phone.startsWith('+') ? payload.user.phone : `+${payload.user.phone}`;
 
   try {
     await envoyerSms(phone, `Votre code MargoPro : ${otp}`);
