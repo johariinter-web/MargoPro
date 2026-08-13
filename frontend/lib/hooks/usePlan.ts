@@ -17,7 +17,12 @@ export interface PlanInfo {
   isLoading?: boolean;     // true pendant que Dexie charge (< 100ms)
 }
 
-const TRIAL_DAYS = 30;
+const TRIAL_DAYS_ESSAI_EN_COURS = 30;
+const TRIAL_DAYS_NOUVEAU_COMPTE = 15;
+// Comptes deja en essai au moment de ce changement (2026-08-09) : gardent leurs
+// 30 jours d'origine, pas raccourcis en cours de route. Nouveaux comptes a
+// partir de ce moment : 15 jours.
+const CHANGEMENT_DUREE_ESSAI = new Date('2026-08-09T20:52:36Z').getTime();
 const WARNING_DAYS = 7;
 
 export function computePlanStatus(
@@ -25,7 +30,8 @@ export function computePlanStatus(
   isPremium: boolean,
   activeProductCount: number,
   now: number = Date.now(),
-  premiumExpiresAt?: number
+  premiumExpiresAt?: number,
+  essaiEtendu: boolean = false
 ): PlanInfo {
   const premiumActif = isPremium && (premiumExpiresAt === undefined || premiumExpiresAt > now);
 
@@ -33,12 +39,18 @@ export function computePlanStatus(
     return { status: 'premium', daysRemaining: 0, isPremium: true, activeProductCount, canAddProduct: true, accesFonctionnalitesPremium: true };
   }
 
+  const dureeEssaiParDefaut = essaiEtendu ? TRIAL_DAYS_ESSAI_EN_COURS : TRIAL_DAYS_NOUVEAU_COMPTE;
+
   if (trialStart === undefined) {
-    return { status: 'trial', daysRemaining: TRIAL_DAYS, isPremium: false, activeProductCount, canAddProduct: true, accesFonctionnalitesPremium: true };
+    return { status: 'trial', daysRemaining: dureeEssaiParDefaut, isPremium: false, activeProductCount, canAddProduct: true, accesFonctionnalitesPremium: true };
   }
 
+  // Comptes deja en essai avant le changement du 2026-08-09 : gardent 30 jours
+  // peu importe essaiEtendu. Nouveaux comptes : 30 jours si arrives via le
+  // lien "Pro" d'eidma.co (essaiEtendu), sinon 15 par defaut.
+  const dureeEssai = trialStart < CHANGEMENT_DUREE_ESSAI ? TRIAL_DAYS_ESSAI_EN_COURS : dureeEssaiParDefaut;
   const elapsed = Math.floor((now - trialStart) / (1000 * 60 * 60 * 24));
-  const remaining = Math.max(0, TRIAL_DAYS - elapsed);
+  const remaining = Math.max(0, dureeEssai - elapsed);
 
   let status: PlanStatus;
   if (remaining === 0) status = 'expired';
@@ -62,7 +74,8 @@ export function usePlan(): PlanInfo {
       config?.isPremium ?? false,
       activeProductCount,
       Date.now(),
-      config?.premiumExpiresAt
+      config?.premiumExpiresAt,
+      config?.essaiEtendu ?? false
     );
   });
 
@@ -78,7 +91,7 @@ export function usePlan(): PlanInfo {
 
   return result ?? {
     status: 'trial',
-    daysRemaining: TRIAL_DAYS,
+    daysRemaining: TRIAL_DAYS_NOUVEAU_COMPTE,
     isPremium: false,
     activeProductCount: 0,
     canAddProduct: true,
