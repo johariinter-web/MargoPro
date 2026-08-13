@@ -6,6 +6,13 @@ import { createClient } from '@/lib/supabase/client';
 
 type Mode = 'connexion' | 'inscription' | 'oubli';
 
+// Coupe-circuit temporaire : le bouton "Téléphone" reste visible (les gens
+// savent que ça arrive) mais indique "bientôt disponible" au lieu du
+// formulaire, tant qu'on n'a pas confirmé un vrai envoi de SMS de bout en
+// bout avec un solde Africa's Talking suffisant. Repasser à true une fois
+// confirmé.
+const TELEPHONE_DISPONIBLE = false;
+
 const T = {
   accent: '#D4601A',
   accentLight: '#FEF0E6',
@@ -27,6 +34,8 @@ export default function AuthPage() {
     return params.get('oubli') ? 'oubli' : 'connexion';
   });
   const [email, setEmail] = useState('');
+  const [identifiant, setIdentifiant] = useState<'email' | 'telephone'>('email');
+  const [telephone, setTelephone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [cguAccepte, setCguAccepte] = useState(false);
@@ -45,6 +54,12 @@ export default function AuthPage() {
   const [oubliEnvoye, setOubliEnvoye] = useState(false);
   const [oubliLoading, setOubliLoading] = useState(false);
   const [confirmationEmailRequise, setConfirmationEmailRequise] = useState(false);
+  const [confirmationTelephoneRequise, setConfirmationTelephoneRequise] = useState(false);
+  const [codeSms, setCodeSms] = useState('');
+  const [erreurCode, setErreurCode] = useState('');
+  const [verificationEnCours, setVerificationEnCours] = useState(false);
+  const [renvoiEnCours, setRenvoiEnCours] = useState(false);
+  const [renvoiMessage, setRenvoiMessage] = useState('');
 
   useEffect(() => {
     // Une session active sur /auth arrive surtout juste apres avoir confirme
@@ -65,6 +80,8 @@ export default function AuthPage() {
     setConfirmPassword('');
     setCguAccepte(false);
     setConfirmationEmailRequise(false);
+    setTelephone('');
+    setConfirmationTelephoneRequise(false);
   }
 
   function voirOubli() {
@@ -78,6 +95,10 @@ export default function AuthPage() {
     setErreur('');
     setOubliEnvoye(false);
     setConfirmationEmailRequise(false);
+    setConfirmationTelephoneRequise(false);
+    setCodeSms('');
+    setErreurCode('');
+    setRenvoiMessage('');
   }
 
   async function envoyerReinitialisation(e: React.FormEvent<HTMLFormElement>) {
@@ -99,8 +120,11 @@ export default function AuthPage() {
     setOubliEnvoye(true);
   }
 
+  const identifiantValide = identifiant === 'email'
+    ? email.trim() !== ''
+    : TELEPHONE_DISPONIBLE && /^\+[1-9]\d{6,14}$/.test(telephone.trim());
   const formulaireValide =
-    email.trim() !== '' &&
+    identifiantValide &&
     password.length >= 6 &&
     cguAccepte &&
     (mode === 'connexion' || confirmPassword === password);
@@ -114,9 +138,11 @@ export default function AuthPage() {
     const supabase = createClient();
 
     if (mode === 'connexion') {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = identifiant === 'email'
+        ? await supabase.auth.signInWithPassword({ email, password })
+        : await supabase.auth.signInWithPassword({ phone: telephone.trim(), password });
       if (error) {
-        setErreur('Email ou mot de passe incorrect.');
+        setErreur(identifiant === 'email' ? 'Email ou mot de passe incorrect.' : 'Numéro ou mot de passe incorrect.');
         setLoading(false);
         return;
       }
@@ -127,28 +153,84 @@ export default function AuthPage() {
         setLoading(false);
         return;
       }
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: `${window.location.origin}/` },
-      });
-      if (error) {
-        setErreur(error.message.includes('already registered')
-          ? 'Cet email est déjà utilisé. Connectez-vous.'
-          : 'Erreur lors de la création du compte. Réessayez.');
-        setLoading(false);
-        return;
+      if (identifiant === 'email') {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: `${window.location.origin}/` },
+        });
+        if (error) {
+          setErreur(error.message.includes('already registered')
+            ? 'Cet email est déjà utilisé. Connectez-vous.'
+            : 'Erreur lors de la création du compte. Réessayez.');
+          setLoading(false);
+          return;
+        }
+        if (!data.session) {
+          // Confirmation email activée côté Supabase : aucune session tant que le lien
+          // n'a pas été cliqué. /onboarding est protégé par le middleware, donc on ne
+          // redirige pas : on informe l'utilisateur à la place.
+          setConfirmationEmailRequise(true);
+          setLoading(false);
+          return;
+        }
+        router.push('/onboarding');
+      } else {
+        const { data, error } = await supabase.auth.signUp({ phone: telephone.trim(), password });
+        if (error) {
+          setErreur(error.message.includes('already registered') || error.message.includes('already exists')
+            ? 'Ce numéro est déjà utilisé. Connectez-vous.'
+            : 'Erreur lors de la création du compte. Réessayez.');
+          setLoading(false);
+          return;
+        }
+        if (!data.session) {
+          // Meme principe que l'email : aucune session tant que le code SMS
+          // n'a pas ete verifie. Task 4 branche cet ecran.
+          setConfirmationTelephoneRequise(true);
+          setLoading(false);
+          return;
+        }
+        router.push('/onboarding');
       }
-      if (!data.session) {
-        // Confirmation email activée côté Supabase : aucune session tant que le lien
-        // n'a pas été cliqué. /onboarding est protégé par le middleware, donc on ne
-        // redirige pas : on informe l'utilisateur à la place.
-        setConfirmationEmailRequise(true);
-        setLoading(false);
-        return;
-      }
-      router.push('/onboarding');
     }
+  }
+
+  async function verifierCodeSms(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (codeSms.trim().length !== 6) return;
+    setVerificationEnCours(true);
+    setErreurCode('');
+    const supabase = createClient();
+    const { error } = await supabase.auth.verifyOtp({
+      phone: telephone.trim(),
+      token: codeSms.trim(),
+      type: 'sms',
+    });
+    if (error) {
+      setErreurCode('Code incorrect ou expiré. Réessaie ou demande un nouveau code.');
+      setVerificationEnCours(false);
+      return;
+    }
+    router.push('/onboarding');
+  }
+
+  async function renvoyerCodeSms() {
+    setRenvoiEnCours(true);
+    setRenvoiMessage('');
+    const supabase = createClient();
+    const { error } = await supabase.auth.resend({ type: 'sms', phone: telephone.trim() });
+    setRenvoiEnCours(false);
+    if (error) {
+      // Supabase applique deja sa propre limite de frequence (~60s) et
+      // renvoie une erreur explicite si on redemande trop vite - on
+      // l'affiche telle quelle plutot que de reimplementer une limite.
+      setRenvoiMessage(error.message.includes('security purposes')
+        ? 'Merci de patienter avant de redemander un code.'
+        : "Échec de l'envoi. Réessaie dans un instant.");
+      return;
+    }
+    setRenvoiMessage('Nouveau code envoyé.');
   }
 
   const inputStyle = {
@@ -185,25 +267,69 @@ export default function AuthPage() {
         </div>
 
         {/* Formulaire */}
-        {mode !== 'oubli' && !confirmationEmailRequise && (
+        {mode !== 'oubli' && !confirmationEmailRequise && !confirmationTelephoneRequise && (
         <form onSubmit={soumettre} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 13, fontWeight: 700, color: T.text, fontFamily: 'Manrope, sans-serif' }}>
-              Adresse email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="exemple@email.com"
-              autoComplete="email"
-              required
-              style={inputStyle}
-              onFocus={e => (e.target.style.borderColor = T.accent)}
-              onBlur={e => (e.target.style.borderColor = T.border)}
-            />
+          <div style={{ display: 'flex', gap: 8, background: T.bg, borderRadius: 12, padding: 4 }}>
+            {(['email', 'telephone'] as const).map(opt => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => { setIdentifiant(opt); setErreur(''); }}
+                style={{
+                  flex: 1, height: 40, borderRadius: 10, border: 'none', cursor: 'pointer',
+                  background: identifiant === opt ? T.accent : 'transparent',
+                  color: identifiant === opt ? '#fff' : T.textSub,
+                  fontSize: 14, fontWeight: 700, fontFamily: 'Manrope, sans-serif',
+                }}
+              >
+                {opt === 'email' ? 'Email' : 'Téléphone'}
+              </button>
+            ))}
           </div>
+
+          {identifiant === 'email' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ fontSize: 13, fontWeight: 700, color: T.text, fontFamily: 'Manrope, sans-serif' }}>
+                Adresse email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="exemple@email.com"
+                autoComplete="email"
+                required
+                style={inputStyle}
+                onFocus={e => (e.target.style.borderColor = T.accent)}
+                onBlur={e => (e.target.style.borderColor = T.border)}
+              />
+            </div>
+          ) : !TELEPHONE_DISPONIBLE ? (
+            <div style={{ background: T.accentLight, borderRadius: 14, padding: '14px 16px' }}>
+              <p style={{ fontSize: 13, color: T.text, fontFamily: 'Manrope, sans-serif', lineHeight: 1.6, margin: 0 }}>
+                La connexion par téléphone arrive bientôt ! Utilise ton email pour l&apos;instant.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ fontSize: 13, fontWeight: 700, color: T.text, fontFamily: 'Manrope, sans-serif' }}>
+                Numéro de téléphone
+              </label>
+              <input
+                type="tel"
+                value={telephone}
+                onChange={(e) => setTelephone(e.target.value)}
+                placeholder="+2250123456789"
+                autoComplete="tel"
+                required
+                style={inputStyle}
+                onFocus={e => (e.target.style.borderColor = T.accent)}
+                onBlur={e => (e.target.style.borderColor = T.border)}
+              />
+              <span style={{ fontSize: 12, color: T.textMuted }}>Avec l&apos;indicatif du pays, ex: +225 pour la Côte d&apos;Ivoire.</span>
+            </div>
+          )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <label style={{ fontSize: 13, fontWeight: 700, color: T.text, fontFamily: 'Manrope, sans-serif' }}>
@@ -349,7 +475,7 @@ export default function AuthPage() {
         )}
 
         {/* Basculer mode */}
-        {mode !== 'oubli' && !confirmationEmailRequise && (
+        {mode !== 'oubli' && !confirmationEmailRequise && !confirmationTelephoneRequise && (
         <p style={{ textAlign: 'center', fontSize: 13, color: T.textMuted, margin: 0, fontFamily: 'Manrope, sans-serif' }}>
           {mode === 'connexion' ? "Pas encore de compte ?" : "Déjà un compte ?"}{' '}
           <button
@@ -374,6 +500,69 @@ export default function AuthPage() {
               Retour à la connexion
             </button>
           </div>
+        )}
+
+        {/* Confirmation téléphone requise après inscription */}
+        {mode === 'inscription' && confirmationTelephoneRequise && (
+          <form onSubmit={verifierCodeSms} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <p style={{ fontSize: 13, color: T.textSub, fontFamily: 'Manrope, sans-serif', lineHeight: 1.6, margin: 0, textAlign: 'center' }}>
+              Un code à 6 chiffres a été envoyé par SMS au {telephone}. Entre-le ci-dessous.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ fontSize: 13, fontWeight: 700, color: T.text, fontFamily: 'Manrope, sans-serif' }}>
+                Code reçu par SMS
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={codeSms}
+                onChange={(e) => setCodeSms(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="123456"
+                required
+                style={{ ...inputStyle, textAlign: 'center', fontSize: 24, letterSpacing: 8, fontFamily: '"Space Grotesk", sans-serif' }}
+                onFocus={e => (e.target.style.borderColor = T.accent)}
+                onBlur={e => (e.target.style.borderColor = T.border)}
+              />
+            </div>
+            {erreurCode && (
+              <p style={{ fontSize: 13, fontWeight: 600, color: T.red, textAlign: 'center', background: T.redBg, borderRadius: 12, padding: '12px 16px', margin: 0, fontFamily: 'Manrope, sans-serif' }}>
+                {erreurCode}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={codeSms.trim().length !== 6 || verificationEnCours}
+              style={{
+                width: '100%', height: 52, borderRadius: 14,
+                background: T.accent, color: '#fff',
+                fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer',
+                opacity: (codeSms.trim().length !== 6 || verificationEnCours) ? 0.4 : 1,
+                fontFamily: 'Manrope, sans-serif',
+              }}
+            >
+              {verificationEnCours ? '...' : 'Vérifier'}
+            </button>
+            <button
+              type="button"
+              onClick={renvoyerCodeSms}
+              disabled={renvoiEnCours}
+              style={{ color: T.accent, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontSize: 13, fontFamily: 'Manrope, sans-serif', textAlign: 'center' }}
+            >
+              {renvoiEnCours ? '...' : "Je n'ai pas reçu le code, renvoyer"}
+            </button>
+            {renvoiMessage && (
+              <p style={{ fontSize: 12, color: T.textMuted, textAlign: 'center', margin: 0, fontFamily: 'Manrope, sans-serif' }}>
+                {renvoiMessage}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={retourConnexion}
+              style={{ color: T.textMuted, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontSize: 13, fontFamily: 'Manrope, sans-serif', textAlign: 'center' }}
+            >
+              Retour à la connexion
+            </button>
+          </form>
         )}
 
         {mode === 'oubli' && (

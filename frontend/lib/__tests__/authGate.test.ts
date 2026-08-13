@@ -39,6 +39,10 @@ describe('isPublicPath', () => {
     expect(isPublicPath('/api/webhooks/fedapay')).toBe(true);
   });
 
+  it('autorise le hook Send SMS de Supabase', () => {
+    expect(isPublicPath('/api/webhooks/send-sms')).toBe(true);
+  });
+
   it('ne rend pas publiques les autres routes API', () => {
     expect(isPublicPath('/api/paiement/creer')).toBe(false);
     expect(isPublicPath('/api/webhooksfoo')).toBe(false);
