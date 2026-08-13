@@ -7,6 +7,13 @@ import { clearLocalData } from '@/lib/db';
 
 type Mode = 'connexion' | 'inscription' | 'oubli';
 
+// Coupe-circuit temporaire : le bouton "Téléphone" reste visible (les gens
+// savent que ça arrive) mais indique "bientôt disponible" au lieu du
+// formulaire, tant qu'on n'a pas confirmé un vrai envoi de SMS de bout en
+// bout avec un solde Africa's Talking suffisant. Repasser à true une fois
+// confirmé.
+const TELEPHONE_DISPONIBLE = false;
+
 const T = {
   accent: '#D4601A',
   accentLight: '#FEF0E6',
@@ -119,7 +126,9 @@ export default function AuthPage() {
     setOubliEnvoye(true);
   }
 
-  const identifiantValide = identifiant === 'email' ? email.trim() !== '' : /^\+[1-9]\d{6,14}$/.test(telephone.trim());
+  const identifiantValide = identifiant === 'email'
+    ? email.trim() !== ''
+    : TELEPHONE_DISPONIBLE && /^\+[1-9]\d{6,14}$/.test(telephone.trim());
   const formulaireValide =
     identifiantValide &&
     password.length >= 6 &&
@@ -323,6 +332,12 @@ export default function AuthPage() {
                 onFocus={e => (e.target.style.borderColor = T.accent)}
                 onBlur={e => (e.target.style.borderColor = T.border)}
               />
+            </div>
+          ) : !TELEPHONE_DISPONIBLE ? (
+            <div style={{ background: T.accentLight, borderRadius: 14, padding: '14px 16px' }}>
+              <p style={{ fontSize: 13, color: T.text, fontFamily: 'Manrope, sans-serif', lineHeight: 1.6, margin: 0 }}>
+                La connexion par téléphone arrive bientôt ! Utilise ton email pour l&apos;instant.
+              </p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
