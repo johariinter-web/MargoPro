@@ -27,15 +27,17 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((noms) =>
-      Promise.all(
-        noms
-          .filter((nom) => nom.startsWith('margopro-') && !CACHES_ACTUELS.includes(nom))
-          .map((nom) => caches.delete(nom))
+    caches
+      .keys()
+      .then((noms) =>
+        Promise.all(
+          noms
+            .filter((nom) => nom.startsWith('margopro-') && !CACHES_ACTUELS.includes(nom))
+            .map((nom) => caches.delete(nom))
+        )
       )
-    )
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 function estRequeteApi(url) {
@@ -54,7 +56,7 @@ function estFichierStatique(url) {
 async function reseauPuisCache(request, cache) {
   try {
     const reponse = await fetch(request);
-    cache.put(request, reponse.clone());
+    if (reponse.ok && reponse.type === 'basic') cache.put(request, reponse.clone());
     return reponse;
   } catch {
     const enCache = await cache.match(request);
@@ -69,7 +71,7 @@ async function cachePuisReseau(request, cache) {
   const enCache = await cache.match(request);
   if (enCache) return enCache;
   const reponse = await fetch(request);
-  cache.put(request, reponse.clone());
+  if (reponse.ok && reponse.type === 'basic') cache.put(request, reponse.clone());
   return reponse;
 }
 
@@ -81,14 +83,20 @@ self.addEventListener('fetch', (event) => {
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      caches.open(PAGES_CACHE).then((cache) => reseauPuisCache(event.request, cache))
+      caches
+        .open(PAGES_CACHE)
+        .then((cache) => reseauPuisCache(event.request, cache))
+        .catch(() => fetch(event.request))
     );
     return;
   }
 
   if (estFichierStatique(url)) {
     event.respondWith(
-      caches.open(ASSETS_CACHE).then((cache) => cachePuisReseau(event.request, cache))
+      caches
+        .open(ASSETS_CACHE)
+        .then((cache) => cachePuisReseau(event.request, cache))
+        .catch(() => fetch(event.request))
     );
   }
 });
