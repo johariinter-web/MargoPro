@@ -29,7 +29,7 @@ export default function OnboardingPage() {
   const { saveConfig } = useConfig();
   const [nomCommerce, setNomCommerce] = useState('');
   const [deviseCode, setDeviseCode] = useState('');
-  const [essaiEtendu] = useState(() => consumePlanPromis());
+  const [essaiEtendu] = useState(() => (typeof window === 'undefined' ? false : consumePlanPromis()));
 
   useEffect(() => {
     let active = true;
