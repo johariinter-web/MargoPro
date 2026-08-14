@@ -9,6 +9,7 @@ import { useColors, setDarkMode, isDarkMode, Colors } from '@/lib/hooks/useColor
 import { useSync } from '@/lib/hooks/useSync';
 import { createClient } from '@/lib/supabase/client';
 import { clearLocalData } from '@/lib/db';
+import { resetSyncState } from '@/lib/syncController';
 import { Appareils } from '@/components/Appareils';
 import { Parrainage } from '@/components/Parrainage';
 
@@ -144,6 +145,7 @@ export default function ParametresPage() {
     const supabase = createClient();
     await supabase.auth.signOut();
     await clearLocalData();
+    resetSyncState();
     router.push('/auth');
   }
   const [nomCommerce, setNomCommerce] = useState(config?.nomCommerce ?? '');

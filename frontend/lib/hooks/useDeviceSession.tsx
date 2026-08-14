@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { checkAndRegisterDevice } from '@/lib/deviceSession';
 import { clearLocalData } from '@/lib/db';
+import { resetSyncState } from '@/lib/syncController';
 
 export function DeviceSessionStarter() {
   const router = useRouter();
@@ -23,6 +24,7 @@ export function DeviceSessionStarter() {
           sessionStorage.setItem('margo_bloque', '1');
           await supabase.auth.signOut();
           await clearLocalData();
+          resetSyncState();
           router.replace('/auth');
         }
       } catch {

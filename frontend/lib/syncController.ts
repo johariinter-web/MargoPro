@@ -94,6 +94,21 @@ export async function runSync(): Promise<void> {
   }
 }
 
+/** Réinitialise l'état de sync (dont lastSyncAt) — à appeler avec
+ *  clearLocalData() à chaque déconnexion. Sans ça, l'ancien lastSyncAt
+ *  survit dans localStorage (clearLocalData ne vide que IndexedDB) et fait
+ *  croire à tort qu'une synchronisation a déjà eu lieu pour la nouvelle
+ *  session : ça court-circuite l'attente du premier sync réel après une
+ *  reconnexion (voir page.tsx, premiereSyncPasEncoreTentee), renvoyant à
+ *  tort un abonné existant vers /onboarding avant que ses vraies données
+ *  n'aient eu la chance d'arriver du cloud. */
+export function resetSyncState(): void {
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem(LAST_SYNC_KEY);
+  }
+  setState({ status: 'idle', lastSyncAt: null });
+}
+
 /** Synchronisation debouncée - appelée par les hooks après une écriture locale. */
 export function requestSync(): void {
   if (debounceTimer) clearTimeout(debounceTimer);
