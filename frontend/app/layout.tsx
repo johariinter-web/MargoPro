@@ -8,6 +8,7 @@ import { ReferralCapture } from "@/components/ReferralCapture";
 import { PlanCapture } from "@/components/PlanCapture";
 import { BanniereEssai } from "@/components/BanniereEssai";
 import { EcranExpiration } from "@/components/EcranExpiration";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -56,6 +57,7 @@ export default function RootLayout({
         <DeviceSessionStarter />
         <ReferralCapture />
         <PlanCapture />
+        <ServiceWorkerRegister />
         <main style={{ maxWidth: 480, margin: '0 auto', position: 'relative', minHeight: '100dvh' }}>
           <BanniereEssai />
           <EcranExpiration />

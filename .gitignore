@@ -8,8 +8,7 @@ frontend/.swc/
 .env.local
 .env*.local
 
-# PWA generated files
-frontend/public/sw.js
+# PWA generated files (keep old workbox/worker files ignored, but sw.js is hand-written)
 frontend/public/workbox-*.js
 frontend/public/worker-*.js
 

@@ -41,6 +41,17 @@
 - Pas de notification push, pas de synchronisation en arrière-plan (Background Sync API) — seule la mise en cache de l'appli elle-même est concernée. `frontend/lib/syncController.ts` (synchro des données avec Supabase) n'est pas touché.
 - Pas de bouton d'installation personnalisé ("Ajouter à l'écran d'accueil") — le mécanisme natif du navigateur (déjà fonctionnel grâce à `manifest.json`) reste tel quel.
 - Pas de retrait des icônes SVG inutilisées déjà présentes dans `public/` (`file.svg`, `globe.svg`, `next.svg`, `vercel.svg`, `window.svg`, restes du template de départ) — sans rapport avec ce chantier.
+- **Croissance du cache sans limite entre les déploiements** : `VERSION` dans `sw.js` est une constante fixe ; tant qu'elle ne change pas, les anciens fichiers mis en cache aux déploiements précédents ne sont jamais nettoyés (seuls les caches d'une AUTRE version le sont, via `activate`). Accepté pour l'instant — sur un téléphone avec peu de stockage, après de nombreux déploiements, les écritures en cache commenceront à échouer silencieusement une fois le quota atteint (l'appli continue de fonctionner, juste sans les tout derniers fichiers en cache). À surveiller ; incrémenter `VERSION` manuellement lors d'une future grosse mise à jour si besoin de forcer un nettoyage.
+- **La navigation hors ligne entre onglets ne fonctionne que pour les pages déjà chargées en entier au moins une fois** : la navigation par clic dans la barre du bas (`BottomNav`) utilise la navigation côté client de Next.js (récupère un fragment RSC, pas un vrai chargement de page), que le service worker ne met jamais en cache. Résultat : si un commerçant ouvre l'appli en ligne, clique sur Stock/Ventes/Marges sans jamais recharger complètement chacune de ces pages, puis passe hors ligne, seule la page d'accueil (chargée au tout début) sera disponible hors ligne — les autres onglets afficheront une erreur si on clique dessus hors ligne, jusqu'à ce que l'utilisateur les ait un jour rechargés complètement en étant en ligne. Limitation connue et acceptée pour cette première version, pas un bug.
+
+### Sécurité : une page en cache peut-elle exposer les données d'un utilisateur déconnecté ?
+
+**Non — pas dans cette base de code.** Trois raisons indépendantes, chacune suffisante à elle seule :
+1. **Le HTML en cache ne contient aucune donnée utilisateur.** Toutes les pages sous `frontend/app/**/page.tsx` sont `'use client'`. Le HTML servi par Next.js est une coquille indépendante de l'utilisateur ; chaque produit, vente et valeur de config est lue depuis IndexedDB au moment de l'exécution, via Dexie.
+2. **La déconnexion vide la source des données.** `frontend/app/parametres/page.tsx` appelle `supabase.auth.signOut()` puis `clearLocalData()`, qui vide les 6 tables IndexedDB dans une seule transaction (`frontend/lib/db.ts`). Une coquille en cache servie après une déconnexion affiche une appli vide.
+3. **Le réseau-d'abord garde le middleware maître de chaque requête en ligne.** La page en cache n'est utilisée que si `fetch` échoue, c'est-à-dire réellement hors ligne. Aucun chemin en ligne ne contourne `frontend/middleware.ts`.
+
+Le seul "risque" résiduel est cosmétique : hors ligne, un utilisateur déconnecté peut voir une coquille d'appli vide au lieu d'être redirigé vers `/auth`. Aucune donnée n'est exposée, puisqu'il n'y a plus de donnée à exposer une fois déconnecté.
 
 ## Test avant mise en ligne
 
