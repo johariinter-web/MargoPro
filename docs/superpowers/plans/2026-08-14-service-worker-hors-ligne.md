@@ -264,25 +264,30 @@ git commit -m "feat: enregistrer le service worker au demarrage de l'appli"
 - Consumes: le service worker enregistré et fonctionnel produit par Task 3.
 - Produces: rien (dernière tâche du plan)
 
-- [ ] **Step 1: Charger l'appli en ligne**
+- [ ] **Step 1: Charger l'appli en ligne, avec un vrai rechargement complet par page**
 
-Avec `npm run start` toujours actif, ouvrir `http://localhost:3000` et naviguer sur 2-3 pages différentes (ex: `/`, `/stock`, `/ventes`) pour qu'elles soient mises en cache par le service worker.
+Avec `npm run start` toujours actif, ouvrir `http://localhost:3000` puis, pour chaque page qui compte (`/`, `/stock`, `/ventes`, `/marges`), faire un **rechargement complet** (F5 / Ctrl+R, pas un clic sur un onglet de la barre du bas). Chaque page a besoin de son propre rechargement complet pour entrer réellement dans le cache de pages : cliquer dans la barre de navigation du bas ne suffit pas, car ça déclenche une navigation côté client Next.js (récupération d'un fragment RSC, pas un vrai chargement de page), que le service worker ne met jamais en cache.
 
 - [ ] **Step 2: Simuler une coupure réseau**
 
-Dans les outils de développement → onglet **Network** (Réseau), changer le menu déroulant de débit de "No throttling" à **"Offline"**.
+Dans les outils de développement → onglet **Network** (Réseau), changer le menu déroulant de débit de "No throttling" à **"Offline"** (ou activer le mode avion sur un vrai appareil).
 
-- [ ] **Step 3: Recharger et naviguer hors ligne**
+- [ ] **Step 3: Fermer complètement l'appli et la rouvrir**
 
-Recharger la page actuelle, puis naviguer vers les 2-3 pages visitées à l'étape 1.
-Expected: toutes les pages déjà visitées en ligne se chargent normalement, sans message "hors connexion" du navigateur.
+Fermer complètement l'onglet/l'appli, puis la rouvrir hors ligne.
+Expected: elle se charge normalement (c'est la garantie de base de ce chantier).
 
-- [ ] **Step 4: Rétablir le réseau et confirmer la fraîcheur**
+- [ ] **Step 4: Naviguer entre les onglets hors ligne (étape qui distingue le vrai du faux positif)**
+
+Toujours hors ligne, cliquer dans la barre de navigation du bas pour passer d'un onglet à l'autre (Accueil, Stock, Ventes, Marges).
+Expected: les pages rechargées complètement à l'étape 1 s'affichent normalement. Si une page rechargée complètement à l'étape 1 échoue à se charger hors ligne, c'est une vraie régression à investiguer. Si une page qu'on n'a jamais rechargée complètement échoue, c'est la limitation connue et acceptée (voir la spec, section "Hors scope"), pas un bug.
+
+- [ ] **Step 5: Rétablir le réseau et confirmer la fraîcheur**
 
 Remettre le débit réseau à "No throttling" (ou "Online"), recharger la page.
 Expected: la page se recharge normalement depuis le réseau (comportement réseau-d'abord confirmé).
 
-- [ ] **Step 5: Rapporter le résultat**
+- [ ] **Step 6: Rapporter le résultat**
 
-Si tout fonctionne comme attendu aux steps 3 et 4 : le chantier est prêt à être testé par Juanita en conditions réelles sur son téléphone (mode avion), avant fusion dans `main`.
-Si un problème apparaît à l'étape 3 (page non servie hors ligne) : vérifier dans l'onglet Application → Cache Storage que les caches `margopro-pages-v1` et `margopro-assets-v1` contiennent bien les fichiers attendus — un cache vide indique que `fetch` n'a pas été intercepté correctement (revoir les conditions dans le gestionnaire `fetch` de `frontend/public/sw.js`, Task 2).
+Si tout fonctionne comme attendu aux steps 3, 4 et 5 : le chantier est prêt à être testé par Juanita en conditions réelles sur son téléphone (mode avion), avant fusion dans `main`.
+Si un problème apparaît à l'étape 3 ou 4 (page rechargée complètement à l'étape 1 non servie hors ligne) : vérifier dans l'onglet Application → Cache Storage que les caches `margopro-pages-v1` et `margopro-assets-v1` contiennent bien les fichiers attendus — un cache vide indique que `fetch` n'a pas été intercepté correctement (revoir les conditions dans le gestionnaire `fetch` de `frontend/public/sw.js`, Task 2).
