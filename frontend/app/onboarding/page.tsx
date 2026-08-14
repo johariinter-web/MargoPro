@@ -29,6 +29,7 @@ export default function OnboardingPage() {
   const { saveConfig } = useConfig();
   const [nomCommerce, setNomCommerce] = useState('');
   const [deviseCode, setDeviseCode] = useState('');
+  const [essaiEtendu] = useState(() => consumePlanPromis());
 
   useEffect(() => {
     let active = true;
@@ -53,7 +54,7 @@ export default function OnboardingPage() {
       devise: devise.code,
       symboleDevise: devise.symbole,
       onboardingComplete: true,
-      essaiEtendu: consumePlanPromis(),
+      essaiEtendu,
     });
     router.push('/');
   }
@@ -94,6 +95,12 @@ export default function OnboardingPage() {
                 <option key={d.code} value={d.code}>{d.libelle}</option>
               ))}
             </select>
+          </div>
+
+          <div style={{ background: '#FEF0E6', borderRadius: 14, padding: '14px 16px' }}>
+            <p style={{ fontSize: 13, color: T.text, fontFamily: 'Manrope, sans-serif', lineHeight: 1.6, margin: 0 }}>
+              🎉 Tu démarres avec <strong>{essaiEtendu ? '30' : '15'} jours d&apos;essai gratuit</strong>, toutes les fonctionnalités débloquées.
+            </p>
           </div>
 
           <button onClick={terminer} disabled={!pretAContinuer}
