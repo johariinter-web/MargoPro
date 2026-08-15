@@ -37,6 +37,7 @@ export default function VentesPage() {
   const { produits, deduireStock } = useStock();
   const facture = useFactureEnCours();
   const [genFactureEnCours, setGenFactureEnCours] = useState(false);
+  const [factureMsg, setFactureMsg] = useState('');
   const [nouvLigneNom, setNouvLigneNom] = useState('');
   const [nouvLigneQte, setNouvLigneQte] = useState('1');
   const [nouvLignePrix, setNouvLignePrix] = useState('');
@@ -161,8 +162,8 @@ export default function VentesPage() {
       ? { clientNom: clientNomCredit.trim(), clientTel: clientTelCredit.trim() || undefined, montantRecu: Math.max(0, Number(acompteCredit) || 0) }
       : undefined;
     await enregistrerVente(produit.id, produit.nom, qte, prixFinal, produit.prixAchat, creditParams);
-    facture.ajouter(produit.nom, qte, prixFinal);
     await deduireStock(produit.id, qte);
+    facture.ajouter(produit.nom, qte, prixFinal);
     setProduitId('');
     setQuantite('1');
     setPrixGros('');
@@ -186,6 +187,7 @@ export default function VentesPage() {
   async function partagerFacture() {
     if (genFactureEnCours || facture.lignes.length === 0) return;
     setGenFactureEnCours(true);
+    setFactureMsg('');
     try {
       const blob = await genererImageFacture({
         nomBoutique: config?.nomCommerce || 'Ma boutique',
@@ -205,9 +207,16 @@ export default function VentesPage() {
         const a = document.createElement('a');
         a.href = url; a.download = 'facture.jpg'; a.click();
         URL.revokeObjectURL(url);
+        setFactureMsg('Image enregistrée - tu peux l\'envoyer sur WhatsApp.');
+        setTimeout(() => setFactureMsg(''), 5000);
       }
       facture.vider();
-    } catch { /* partage annulé : on ignore, le panier reste intact */ }
+    } catch (err) {
+      if (!(err instanceof DOMException && err.name === 'AbortError')) {
+        setFactureMsg('Erreur lors de la génération. Réessaie.');
+      }
+      // partage annulé (AbortError) : on ignore silencieusement, le panier reste intact
+    }
     setGenFactureEnCours(false);
   }
 
@@ -1023,6 +1032,11 @@ export default function VentesPage() {
             </div>
           </div>
 
+          {factureMsg && (
+            <div style={{ fontSize: 12, color: factureMsg.startsWith('Erreur') ? T.red : T.accent, fontWeight: 700, textAlign: 'center', marginBottom: 10 }}>
+              {factureMsg}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 10 }}>
             <button
               onClick={() => facture.vider()}

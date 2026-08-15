@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ajouterLigne, retirerLigne, totalLignes, type LigneFacture } from '../factureEnCours';
 
 const CLE_LIGNES = 'margopro_facture_lignes';
@@ -18,17 +18,30 @@ function lireLignes(): LigneFacture[] {
 
 function lireClient(): string {
   if (typeof window === 'undefined') return '';
-  return window.localStorage.getItem(CLE_CLIENT) ?? '';
+  try {
+    return window.localStorage.getItem(CLE_CLIENT) ?? '';
+  } catch {
+    return '';
+  }
 }
 
 function sauvegarderLignes(lignes: LigneFacture[]) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(CLE_LIGNES, JSON.stringify(lignes));
+  try {
+    window.localStorage.setItem(CLE_LIGNES, JSON.stringify(lignes));
+  } catch {
+    /* stockage indisponible : le panier reste en mémoire pour cette session */
+  }
 }
 
 export function useFactureEnCours() {
-  const [lignes, setLignesState] = useState<LigneFacture[]>(() => lireLignes());
-  const [clientNom, setClientNomState] = useState<string>(() => lireClient());
+  const [lignes, setLignesState] = useState<LigneFacture[]>([]);
+  const [clientNom, setClientNomState] = useState<string>('');
+
+  useEffect(() => {
+    setLignesState(lireLignes());
+    setClientNomState(lireClient());
+  }, []);
 
   function ajouter(nom: string, quantite: number, prixUnitaire: number) {
     setLignesState((prev) => {
@@ -48,15 +61,25 @@ export function useFactureEnCours() {
 
   function setClientNom(nom: string) {
     setClientNomState(nom);
-    if (typeof window !== 'undefined') window.localStorage.setItem(CLE_CLIENT, nom);
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem(CLE_CLIENT, nom);
+      } catch {
+        /* stockage indisponible : le nom reste en mémoire pour cette session */
+      }
+    }
   }
 
   function vider() {
     setLignesState([]);
     setClientNomState('');
     if (typeof window !== 'undefined') {
-      window.localStorage.removeItem(CLE_LIGNES);
-      window.localStorage.removeItem(CLE_CLIENT);
+      try {
+        window.localStorage.removeItem(CLE_LIGNES);
+        window.localStorage.removeItem(CLE_CLIENT);
+      } catch {
+        /* stockage indisponible : rien à nettoyer côté disque */
+      }
     }
   }
 
