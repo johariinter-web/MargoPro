@@ -57,32 +57,41 @@ export default function AdminPage() {
       )}
 
       {comptes && comptes.length > 0 && (
-        <div className="space-y-3">
-          {comptes.map((c) => (
-            <div key={c.userId} className="rounded-2xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 p-4 space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <p className="font-bold text-stone-800 dark:text-stone-50">{c.nomCommerce}</p>
-                {c.isPremium ? (
-                  <span className="text-emerald-600 font-semibold text-sm shrink-0">Premium</span>
-                ) : (
-                  <span className="text-stone-400 text-sm shrink-0">Gratuit / essai</span>
-                )}
-              </div>
-              <p className="text-stone-500 dark:text-stone-400 text-sm break-all">{c.email}</p>
-              <p className="text-stone-500 dark:text-stone-400 text-sm">Inscrit le {formatDate(c.inscritLe)}</p>
-              <div className="flex gap-6 pt-1">
-                <div>
-                  <p className="text-2xl font-bold text-stone-800 dark:text-stone-50">{c.nbProduits}</p>
-                  <p className="text-stone-500 dark:text-stone-400 text-xs">Produits</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-stone-800 dark:text-stone-50">{c.nbVentes}</p>
-                  <p className="text-stone-500 dark:text-stone-400 text-xs">Ventes</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <>
+          <div className="overflow-x-auto rounded-2xl border border-stone-200 dark:border-stone-700">
+            <table className="w-full text-sm whitespace-nowrap">
+              <thead>
+                <tr className="bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 text-left">
+                  <th className="px-3 py-2 font-semibold">Commerce</th>
+                  <th className="px-3 py-2 font-semibold">Email</th>
+                  <th className="px-3 py-2 font-semibold">Inscrit le</th>
+                  <th className="px-3 py-2 font-semibold text-right">Produits</th>
+                  <th className="px-3 py-2 font-semibold text-right">Ventes</th>
+                  <th className="px-3 py-2 font-semibold">Premium</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comptes.map((c) => (
+                  <tr key={c.userId} className="border-t border-stone-200 dark:border-stone-700">
+                    <td className="px-3 py-2 font-medium text-stone-800 dark:text-stone-50">{c.nomCommerce}</td>
+                    <td className="px-3 py-2 text-stone-600 dark:text-stone-300">{c.email}</td>
+                    <td className="px-3 py-2 text-stone-600 dark:text-stone-300">{formatDate(c.inscritLe)}</td>
+                    <td className="px-3 py-2 text-right text-stone-800 dark:text-stone-50">{c.nbProduits}</td>
+                    <td className="px-3 py-2 text-right text-stone-800 dark:text-stone-50">{c.nbVentes}</td>
+                    <td className="px-3 py-2">
+                      {c.isPremium ? (
+                        <span className="text-emerald-600 font-semibold">Premium</span>
+                      ) : (
+                        <span className="text-stone-400">Gratuit / essai</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-stone-400 text-xs text-center">← Fais glisser le tableau vers la gauche pour voir toutes les colonnes →</p>
+        </>
       )}
     </div>
   );
