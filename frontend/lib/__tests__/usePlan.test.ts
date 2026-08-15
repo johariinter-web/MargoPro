@@ -46,27 +46,6 @@ describe('computePlanStatus', () => {
     expect(r.daysRemaining).toBe(0);
   });
 
-  it('essaiEtendu (arrive via le lien Pro) : 30 jours meme pour un nouveau compte', () => {
-    const trialStart = new Date('2026-08-10T00:00:00Z').getTime();
-    const now = new Date('2026-08-26T00:00:00Z').getTime(); // 16 jours ecoules
-    const r = computePlanStatus(trialStart, false, 8, now, undefined, true);
-    expect(r.status).toBe('trial');
-    expect(r.daysRemaining).toBe(14);
-  });
-
-  it('essaiEtendu mais trialStart pas encore defini : 30 jours annonces', () => {
-    const r = computePlanStatus(undefined, false, 0, Date.now(), undefined, true);
-    expect(r.status).toBe('trial');
-    expect(r.daysRemaining).toBe(30);
-  });
-
-  it('essaiEtendu ignore pour un compte deja en essai avant le changement (garde 30, pas de double bonus)', () => {
-    const trialStart = new Date('2026-08-01T00:00:00Z').getTime();
-    const now = new Date('2026-08-03T00:00:00Z').getTime();
-    const r = computePlanStatus(trialStart, false, 3, now, undefined, true);
-    expect(r.daysRemaining).toBe(28);
-  });
-
   it('retourne trial si 22 jours écoulés (8 restants)', () => {
     const now = NOW_essai_en_cours;
     const r = computePlanStatus(now - 22 * DAY, false, 3, now);

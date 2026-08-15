@@ -30,8 +30,7 @@ export function computePlanStatus(
   isPremium: boolean,
   activeProductCount: number,
   now: number = Date.now(),
-  premiumExpiresAt?: number,
-  essaiEtendu: boolean = false
+  premiumExpiresAt?: number
 ): PlanInfo {
   const premiumActif = isPremium && (premiumExpiresAt === undefined || premiumExpiresAt > now);
 
@@ -39,16 +38,17 @@ export function computePlanStatus(
     return { status: 'premium', daysRemaining: 0, isPremium: true, activeProductCount, canAddProduct: true, accesFonctionnalitesPremium: true };
   }
 
-  const dureeEssaiParDefaut = essaiEtendu ? TRIAL_DAYS_ESSAI_EN_COURS : TRIAL_DAYS_NOUVEAU_COMPTE;
-
   if (trialStart === undefined) {
-    return { status: 'trial', daysRemaining: dureeEssaiParDefaut, isPremium: false, activeProductCount, canAddProduct: true, accesFonctionnalitesPremium: true };
+    return { status: 'trial', daysRemaining: TRIAL_DAYS_NOUVEAU_COMPTE, isPremium: false, activeProductCount, canAddProduct: true, accesFonctionnalitesPremium: true };
   }
 
-  // Comptes deja en essai avant le changement du 2026-08-09 : gardent 30 jours
-  // peu importe essaiEtendu. Nouveaux comptes : 30 jours si arrives via le
-  // lien "Pro" d'eidma.co (essaiEtendu), sinon 15 par defaut.
-  const dureeEssai = trialStart < CHANGEMENT_DUREE_ESSAI ? TRIAL_DAYS_ESSAI_EN_COURS : dureeEssaiParDefaut;
+  // Comptes deja en essai avant le changement du 2026-08-09 : gardent leurs
+  // 30 jours d'origine (grandfathering, pas raccourci en cours de route).
+  // Nouveaux comptes : 15 jours, pour tout le monde (le "essai 30 jours si
+  // arrive via le lien Pro" a ete retire le 2026-08-14 -- retardait
+  // inutilement le signal de conversion, y compris pour les affilies qui
+  // attendent de savoir si leur filleul va s'abonner).
+  const dureeEssai = trialStart < CHANGEMENT_DUREE_ESSAI ? TRIAL_DAYS_ESSAI_EN_COURS : TRIAL_DAYS_NOUVEAU_COMPTE;
   const elapsed = Math.floor((now - trialStart) / (1000 * 60 * 60 * 24));
   const remaining = Math.max(0, dureeEssai - elapsed);
 
@@ -74,8 +74,7 @@ export function usePlan(): PlanInfo {
       config?.isPremium ?? false,
       activeProductCount,
       Date.now(),
-      config?.premiumExpiresAt,
-      config?.essaiEtendu ?? false
+      config?.premiumExpiresAt
     );
   });
 

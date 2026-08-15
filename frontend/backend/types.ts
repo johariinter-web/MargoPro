@@ -52,7 +52,6 @@ export interface Config {
   symboleDevise: string;
   onboardingComplete: boolean;
   trialStart?: number;  // timestamp ms du premier produit ajouté
-  essaiEtendu?: boolean;  // true = essai de 30 jours (arrive via le lien Pro d'eidma.co) au lieu de 15
   isPremium?: boolean;  // true = plan Premium actif
   premiumExpiresAt?: number;  // timestamp ms de fin de la periode Premium en cours
   dateAbonnement?: number;

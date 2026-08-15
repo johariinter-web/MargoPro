@@ -5,7 +5,6 @@ import BottomNav from "@/components/BottomNav";
 import { SyncStarter } from "@/lib/hooks/useSync";
 import { DeviceSessionStarter } from "@/lib/hooks/useDeviceSession";
 import { ReferralCapture } from "@/components/ReferralCapture";
-import { PlanCapture } from "@/components/PlanCapture";
 import { BanniereEssai } from "@/components/BanniereEssai";
 import { EcranExpiration } from "@/components/EcranExpiration";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
@@ -57,7 +56,6 @@ export default function RootLayout({
         <SyncStarter />
         <DeviceSessionStarter />
         <ReferralCapture />
-        <PlanCapture />
         <ServiceWorkerRegister />
         <PrecachePages />
         <main style={{ maxWidth: 480, margin: '0 auto', position: 'relative', minHeight: '100dvh' }}>

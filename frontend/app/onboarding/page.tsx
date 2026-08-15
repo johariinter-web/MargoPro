@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useConfig } from '@/lib/hooks/useConfig';
 import { createClient } from '@/lib/supabase/client';
 import { consumeReferralCode } from '@/lib/parrainage';
-import { consumePlanPromis } from '@/lib/planPromis';
 
 const T = {
   accent: '#D4601A',
@@ -29,7 +28,6 @@ export default function OnboardingPage() {
   const { saveConfig } = useConfig();
   const [nomCommerce, setNomCommerce] = useState('');
   const [deviseCode, setDeviseCode] = useState('');
-  const [essaiEtendu] = useState(() => (typeof window === 'undefined' ? false : consumePlanPromis()));
 
   useEffect(() => {
     let active = true;
@@ -54,7 +52,6 @@ export default function OnboardingPage() {
       devise: devise.code,
       symboleDevise: devise.symbole,
       onboardingComplete: true,
-      essaiEtendu,
     });
     router.push('/');
   }
@@ -99,7 +96,7 @@ export default function OnboardingPage() {
 
           <div style={{ background: '#FEF0E6', borderRadius: 14, padding: '14px 16px' }}>
             <p style={{ fontSize: 13, color: T.text, fontFamily: 'Manrope, sans-serif', lineHeight: 1.6, margin: 0 }}>
-              🎉 Tu démarres avec <strong>{essaiEtendu ? '30' : '15'} jours d&apos;essai gratuit</strong>, toutes les fonctionnalités débloquées.
+              🎉 Tu démarres avec <strong>15 jours d&apos;essai gratuit</strong>, toutes les fonctionnalités débloquées.
             </p>
           </div>
 
