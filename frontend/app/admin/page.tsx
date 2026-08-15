@@ -24,6 +24,7 @@ export default function AdminPage() {
   const router = useRouter();
   const [comptes, setComptes] = useState<CompteAdmin[] | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [ouvert, setOuvert] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/admin/stats')
@@ -57,41 +58,33 @@ export default function AdminPage() {
       )}
 
       {comptes && comptes.length > 0 && (
-        <>
-          <div className="overflow-x-auto rounded-2xl border border-stone-200 dark:border-stone-700">
-            <table className="w-full text-sm whitespace-nowrap">
-              <thead>
-                <tr className="bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 text-left">
-                  <th className="px-3 py-2 font-semibold">Commerce</th>
-                  <th className="px-3 py-2 font-semibold">Email</th>
-                  <th className="px-3 py-2 font-semibold">Inscrit le</th>
-                  <th className="px-3 py-2 font-semibold text-right">Produits</th>
-                  <th className="px-3 py-2 font-semibold text-right">Ventes</th>
-                  <th className="px-3 py-2 font-semibold">Premium</th>
-                </tr>
-              </thead>
-              <tbody>
-                {comptes.map((c) => (
-                  <tr key={c.userId} className="border-t border-stone-200 dark:border-stone-700">
-                    <td className="px-3 py-2 font-medium text-stone-800 dark:text-stone-50">{c.nomCommerce}</td>
-                    <td className="px-3 py-2 text-stone-600 dark:text-stone-300">{c.email}</td>
-                    <td className="px-3 py-2 text-stone-600 dark:text-stone-300">{formatDate(c.inscritLe)}</td>
-                    <td className="px-3 py-2 text-right text-stone-800 dark:text-stone-50">{c.nbProduits}</td>
-                    <td className="px-3 py-2 text-right text-stone-800 dark:text-stone-50">{c.nbVentes}</td>
-                    <td className="px-3 py-2">
-                      {c.isPremium ? (
-                        <span className="text-emerald-600 font-semibold">Premium</span>
-                      ) : (
-                        <span className="text-stone-400">Gratuit / essai</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-stone-400 text-xs text-center">← Fais glisser le tableau vers la gauche pour voir toutes les colonnes →</p>
-        </>
+        <div className="space-y-2">
+          {comptes.map((c) => {
+            const estOuvert = ouvert === c.userId;
+            return (
+              <div key={c.userId} className="rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 overflow-hidden">
+                <button
+                  onClick={() => setOuvert(estOuvert ? null : c.userId)}
+                  className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left"
+                >
+                  <span className="font-semibold text-stone-800 dark:text-stone-50 truncate">{c.nomCommerce}</span>
+                  <span className="flex items-center gap-2 shrink-0 text-xs text-stone-500 dark:text-stone-400">
+                    <span>{c.nbProduits} prod. · {c.nbVentes} ventes</span>
+                    {c.isPremium && <span className="text-emerald-600 font-semibold">Premium</span>}
+                    <span className="text-stone-400">{estOuvert ? '▲' : '▼'}</span>
+                  </span>
+                </button>
+                {estOuvert && (
+                  <div className="px-3 pb-3 pt-1 border-t border-stone-100 dark:border-stone-700 text-sm text-stone-600 dark:text-stone-300 space-y-1">
+                    <p className="break-all">{c.email}</p>
+                    <p>Inscrit le {formatDate(c.inscritLe)}</p>
+                    <p>{c.isPremium ? 'Premium' : 'Gratuit / essai'}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
