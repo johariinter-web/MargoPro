@@ -8,6 +8,8 @@ import { usePacks } from '@/lib/hooks/usePacks';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import { useColors } from '@/lib/hooks/useColors';
 import { usePlan } from '@/lib/hooks/usePlan';
+import { useFactureEnCours } from '@/lib/hooks/useFactureEnCours';
+import { genererImageFacture } from '@/lib/facture';
 import { AccesPremiumRequis } from '@/components/AccesPremiumRequis';
 import type { Periode } from '@backend/types';
 import { filtrerParPeriode, urgenceCredit, resteADoit } from '@backend/ventes';
@@ -33,11 +35,16 @@ export default function VentesPage() {
   const { config } = useConfig();
   const { accesFonctionnalitesPremium } = usePlan();
   const { produits, deduireStock } = useStock();
+  const facture = useFactureEnCours();
+  const [genFactureEnCours, setGenFactureEnCours] = useState(false);
+  const [nouvLigneNom, setNouvLigneNom] = useState('');
+  const [nouvLigneQte, setNouvLigneQte] = useState('1');
+  const [nouvLignePrix, setNouvLignePrix] = useState('');
   const [periode, setPeriode] = useState<Periode>('jour');
   const { ventes, ventesSupprimees, stats, credits, soldes, totalDu, enregistrerVente, enregistrerVentePack, enregistrerPaiementCredit, supprimerVente, restaurerVente, supprimerVenteDefinitivement } = useVentes(periode);
   const [voirSoldes, setVoirSoldes] = useState(false);
   const [voirNormaux, setVoirNormaux] = useState(false);
-  const [onglet, setOnglet] = useState<'ventes' | 'carnet'>('ventes');
+  const [onglet, setOnglet] = useState<'ventes' | 'carnet' | 'facture'>('ventes');
   const [joursOuverts, setJoursOuverts] = useState<Record<string, boolean>>({});
   const [showForm, setShowForm] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
@@ -128,6 +135,7 @@ export default function VentesPage() {
         : undefined;
       const erreurPack = await enregistrerVentePack(pack, creditParams);
       if (erreurPack) { setErreur(erreurPack); return; }
+      facture.ajouter(pack.nom, 1, pack.prixVente);
       setProduitId('');
       setQuantite('1');
       setPrixGros('');
@@ -153,6 +161,7 @@ export default function VentesPage() {
       ? { clientNom: clientNomCredit.trim(), clientTel: clientTelCredit.trim() || undefined, montantRecu: Math.max(0, Number(acompteCredit) || 0) }
       : undefined;
     await enregistrerVente(produit.id, produit.nom, qte, prixFinal, produit.prixAchat, creditParams);
+    facture.ajouter(produit.nom, qte, prixFinal);
     await deduireStock(produit.id, qte);
     setProduitId('');
     setQuantite('1');
@@ -172,6 +181,34 @@ export default function VentesPage() {
     if (err) { setErreurPaiement(err); return; }
     setVentePaiement(null);
     setMontantPaiement('');
+  }
+
+  async function partagerFacture() {
+    if (genFactureEnCours || facture.lignes.length === 0) return;
+    setGenFactureEnCours(true);
+    try {
+      const blob = await genererImageFacture({
+        nomBoutique: config?.nomCommerce || 'Ma boutique',
+        clientNom: facture.clientNom,
+        lignes: facture.lignes,
+        total: facture.total,
+        date: Date.now(),
+        symbole: config?.symboleDevise || '',
+      });
+      const file = new File([blob], 'facture.jpg', { type: 'image/jpeg' });
+      type NavShare = Navigator & { canShare?: (d: { files: File[] }) => boolean };
+      const nav = navigator as NavShare;
+      if (nav.canShare && nav.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], text: `Facture - ${fmtF(facture.total)} ${config?.symboleDevise || ''}` });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'facture.jpg'; a.click();
+        URL.revokeObjectURL(url);
+      }
+      facture.vider();
+    } catch { /* partage annulé : on ignore, le panier reste intact */ }
+    setGenFactureEnCours(false);
   }
 
   // Filtre la liste selon la période choisie (Jour / Semaine / Mois / Tout)
@@ -440,6 +477,12 @@ export default function VentesPage() {
               {credits.length}
             </span>
           )}
+        </button>
+        <button
+          onClick={() => setOnglet('facture')}
+          style={{ flex: 1, height: 36, borderRadius: 10, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', background: onglet === 'facture' ? T.accent : T.bgSubtle, color: onglet === 'facture' ? 'white' : T.textSub, position: 'relative' }}
+        >
+          Facture{facture.lignes.length > 0 ? ` (${facture.lignes.length})` : ''}
         </button>
       </div>
 
@@ -914,6 +957,88 @@ export default function VentesPage() {
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* VUE FACTURE */}
+      {onglet === 'facture' && (
+        <div style={{ padding: '0 16px' }}>
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 13, fontWeight: 700, color: T.text, display: 'block', marginBottom: 6 }}>Nom du client (optionnel)</label>
+            <input
+              type="text"
+              value={facture.clientNom}
+              onChange={(e) => facture.setClientNom(e.target.value)}
+              placeholder="Ex: Aminata"
+              style={{ width: '100%', border: `2px solid ${T.border}`, borderRadius: 12, padding: '10px 14px', fontSize: 15, color: T.text, background: T.surface, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          {facture.lignes.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '30px 0', color: T.textMuted, fontSize: 14 }}>
+              Aucun article pour l&apos;instant. Enregistre une vente, ou ajoute un article à la main ci-dessous.
+            </div>
+          ) : (
+            <div style={{ background: T.surface, borderRadius: 16, boxShadow: T.shadow, padding: '10px 14px', marginBottom: 14 }}>
+              {facture.lignes.map((l) => (
+                <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: `1px solid ${T.border}` }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{l.nom} x{l.quantite}</div>
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>{fmtF(l.total)}</div>
+                  <button onClick={() => facture.retirer(l.id)} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 18, cursor: 'pointer', padding: '0 4px' }}>×</button>
+                </div>
+              ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10 }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: T.text }}>Total</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>{fmtF(facture.total)} {config?.symboleDevise}</div>
+              </div>
+            </div>
+          )}
+
+          <div style={{ background: T.surface, borderRadius: 16, boxShadow: T.shadow, padding: 14, marginBottom: 14 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: T.textSub, marginBottom: 10 }}>Ajouter un article à la main</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <input type="text" value={nouvLigneNom} onChange={(e) => setNouvLigneNom(e.target.value)} placeholder="Nom du produit"
+                style={{ width: '100%', border: `2px solid ${T.border}`, borderRadius: 12, padding: '10px 14px', fontSize: 14, color: T.text, background: T.bgSubtle, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input type="number" onWheel={(e) => e.currentTarget.blur()} value={nouvLigneQte} onChange={(e) => setNouvLigneQte(e.target.value)} placeholder="Qté" min="1"
+                  style={{ width: 70, border: `2px solid ${T.border}`, borderRadius: 12, padding: '10px 14px', fontSize: 14, color: T.text, background: T.bgSubtle, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
+                <input type="number" onWheel={(e) => e.currentTarget.blur()} value={nouvLignePrix} onChange={(e) => setNouvLignePrix(e.target.value)} placeholder={`Prix (${config?.symboleDevise ?? ''})`} min="0"
+                  style={{ flex: 1, border: `2px solid ${T.border}`, borderRadius: 12, padding: '10px 14px', fontSize: 14, color: T.text, background: T.bgSubtle, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
+              </div>
+              <button
+                onClick={() => {
+                  const qte = Number(nouvLigneQte) || 0;
+                  const prix = Number(nouvLignePrix) || 0;
+                  if (!nouvLigneNom.trim() || qte <= 0 || prix <= 0) return;
+                  facture.ajouter(nouvLigneNom.trim(), qte, prix);
+                  setNouvLigneNom(''); setNouvLigneQte('1'); setNouvLignePrix('');
+                }}
+                disabled={!nouvLigneNom.trim() || !(Number(nouvLigneQte) > 0) || !(Number(nouvLignePrix) > 0)}
+                style={{ width: '100%', height: 42, borderRadius: 12, background: T.bgSubtle, border: `2px solid ${T.accent}`, color: T.accent, fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: (!nouvLigneNom.trim() || !(Number(nouvLigneQte) > 0) || !(Number(nouvLignePrix) > 0)) ? 0.4 : 1, fontFamily: 'Manrope, sans-serif' }}
+              >
+                + Ajouter cet article
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              onClick={() => facture.vider()}
+              disabled={facture.lignes.length === 0}
+              style={{ flex: 1, height: 48, borderRadius: 14, background: T.bgSubtle, border: 'none', color: T.textSub, fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: facture.lignes.length === 0 ? 0.4 : 1, fontFamily: 'Manrope, sans-serif' }}
+            >
+              Vider
+            </button>
+            <button
+              onClick={partagerFacture}
+              disabled={facture.lignes.length === 0 || genFactureEnCours}
+              style={{ flex: 2, height: 48, borderRadius: 14, background: T.accent, border: 'none', color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: (facture.lignes.length === 0 || genFactureEnCours) ? 0.4 : 1, fontFamily: 'Manrope, sans-serif' }}
+            >
+              {genFactureEnCours ? 'Génération...' : 'Générer et partager'}
+            </button>
+          </div>
         </div>
       )}
     </div>
