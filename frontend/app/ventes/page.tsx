@@ -972,6 +972,10 @@ export default function VentesPage() {
       {/* VUE FACTURE */}
       {onglet === 'facture' && (
         <div style={{ padding: '0 16px' }}>
+          {!accesFonctionnalitesPremium ? (
+            <AccesPremiumRequis titre="Facture" description="Génère et partage une facture avec tes clients par WhatsApp." />
+          ) : (
+          <>
           <div style={{ marginBottom: 12 }}>
             <label style={{ fontSize: 13, fontWeight: 700, color: T.text, display: 'block', marginBottom: 6 }}>Nom du client (optionnel)</label>
             <input
@@ -1053,6 +1057,8 @@ export default function VentesPage() {
               {genFactureEnCours ? 'Génération...' : 'Générer et partager'}
             </button>
           </div>
+          </>
+          )}
         </div>
       )}
     </div>

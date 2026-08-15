@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ajouterLigne, retirerLigne, totalLignes, type LigneFacture } from '../factureEnCours';
+import { ajouterLigne, retirerLigne, totalLignes, lignesDuJour, type LigneFacture } from '../factureEnCours';
 
 const CLE_LIGNES = 'margopro_facture_lignes';
 const CLE_CLIENT = 'margopro_facture_client';
@@ -39,7 +39,13 @@ export function useFactureEnCours() {
   const [clientNom, setClientNomState] = useState<string>('');
 
   useEffect(() => {
-    setLignesState(lireLignes());
+    // Ne garde que les lignes du jour même : un panier oublié la veille (ou
+    // plus tôt) ne doit jamais se retrouver mélangé aux achats d'aujourd'hui
+    // dans une même facture. Les lignes périmées sont aussi purgées du
+    // stockage, pas seulement masquées à l'affichage.
+    const duJour = lignesDuJour(lireLignes());
+    setLignesState(duJour);
+    sauvegarderLignes(duJour);
     setClientNomState(lireClient());
   }, []);
 
