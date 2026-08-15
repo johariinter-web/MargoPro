@@ -279,7 +279,7 @@ export default function Dashboard() {
             onClick={() => router.push('/ventes')}
             style={{ fontSize: 13, color: T.accent, fontWeight: 700, textAlign: 'right', marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.border}`, cursor: 'pointer', fontFamily: 'Manrope, sans-serif' }}
           >
-            Voir rapport complet →
+            Voir toutes les ventes →
           </div>
         </div>
 
