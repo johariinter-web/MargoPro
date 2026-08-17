@@ -3,8 +3,22 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { clearLocalData } from '@/lib/db';
+import { clearLocalData, estProprietaireDonneesLocales, marquerProprietaireDonneesLocales } from '@/lib/db';
 import { resetSyncState } from '@/lib/syncController';
+
+// Un autre compte a pu rester connecté sur cet appareil (jamais déconnecté
+// explicitement, session juste expirée) : sans ce contrôle, ses données
+// locales resteraient affichées sous la nouvelle session tant que la
+// synchro n'a pas eu la chance de les remplacer. Mais si c'est le MÊME
+// compte qui se reconnecte, on garde son cache local (évite de tout
+// retélécharger du cloud à chaque expiration de session).
+async function assurerDonneesPropresPour(userId: string) {
+  if (!estProprietaireDonneesLocales(userId)) {
+    await clearLocalData();
+    resetSyncState();
+  }
+  marquerProprietaireDonneesLocales(userId);
+}
 
 type Mode = 'connexion' | 'inscription' | 'oubli';
 
@@ -140,7 +154,7 @@ export default function AuthPage() {
     const supabase = createClient();
 
     if (mode === 'connexion') {
-      const { error } = identifiant === 'email'
+      const { data, error } = identifiant === 'email'
         ? await supabase.auth.signInWithPassword({ email, password })
         : await supabase.auth.signInWithPassword({ phone: telephone.trim(), password });
       if (error) {
@@ -148,13 +162,7 @@ export default function AuthPage() {
         setLoading(false);
         return;
       }
-      // Un autre compte a pu rester connecté sur cet appareil (jamais
-      // déconnecté explicitement) : sans ça, ses données locales restent
-      // affichées sous la nouvelle session tant que la synchro n'a pas
-      // eu la chance de les remplacer. Voir clearLocalData() à la
-      // déconnexion (parametres/page.tsx) pour le même principe.
-      await clearLocalData();
-      resetSyncState();
+      await assurerDonneesPropresPour(data.user.id);
       router.push('/');
     } else {
       if (password !== confirmPassword) {
@@ -183,8 +191,7 @@ export default function AuthPage() {
           setLoading(false);
           return;
         }
-        await clearLocalData();
-        resetSyncState();
+        await assurerDonneesPropresPour(data.user!.id);
         router.push('/onboarding');
       } else {
         const { data, error } = await supabase.auth.signUp({ phone: telephone.trim(), password });
@@ -202,8 +209,7 @@ export default function AuthPage() {
           setLoading(false);
           return;
         }
-        await clearLocalData();
-        resetSyncState();
+        await assurerDonneesPropresPour(data.user!.id);
         router.push('/onboarding');
       }
     }
@@ -215,7 +221,7 @@ export default function AuthPage() {
     setVerificationEnCours(true);
     setErreurCode('');
     const supabase = createClient();
-    const { error } = await supabase.auth.verifyOtp({
+    const { data, error } = await supabase.auth.verifyOtp({
       phone: telephone.trim(),
       token: codeSms.trim(),
       type: 'sms',
@@ -225,10 +231,7 @@ export default function AuthPage() {
       setVerificationEnCours(false);
       return;
     }
-    // Voir le commentaire équivalent dans soumettre() : un autre compte a pu
-    // rester connecté sur cet appareil sans déconnexion explicite.
-    await clearLocalData();
-    resetSyncState();
+    await assurerDonneesPropresPour(data.user!.id);
     router.push('/onboarding');
   }
 

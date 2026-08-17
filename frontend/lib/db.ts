@@ -100,3 +100,27 @@ export async function clearLocalData(): Promise<void> {
     await db.config.clear();
   });
 }
+
+const PROPRIETAIRE_DONNEES_KEY = 'margopro_local_data_owner';
+
+// Permet de ne vider les données locales à la connexion que quand le compte
+// qui se connecte diffère de celui déjà en cache (voir auth/page.tsx) --
+// sinon une simple expiration de session forcerait un rechargement complet
+// depuis le cloud à chaque reconnexion, même pour retrouver son propre compte.
+export function estProprietaireDonneesLocales(userId: string): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(PROPRIETAIRE_DONNEES_KEY) === userId;
+  } catch {
+    return false;
+  }
+}
+
+export function marquerProprietaireDonneesLocales(userId: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(PROPRIETAIRE_DONNEES_KEY, userId);
+  } catch {
+    /* stockage indisponible : impossible de retenir le proprietaire, on effacera par prudence a la prochaine connexion */
+  }
+}
