@@ -11,7 +11,7 @@ type Mode = 'connexion' | 'inscription' | 'oubli';
 // formulaire, tant qu'on n'a pas confirmé un vrai envoi de SMS de bout en
 // bout avec un solde Africa's Talking suffisant. Repasser à true une fois
 // confirmé.
-const TELEPHONE_DISPONIBLE = false;
+const TELEPHONE_DISPONIBLE = true;
 
 const T = {
   accent: '#D4601A',
