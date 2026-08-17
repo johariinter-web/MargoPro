@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { clearLocalData } from '@/lib/db';
+import { resetSyncState } from '@/lib/syncController';
 
 type Mode = 'connexion' | 'inscription' | 'oubli';
 
@@ -146,6 +148,13 @@ export default function AuthPage() {
         setLoading(false);
         return;
       }
+      // Un autre compte a pu rester connecté sur cet appareil (jamais
+      // déconnecté explicitement) : sans ça, ses données locales restent
+      // affichées sous la nouvelle session tant que la synchro n'a pas
+      // eu la chance de les remplacer. Voir clearLocalData() à la
+      // déconnexion (parametres/page.tsx) pour le même principe.
+      await clearLocalData();
+      resetSyncState();
       router.push('/');
     } else {
       if (password !== confirmPassword) {
@@ -174,6 +183,8 @@ export default function AuthPage() {
           setLoading(false);
           return;
         }
+        await clearLocalData();
+        resetSyncState();
         router.push('/onboarding');
       } else {
         const { data, error } = await supabase.auth.signUp({ phone: telephone.trim(), password });
@@ -191,6 +202,8 @@ export default function AuthPage() {
           setLoading(false);
           return;
         }
+        await clearLocalData();
+        resetSyncState();
         router.push('/onboarding');
       }
     }
@@ -212,6 +225,10 @@ export default function AuthPage() {
       setVerificationEnCours(false);
       return;
     }
+    // Voir le commentaire équivalent dans soumettre() : un autre compte a pu
+    // rester connecté sur cet appareil sans déconnexion explicite.
+    await clearLocalData();
+    resetSyncState();
     router.push('/onboarding');
   }
 
