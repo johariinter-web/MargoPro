@@ -60,13 +60,25 @@ describe('clientsFideles', () => {
     expect(clientsFideles(ventes)).toHaveLength(0);
   });
 
-  it('garde le téléphone dès qu\'une des ventes le fournit', () => {
+  it('garde le même téléphone quand il est fourni sur chaque vente du client', () => {
     const ventes = [
-      venteTest({ clientNom: 'Amira', clientTel: undefined }),
-      venteTest({ clientNom: 'Amira', clientTel: '90000000' }),
+      venteTest({ clientNom: 'Amira', clientTel: '90000000', total: 1000 }),
+      venteTest({ clientNom: 'Amira', clientTel: '90000000', total: 500 }),
     ];
     const resultat = clientsFideles(ventes);
+    expect(resultat).toHaveLength(1);
     expect(resultat[0].tel).toBe('90000000');
+  });
+
+  it('ne fusionne jamais deux clients de même nom mais avec des téléphones différents', () => {
+    const ventes = [
+      venteTest({ clientNom: 'Amira', clientTel: '111', total: 1000 }),
+      venteTest({ clientNom: 'Amira', clientTel: '222', total: 5000 }),
+    ];
+    const resultat = clientsFideles(ventes);
+    expect(resultat).toHaveLength(2);
+    const tels = resultat.map(c => c.tel).sort();
+    expect(tels).toEqual(['111', '222']);
   });
 
   it('garde la date la plus récente comme dernier achat', () => {
