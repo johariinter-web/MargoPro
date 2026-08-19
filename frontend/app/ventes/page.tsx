@@ -13,6 +13,7 @@ import { genererImageFacture } from '@/lib/facture';
 import { AccesPremiumRequis } from '@/components/AccesPremiumRequis';
 import type { Periode } from '@backend/types';
 import { filtrerParPeriode, urgenceCredit, resteADoit } from '@backend/ventes';
+import { clientsFideles } from '@backend/clients';
 
 function fmtF(n: number) {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -45,7 +46,7 @@ export default function VentesPage() {
   const { ventes, ventesSupprimees, stats, credits, soldes, totalDu, enregistrerVente, enregistrerVentePack, enregistrerPaiementCredit, supprimerVente, restaurerVente, supprimerVenteDefinitivement } = useVentes(periode);
   const [voirSoldes, setVoirSoldes] = useState(false);
   const [voirNormaux, setVoirNormaux] = useState(false);
-  const [onglet, setOnglet] = useState<'ventes' | 'carnet' | 'facture'>('ventes');
+  const [onglet, setOnglet] = useState<'ventes' | 'carnet' | 'facture' | 'clients'>('ventes');
   const [joursOuverts, setJoursOuverts] = useState<Record<string, boolean>>({});
   const [showForm, setShowForm] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
@@ -501,6 +502,12 @@ export default function VentesPage() {
           style={{ flex: 1, height: 36, borderRadius: 10, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', background: onglet === 'facture' ? T.accent : T.bgSubtle, color: onglet === 'facture' ? 'white' : T.textSub, position: 'relative' }}
         >
           Facture{facture.lignes.length > 0 ? ` (${facture.lignes.length})` : ''}
+        </button>
+        <button
+          onClick={() => setOnglet('clients')}
+          style={{ flex: 1, height: 36, borderRadius: 10, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', background: onglet === 'clients' ? T.accent : T.bgSubtle, color: onglet === 'clients' ? 'white' : T.textSub }}
+        >
+          Clients
         </button>
       </div>
 
@@ -1103,6 +1110,48 @@ export default function VentesPage() {
           </div>
           </>
           )}
+        </div>
+      )}
+
+      {/* VUE CLIENTS */}
+      {onglet === 'clients' && (
+        <div style={{ padding: '0 16px' }}>
+          {!accesFonctionnalitesPremium ? (
+            <AccesPremiumRequis titre="Clients fidèles" description="Vois qui achète le plus souvent chez toi, pour les récompenser." />
+          ) : (() => {
+            const liste = clientsFideles(ventes);
+            if (liste.length === 0) {
+              return (
+                <div style={{ textAlign: 'center', padding: '60px 0' }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>🧑‍🤝‍🧑</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: T.textSub }}>Aucun client enregistré</div>
+                  <div style={{ fontSize: 13, color: T.textMuted, marginTop: 4 }}>Ajoute un nom de client lors d&apos;une vente pour le voir ici.</div>
+                </div>
+              );
+            }
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {liste.map(c => (
+                  <div key={c.tel || c.nom} style={{ background: T.surface, borderRadius: 14, padding: '12px 14px', border: `1px solid ${T.border}`, boxShadow: T.shadow, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: T.text, marginBottom: 3 }}>{c.nom}</div>
+                      <div style={{ fontSize: 11, color: T.textMuted }}>
+                        {c.nombreAchats} achat{c.nombreAchats > 1 ? 's' : ''} · dernier le {new Date(c.dernierAchat).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                      </div>
+                      {c.tel && (
+                        <a href={`tel:${c.tel}`} style={{ fontSize: 12, color: T.accent, fontWeight: 600, textDecoration: 'none', display: 'inline-block', marginTop: 3 }}>
+                          📞 {c.tel}
+                        </a>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 17, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>
+                      {fmtF(c.totalDepense)} {symbole}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>
