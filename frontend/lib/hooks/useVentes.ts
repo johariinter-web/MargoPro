@@ -27,9 +27,10 @@ export function useVentes(periode: Periode = 'jour') {
     quantite: number,
     prixVente: number,
     prixAchat: number,
-    credit?: { clientNom: string; clientTel?: string; montantRecu: number }
+    credit?: { clientNom: string; clientTel?: string; montantRecu: number },
+    client?: { nom: string; tel?: string }
   ) {
-    const vente = creerVente(produitId, produitNom, quantite, prixVente, prixAchat, credit);
+    const vente = creerVente(produitId, produitNom, quantite, prixVente, prixAchat, credit, client);
     await db.ventes.add({ ...vente, id: genId(), deleted: false });
     requestSync();
   }
@@ -123,7 +124,8 @@ export function useVentes(periode: Periode = 'jour') {
 
   async function enregistrerVentePack(
     pack: Pack,
-    credit?: { clientNom: string; clientTel?: string; montantRecu: number }
+    credit?: { clientNom: string; clientTel?: string; montantRecu: number },
+    client?: { nom: string; tel?: string }
   ): Promise<string | null> {
     // Lire les produits actuels pour calculer le prixAchat
     const produitsArray = await db.produits.toArray();
@@ -139,7 +141,7 @@ export function useVentes(periode: Periode = 'jour') {
 
     // Calculer la vente avant la transaction (lecture seule, hors transaction)
     const now = Date.now();
-    const vente = creerVentePack(pack, produitsMap, credit);
+    const vente = creerVentePack(pack, produitsMap, credit, client);
 
     // Décrémenter le stock + enregistrer la vente dans une transaction atomique
     await db.transaction('rw', db.produits, db.ventes, async () => {
@@ -156,9 +158,41 @@ export function useVentes(periode: Periode = 'jour') {
     return null;
   }
 
+  // Corrige le téléphone sur toutes les ventes d'un client (crédit ou
+  // comptant) - utile quand le client change de numéro.
+  async function modifierTelephoneClient(venteIds: string[], nouveauTel: string) {
+    const tel = nouveauTel.trim() || undefined;
+    await db.transaction('rw', db.ventes, async () => {
+      for (const id of venteIds) {
+        await db.ventes.update(id, { clientTel: tel, updatedAt: Date.now() });
+      }
+    });
+    requestSync();
+  }
+
+  // Retire un client de la liste des clients fidèles en effaçant son nom
+  // sur ses ventes COMPTANT uniquement. Les ventes à crédit gardent leur
+  // nom : le Carnet en a besoin pour savoir qui doit de l'argent.
+  // Double vérification (modeReglement ET montantRecu, jamais défini pour
+  // une vente comptant) pour se protéger d'un vieux cas de migration où
+  // modeReglement pouvait rester "comptant" par erreur sur un appareil
+  // resté longtemps hors ligne (voir sync.ts, cloudFixesCredit) - effacer
+  // le nom d'un vrai crédit casserait le suivi de dette dans le Carnet.
+  async function retirerClientComptant(venteIds: string[]) {
+    await db.transaction('rw', db.ventes, async () => {
+      for (const id of venteIds) {
+        const v = await db.ventes.get(id);
+        if (v && v.modeReglement !== 'credit' && v.montantRecu === undefined) {
+          await db.ventes.update(id, { clientNom: undefined, clientTel: undefined, updatedAt: Date.now() });
+        }
+      }
+    });
+    requestSync();
+  }
+
   const credits = creditsEnCours(ventes);
   const soldes = creditsSoldes(ventes);
   const totalDu = totalCredit(ventes);
 
-  return { ventes, ventesSupprimees, stats, top3, credits, soldes, totalDu, enregistrerVente, enregistrerVentePack, enregistrerPaiementCredit, supprimerVente, restaurerVente, supprimerVenteDefinitivement };
+  return { ventes, ventesSupprimees, stats, top3, credits, soldes, totalDu, enregistrerVente, enregistrerVentePack, enregistrerPaiementCredit, supprimerVente, restaurerVente, supprimerVenteDefinitivement, modifierTelephoneClient, retirerClientComptant };
 }
