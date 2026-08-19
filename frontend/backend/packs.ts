@@ -28,7 +28,8 @@ export function prixVenteSepares(pack: Pack, produitsMap: Map<string, Produit>):
 export function creerVentePack(
   pack: Pack,
   produitsMap: Map<string, Produit>,
-  credit?: { clientNom: string; clientTel?: string; montantRecu: number }
+  credit?: { clientNom: string; clientTel?: string; montantRecu: number },
+  client?: { nom: string; tel?: string }
 ): Omit<Vente, 'id'> {
   const sumPrixAchat = prixAchatPack(pack, produitsMap);
   const now = Date.now();
@@ -45,6 +46,8 @@ export function creerVentePack(
     type: 'pack',
     ...(credit
       ? { modeReglement: 'credit', clientNom: credit.clientNom, clientTel: credit.clientTel, montantRecu: credit.montantRecu }
+      : client
+      ? { modeReglement: 'comptant', clientNom: client.nom, clientTel: client.tel }
       : { modeReglement: 'comptant' }),
   };
 }
