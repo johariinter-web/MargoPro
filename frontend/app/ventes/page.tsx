@@ -476,12 +476,32 @@ export default function VentesPage() {
           onClick={() => { setClientEnEdition(null); setTelEdition(''); setConfirmerRetraitClient(false); }}
         >
           <div
-            style={{ background: T.surface, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, margin: '0 auto', padding: '20px 20px 36px' }}
+            style={{ background: T.surface, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, margin: '0 auto', padding: '20px 20px 36px', maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box' }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border, margin: '0 auto 16px' }} />
             <div style={{ fontSize: 17, fontWeight: 800, color: T.text, marginBottom: 16 }}>
               {clientEnEdition.nom}
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 8 }}>
+              Historique des achats ({clientEnEdition.nombreAchats})
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16, maxHeight: 200, overflowY: 'auto' }}>
+              {ventes
+                .filter(v => clientEnEdition.venteIds.includes(v.id))
+                .sort((a, b) => b.date - a.date)
+                .map(v => (
+                  <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: T.bgSubtle, borderRadius: 10, padding: '8px 10px' }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{v.produitNom} ×{v.quantite}</div>
+                      <div style={{ fontSize: 11, color: T.textMuted }}>
+                        {new Date(v.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {v.modeReglement === 'credit' ? ' · crédit' : ''}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{fmtF(v.total)} {symbole}</div>
+                  </div>
+                ))}
             </div>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Téléphone</label>
             <input
