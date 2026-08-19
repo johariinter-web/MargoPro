@@ -54,8 +54,9 @@ export default function VentesPage() {
   const [erreur, setErreur] = useState('');
   const [prixGros, setPrixGros] = useState('');
   const [isCredit, setIsCredit] = useState(false);
-  const [clientNomCredit, setClientNomCredit] = useState('');
-  const [clientTelCredit, setClientTelCredit] = useState('');
+  const [clientNom, setClientNom] = useState('');
+  const [clientTel, setClientTel] = useState('');
+  const [showClientOptionnel, setShowClientOptionnel] = useState(false);
   const [acompteCredit, setAcompteCredit] = useState('');
   const [venteSelectionnee, setVenteSelectionnee] = useState<typeof ventes[number] | null>(null);
   const [venteSupprimee, setVenteSupprimee] = useState<typeof ventes[number] | null>(null);
@@ -130,19 +131,23 @@ export default function VentesPage() {
     if (modeProduit === 'pack') {
       const pack = packs.find(p => p.id === packSelectionne);
       if (!pack) { setErreur('Choisissez un pack'); return; }
-      if (isCredit && !clientNomCredit.trim()) { setErreur('Nom du client requis pour un crédit'); return; }
+      if (isCredit && !clientNom.trim()) { setErreur('Nom du client requis pour un crédit'); return; }
       const creditParams = isCredit
-        ? { clientNom: clientNomCredit.trim(), clientTel: clientTelCredit.trim() || undefined, montantRecu: Math.max(0, Number(acompteCredit) || 0) }
+        ? { clientNom: clientNom.trim(), clientTel: clientTel.trim() || undefined, montantRecu: Math.max(0, Number(acompteCredit) || 0) }
         : undefined;
-      const erreurPack = await enregistrerVentePack(pack, creditParams);
+      const clientParams = !isCredit && clientNom.trim() !== ''
+        ? { nom: clientNom.trim(), tel: clientTel.trim() || undefined }
+        : undefined;
+      const erreurPack = await enregistrerVentePack(pack, creditParams, clientParams);
       if (erreurPack) { setErreur(erreurPack); return; }
       facture.ajouter(pack.nom, 1, pack.prixVente);
       setProduitId('');
       setQuantite('1');
       setPrixGros('');
       setIsCredit(false);
-      setClientNomCredit('');
-      setClientTelCredit('');
+      setClientNom('');
+      setClientTel('');
+      setShowClientOptionnel(false);
       setAcompteCredit('0');
       setPackSelectionne('');
       setModeProduit('produit');
@@ -156,20 +161,24 @@ export default function VentesPage() {
     const qte = Number(quantite);
     if (!qte || qte <= 0) { setErreur('Quantité invalide'); return; }
     if (qte > produit.quantite) { setErreur(`Stock insuffisant (${produit.quantite} disponibles)`); return; }
-    if (isCredit && !clientNomCredit.trim()) { setErreur('Nom du client requis pour un crédit'); return; }
+    if (isCredit && !clientNom.trim()) { setErreur('Nom du client requis pour un crédit'); return; }
     const prixFinal = Number(prixGros) > 0 ? Number(prixGros) : produit.prixVente;
     const creditParams = isCredit
-      ? { clientNom: clientNomCredit.trim(), clientTel: clientTelCredit.trim() || undefined, montantRecu: Math.max(0, Number(acompteCredit) || 0) }
+      ? { clientNom: clientNom.trim(), clientTel: clientTel.trim() || undefined, montantRecu: Math.max(0, Number(acompteCredit) || 0) }
       : undefined;
-    await enregistrerVente(produit.id, produit.nom, qte, prixFinal, produit.prixAchat, creditParams);
+    const clientParams = !isCredit && clientNom.trim() !== ''
+      ? { nom: clientNom.trim(), tel: clientTel.trim() || undefined }
+      : undefined;
+    await enregistrerVente(produit.id, produit.nom, qte, prixFinal, produit.prixAchat, creditParams, clientParams);
     await deduireStock(produit.id, qte);
     facture.ajouter(produit.nom, qte, prixFinal);
     setProduitId('');
     setQuantite('1');
     setPrixGros('');
     setIsCredit(false);
-    setClientNomCredit('');
-    setClientTelCredit('');
+    setClientNom('');
+    setClientTel('');
+    setShowClientOptionnel(false);
     setAcompteCredit('0');
     setShowForm(false);
     if (isCredit) setOnglet('carnet');
@@ -664,7 +673,7 @@ export default function VentesPage() {
 
           {/* TOGGLE CRÉDIT */}
           <div
-            onClick={() => { if (!accesFonctionnalitesPremium) return; setIsCredit(v => !v); setClientNomCredit(''); setClientTelCredit(''); setAcompteCredit('0'); }}
+            onClick={() => { if (!accesFonctionnalitesPremium) return; setIsCredit(v => !v); setClientNom(''); setClientTel(''); setAcompteCredit('0'); setShowClientOptionnel(false); }}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, cursor: accesFonctionnalitesPremium ? 'pointer' : 'not-allowed', padding: '10px 12px', background: isCredit ? '#FFF7ED' : T.bgSubtle, borderRadius: 10, border: isCredit ? '1.5px solid #F97316' : `1.5px solid ${T.border}`, opacity: accesFonctionnalitesPremium ? 1 : 0.5 }}
           >
             <span style={{ fontSize: 13, fontWeight: 600, color: isCredit ? '#C2410C' : T.textSub }}>Vente à crédit</span>
@@ -681,8 +690,8 @@ export default function VentesPage() {
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Nom du client *</label>
                 <input
                   type="text"
-                  value={clientNomCredit}
-                  onChange={e => setClientNomCredit(e.target.value)}
+                  value={clientNom}
+                  onChange={e => setClientNom(e.target.value)}
                   placeholder="Ex : Aminata Koné"
                   style={{ width: '100%', border: `1.5px solid #F97316`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }}
                 />
@@ -691,8 +700,8 @@ export default function VentesPage() {
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Téléphone du client (optionnel)</label>
                 <input
                   type="tel"
-                  value={clientTelCredit}
-                  onChange={e => setClientTelCredit(e.target.value)}
+                  value={clientTel}
+                  onChange={e => setClientTel(e.target.value)}
                   placeholder="Ex : 77 123 45 67"
                   style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }}
                 />
@@ -713,9 +722,44 @@ export default function VentesPage() {
               </div>
             </>
           )}
+          {!isCredit && (
+            <div style={{ marginBottom: 12 }}>
+              <button
+                type="button"
+                onClick={() => setShowClientOptionnel(v => !v)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: T.accent, padding: '4px 0' }}
+              >
+                {showClientOptionnel ? 'Masquer' : '+ Ajouter un client'}
+              </button>
+              {showClientOptionnel && (
+                <>
+                  <div style={{ marginBottom: 12, marginTop: 6 }}>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Nom du client</label>
+                    <input
+                      type="text"
+                      value={clientNom}
+                      onChange={e => setClientNom(e.target.value)}
+                      placeholder="Ex : Aminata Koné"
+                      style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Téléphone (optionnel)</label>
+                    <input
+                      type="tel"
+                      value={clientTel}
+                      onChange={e => setClientTel(e.target.value)}
+                      placeholder="Ex : 77 123 45 67"
+                      style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 10 }}>
             <button
-              onClick={() => { setShowForm(false); setErreur(''); setPrixGros(''); setIsCredit(false); setClientNomCredit(''); setClientTelCredit(''); setAcompteCredit('0'); setModeProduit('produit'); setPackSelectionne(''); }}
+              onClick={() => { setShowForm(false); setErreur(''); setPrixGros(''); setIsCredit(false); setClientNom(''); setClientTel(''); setAcompteCredit('0'); setShowClientOptionnel(false); setModeProduit('produit'); setPackSelectionne(''); }}
               style={{
                 flex: 1, height: 44, borderRadius: 12, background: T.bgSubtle,
                 border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: T.textSub,

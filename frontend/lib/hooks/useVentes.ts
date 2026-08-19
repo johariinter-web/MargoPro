@@ -27,9 +27,10 @@ export function useVentes(periode: Periode = 'jour') {
     quantite: number,
     prixVente: number,
     prixAchat: number,
-    credit?: { clientNom: string; clientTel?: string; montantRecu: number }
+    credit?: { clientNom: string; clientTel?: string; montantRecu: number },
+    client?: { nom: string; tel?: string }
   ) {
-    const vente = creerVente(produitId, produitNom, quantite, prixVente, prixAchat, credit);
+    const vente = creerVente(produitId, produitNom, quantite, prixVente, prixAchat, credit, client);
     await db.ventes.add({ ...vente, id: genId(), deleted: false });
     requestSync();
   }
@@ -123,7 +124,8 @@ export function useVentes(periode: Periode = 'jour') {
 
   async function enregistrerVentePack(
     pack: Pack,
-    credit?: { clientNom: string; clientTel?: string; montantRecu: number }
+    credit?: { clientNom: string; clientTel?: string; montantRecu: number },
+    client?: { nom: string; tel?: string }
   ): Promise<string | null> {
     // Lire les produits actuels pour calculer le prixAchat
     const produitsArray = await db.produits.toArray();
@@ -139,7 +141,7 @@ export function useVentes(periode: Periode = 'jour') {
 
     // Calculer la vente avant la transaction (lecture seule, hors transaction)
     const now = Date.now();
-    const vente = creerVentePack(pack, produitsMap, credit);
+    const vente = creerVentePack(pack, produitsMap, credit, client);
 
     // Décrémenter le stock + enregistrer la vente dans une transaction atomique
     await db.transaction('rw', db.produits, db.ventes, async () => {
