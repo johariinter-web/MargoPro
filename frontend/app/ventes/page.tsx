@@ -1239,10 +1239,16 @@ export default function VentesPage() {
                     {c.nombreAchats} achat{c.nombreAchats > 1 ? 's' : ''} · dernier le {new Date(c.dernierAchat).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                   </div>
                   {c.tel && (
-                    <a href={`tel:${c.tel}`} onClick={e => e.stopPropagation()}
-                      style={{ fontSize: 12, color: T.accent, fontWeight: 600, textDecoration: 'none', display: 'inline-block', marginTop: 3 }}>
-                      📞 {c.tel}
-                    </a>
+                    <div style={{ display: 'flex', gap: 12, marginTop: 3 }}>
+                      <a href={`tel:${c.tel}`} onClick={e => e.stopPropagation()}
+                        style={{ fontSize: 12, color: T.accent, fontWeight: 600, textDecoration: 'none' }}>
+                        📞 {c.tel}
+                      </a>
+                      <a href={`https://wa.me/${c.tel.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                        style={{ fontSize: 12, color: '#25D366', fontWeight: 600, textDecoration: 'none' }}>
+                        💬 WhatsApp
+                      </a>
+                    </div>
                   )}
                 </div>
                 <div style={{ fontSize: 17, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>
