@@ -158,9 +158,36 @@ export function useVentes(periode: Periode = 'jour') {
     return null;
   }
 
+  // Corrige le téléphone sur toutes les ventes d'un client (crédit ou
+  // comptant) - utile quand le client change de numéro.
+  async function modifierTelephoneClient(venteIds: string[], nouveauTel: string) {
+    const tel = nouveauTel.trim() || undefined;
+    await db.transaction('rw', db.ventes, async () => {
+      for (const id of venteIds) {
+        await db.ventes.update(id, { clientTel: tel, updatedAt: Date.now() });
+      }
+    });
+    requestSync();
+  }
+
+  // Retire un client de la liste des clients fidèles en effaçant son nom
+  // sur ses ventes COMPTANT uniquement. Les ventes à crédit gardent leur
+  // nom : le Carnet en a besoin pour savoir qui doit de l'argent.
+  async function retirerClientComptant(venteIds: string[]) {
+    await db.transaction('rw', db.ventes, async () => {
+      for (const id of venteIds) {
+        const v = await db.ventes.get(id);
+        if (v && v.modeReglement !== 'credit') {
+          await db.ventes.update(id, { clientNom: undefined, clientTel: undefined, updatedAt: Date.now() });
+        }
+      }
+    });
+    requestSync();
+  }
+
   const credits = creditsEnCours(ventes);
   const soldes = creditsSoldes(ventes);
   const totalDu = totalCredit(ventes);
 
-  return { ventes, ventesSupprimees, stats, top3, credits, soldes, totalDu, enregistrerVente, enregistrerVentePack, enregistrerPaiementCredit, supprimerVente, restaurerVente, supprimerVenteDefinitivement };
+  return { ventes, ventesSupprimees, stats, top3, credits, soldes, totalDu, enregistrerVente, enregistrerVentePack, enregistrerPaiementCredit, supprimerVente, restaurerVente, supprimerVenteDefinitivement, modifierTelephoneClient, retirerClientComptant };
 }

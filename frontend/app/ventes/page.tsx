@@ -14,6 +14,7 @@ import { AccesPremiumRequis } from '@/components/AccesPremiumRequis';
 import type { Periode } from '@backend/types';
 import { filtrerParPeriode, urgenceCredit, resteADoit } from '@backend/ventes';
 import { clientsFideles } from '@backend/clients';
+import type { ClientFidele } from '@backend/clients';
 
 function fmtF(n: number) {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -43,7 +44,7 @@ export default function VentesPage() {
   const [nouvLigneQte, setNouvLigneQte] = useState('1');
   const [nouvLignePrix, setNouvLignePrix] = useState('');
   const [periode, setPeriode] = useState<Periode>('jour');
-  const { ventes, ventesSupprimees, stats, credits, soldes, totalDu, enregistrerVente, enregistrerVentePack, enregistrerPaiementCredit, supprimerVente, restaurerVente, supprimerVenteDefinitivement } = useVentes(periode);
+  const { ventes, ventesSupprimees, stats, credits, soldes, totalDu, enregistrerVente, enregistrerVentePack, enregistrerPaiementCredit, supprimerVente, restaurerVente, supprimerVenteDefinitivement, modifierTelephoneClient, retirerClientComptant } = useVentes(periode);
   const [voirSoldes, setVoirSoldes] = useState(false);
   const [voirNormaux, setVoirNormaux] = useState(false);
   const [onglet, setOnglet] = useState<'ventes' | 'carnet' | 'facture' | 'clients'>('ventes');
@@ -58,6 +59,10 @@ export default function VentesPage() {
   const [clientNom, setClientNom] = useState('');
   const [clientTel, setClientTel] = useState('');
   const [showClientOptionnel, setShowClientOptionnel] = useState(false);
+  const [voirTousClients, setVoirTousClients] = useState(false);
+  const [clientEnEdition, setClientEnEdition] = useState<ClientFidele | null>(null);
+  const [telEdition, setTelEdition] = useState('');
+  const [confirmerRetraitClient, setConfirmerRetraitClient] = useState(false);
   const [acompteCredit, setAcompteCredit] = useState('');
   const [venteSelectionnee, setVenteSelectionnee] = useState<typeof ventes[number] | null>(null);
   const [venteSupprimee, setVenteSupprimee] = useState<typeof ventes[number] | null>(null);
@@ -192,6 +197,21 @@ export default function VentesPage() {
     if (err) { setErreurPaiement(err); return; }
     setVentePaiement(null);
     setMontantPaiement('');
+  }
+
+  async function handleModifierTelephoneClient() {
+    if (!clientEnEdition) return;
+    await modifierTelephoneClient(clientEnEdition.venteIds, telEdition);
+    setClientEnEdition(null);
+    setTelEdition('');
+  }
+
+  async function handleRetirerClient() {
+    if (!clientEnEdition) return;
+    await retirerClientComptant(clientEnEdition.venteIds);
+    setClientEnEdition(null);
+    setTelEdition('');
+    setConfirmerRetraitClient(false);
   }
 
   async function partagerFacture() {
@@ -445,6 +465,74 @@ export default function VentesPage() {
                 ✅ Confirmer
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL FICHE CLIENT */}
+      {clientEnEdition && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'flex-end' }}
+          onClick={() => { setClientEnEdition(null); setTelEdition(''); setConfirmerRetraitClient(false); }}
+        >
+          <div
+            style={{ background: T.surface, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, margin: '0 auto', padding: '20px 20px 36px' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border, margin: '0 auto 16px' }} />
+            <div style={{ fontSize: 17, fontWeight: 800, color: T.text, marginBottom: 16 }}>
+              {clientEnEdition.nom}
+            </div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Téléphone</label>
+            <input
+              type="tel"
+              value={telEdition}
+              onChange={e => setTelEdition(e.target.value)}
+              placeholder="Ex : 77 123 45 67"
+              style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box', marginBottom: 14 }}
+            />
+            <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+              <button
+                onClick={() => { setClientEnEdition(null); setTelEdition(''); setConfirmerRetraitClient(false); }}
+                style={{ flex: 1, height: 48, borderRadius: 12, background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: T.textSub }}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleModifierTelephoneClient}
+                style={{ flex: 2, height: 48, borderRadius: 12, background: T.accent, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: 'white' }}
+              >
+                ✅ Enregistrer
+              </button>
+            </div>
+            {!confirmerRetraitClient ? (
+              <button
+                onClick={() => setConfirmerRetraitClient(true)}
+                style={{ width: '100%', height: 44, borderRadius: 12, background: T.redBg, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: T.red }}
+              >
+                Retirer ce client
+              </button>
+            ) : (
+              <div style={{ background: T.redBg, borderRadius: 12, padding: 14 }}>
+                <div style={{ fontSize: 12, color: T.red, fontWeight: 600, marginBottom: 10 }}>
+                  Retirer {clientEnEdition.nom} ? Ses ventes à crédit en cours resteront dans le Carnet - seuls ses achats comptant ne seront plus liés à son nom.
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    onClick={() => setConfirmerRetraitClient(false)}
+                    style={{ flex: 1, height: 40, borderRadius: 10, background: T.surface, border: `1px solid ${T.border}`, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: T.textSub }}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleRetirerClient}
+                    style={{ flex: 1, height: 40, borderRadius: 10, background: T.red, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'white' }}
+                  >
+                    Confirmer
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1137,26 +1225,42 @@ export default function VentesPage() {
                 </div>
               );
             }
+            const TOP_N = 10;
+            const visibles = voirTousClients ? liste : liste.slice(0, TOP_N);
+            const carteClient = (c: ClientFidele) => (
+              <div
+                key={c.tel || c.nom}
+                onClick={() => { setClientEnEdition(c); setTelEdition(c.tel ?? ''); setConfirmerRetraitClient(false); }}
+                style={{ background: T.surface, borderRadius: 14, padding: '12px 14px', border: `1px solid ${T.border}`, boxShadow: T.shadow, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+              >
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: T.text, marginBottom: 3 }}>{c.nom}</div>
+                  <div style={{ fontSize: 11, color: T.textMuted }}>
+                    {c.nombreAchats} achat{c.nombreAchats > 1 ? 's' : ''} · dernier le {new Date(c.dernierAchat).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                  </div>
+                  {c.tel && (
+                    <a href={`tel:${c.tel}`} onClick={e => e.stopPropagation()}
+                      style={{ fontSize: 12, color: T.accent, fontWeight: 600, textDecoration: 'none', display: 'inline-block', marginTop: 3 }}>
+                      📞 {c.tel}
+                    </a>
+                  )}
+                </div>
+                <div style={{ fontSize: 17, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>
+                  {fmtF(c.totalDepense)} {symbole}
+                </div>
+              </div>
+            );
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {liste.map(c => (
-                  <div key={c.tel || c.nom} style={{ background: T.surface, borderRadius: 14, padding: '12px 14px', border: `1px solid ${T.border}`, boxShadow: T.shadow, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontSize: 15, fontWeight: 800, color: T.text, marginBottom: 3 }}>{c.nom}</div>
-                      <div style={{ fontSize: 11, color: T.textMuted }}>
-                        {c.nombreAchats} achat{c.nombreAchats > 1 ? 's' : ''} · dernier le {new Date(c.dernierAchat).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                      </div>
-                      {c.tel && (
-                        <a href={`tel:${c.tel}`} style={{ fontSize: 12, color: T.accent, fontWeight: 600, textDecoration: 'none', display: 'inline-block', marginTop: 3 }}>
-                          📞 {c.tel}
-                        </a>
-                      )}
-                    </div>
-                    <div style={{ fontSize: 17, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>
-                      {fmtF(c.totalDepense)} {symbole}
-                    </div>
-                  </div>
-                ))}
+                {visibles.map(carteClient)}
+                {liste.length > TOP_N && (
+                  <button
+                    onClick={() => setVoirTousClients(v => !v)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: T.textMuted, padding: '8px 0', fontFamily: 'Manrope, sans-serif' }}
+                  >
+                    {voirTousClients ? 'Masquer' : `Voir les ${liste.length - TOP_N} autres clients`}
+                  </button>
+                )}
               </div>
             );
           })()}

@@ -6,6 +6,7 @@ export interface ClientFidele {
   nombreAchats: number;
   totalDepense: number;
   dernierAchat: number;
+  venteIds: string[];
 }
 
 function normaliserTel(tel: string): string {
@@ -71,6 +72,7 @@ export function clientsFideles(ventes: Vente[]): ClientFidele[] {
       existant.nombreAchats += 1;
       existant.totalDepense += v.total;
       existant.dernierAchat = Math.max(existant.dernierAchat, v.date);
+      existant.venteIds.push(v.id);
     } else {
       parCle.set(cle, {
         nom,
@@ -78,6 +80,7 @@ export function clientsFideles(ventes: Vente[]): ClientFidele[] {
         nombreAchats: 1,
         totalDepense: v.total,
         dernierAchat: v.date,
+        venteIds: [v.id],
       });
     }
   }
