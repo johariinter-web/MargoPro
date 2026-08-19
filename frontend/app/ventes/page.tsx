@@ -60,6 +60,7 @@ export default function VentesPage() {
   const [clientTel, setClientTel] = useState('');
   const [showClientOptionnel, setShowClientOptionnel] = useState(false);
   const [voirTousClients, setVoirTousClients] = useState(false);
+  const [triClients, setTriClients] = useState<'depense' | 'frequence'>('depense');
   const [clientEnEdition, setClientEnEdition] = useState<ClientFidele | null>(null);
   const [telEdition, setTelEdition] = useState('');
   const [confirmerRetraitClient, setConfirmerRetraitClient] = useState(false);
@@ -1235,8 +1236,8 @@ export default function VentesPage() {
           {!accesFonctionnalitesPremium ? (
             <AccesPremiumRequis titre="Clients fidèles" description="Vois qui achète le plus souvent chez toi, pour les récompenser." />
           ) : (() => {
-            const liste = clientsFideles(ventes);
-            if (liste.length === 0) {
+            const parDepense = clientsFideles(ventes);
+            if (parDepense.length === 0) {
               return (
                 <div style={{ textAlign: 'center', padding: '60px 0' }}>
                   <div style={{ fontSize: 40, marginBottom: 12 }}>🧑‍🤝‍🧑</div>
@@ -1245,6 +1246,9 @@ export default function VentesPage() {
                 </div>
               );
             }
+            const liste = triClients === 'frequence'
+              ? [...parDepense].sort((a, b) => b.nombreAchats - a.nombreAchats)
+              : parDepense;
             const TOP_N = 10;
             const visibles = voirTousClients ? liste : liste.slice(0, TOP_N);
             const carteClient = (c: ClientFidele) => (
@@ -1278,6 +1282,20 @@ export default function VentesPage() {
             );
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+                  <button
+                    onClick={() => setTriClients('depense')}
+                    style={{ height: 30, borderRadius: 20, padding: '0 12px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', background: triClients === 'depense' ? T.accent : T.bgSubtle, color: triClients === 'depense' ? 'white' : T.textSub }}
+                  >
+                    Plus dépensier
+                  </button>
+                  <button
+                    onClick={() => setTriClients('frequence')}
+                    style={{ height: 30, borderRadius: 20, padding: '0 12px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', background: triClients === 'frequence' ? T.accent : T.bgSubtle, color: triClients === 'frequence' ? 'white' : T.textSub }}
+                  >
+                    Plus fréquent
+                  </button>
+                </div>
                 {visibles.map(carteClient)}
                 {liste.length > TOP_N && (
                   <button
