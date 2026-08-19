@@ -508,7 +508,7 @@ export default function VentesPage() {
               type="tel"
               value={telEdition}
               onChange={e => setTelEdition(e.target.value)}
-              placeholder="Ex : 77 123 45 67"
+              placeholder="Ex : +229 77 123 45 67"
               style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 15, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box', marginBottom: 14 }}
             />
             <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
@@ -822,7 +822,7 @@ export default function VentesPage() {
                   type="tel"
                   value={clientTel}
                   onChange={e => setClientTel(e.target.value)}
-                  placeholder="Ex : 77 123 45 67"
+                  placeholder="Ex : +229 77 123 45 67"
                   style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }}
                 />
               </div>
@@ -872,7 +872,7 @@ export default function VentesPage() {
                       type="tel"
                       value={clientTel}
                       onChange={e => setClientTel(e.target.value)}
-                      placeholder="Ex : 77 123 45 67"
+                      placeholder="Ex : +229 77 123 45 67"
                       style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }}
                     />
                   </div>
