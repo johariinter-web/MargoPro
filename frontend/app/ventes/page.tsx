@@ -606,6 +606,12 @@ export default function VentesPage() {
           )}
         </button>
         <button
+          onClick={() => setOnglet('clients')}
+          style={{ flex: 1, height: 36, borderRadius: 10, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', background: onglet === 'clients' ? T.accent : T.bgSubtle, color: onglet === 'clients' ? 'white' : T.textSub }}
+        >
+          Clients
+        </button>
+        <button
           onClick={() => setOnglet('facture')}
           style={{ flex: 1, height: 36, borderRadius: 10, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', background: onglet === 'facture' ? T.accent : T.bgSubtle, color: onglet === 'facture' ? 'white' : T.textSub, position: 'relative' }}
         >
@@ -615,12 +621,6 @@ export default function VentesPage() {
               {facture.lignes.length}
             </span>
           )}
-        </button>
-        <button
-          onClick={() => setOnglet('clients')}
-          style={{ flex: 1, height: 36, borderRadius: 10, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', background: onglet === 'clients' ? T.accent : T.bgSubtle, color: onglet === 'clients' ? 'white' : T.textSub }}
-        >
-          Clients
         </button>
       </div>
 
