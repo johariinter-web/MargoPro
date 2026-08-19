@@ -173,11 +173,16 @@ export function useVentes(periode: Periode = 'jour') {
   // Retire un client de la liste des clients fidèles en effaçant son nom
   // sur ses ventes COMPTANT uniquement. Les ventes à crédit gardent leur
   // nom : le Carnet en a besoin pour savoir qui doit de l'argent.
+  // Double vérification (modeReglement ET montantRecu, jamais défini pour
+  // une vente comptant) pour se protéger d'un vieux cas de migration où
+  // modeReglement pouvait rester "comptant" par erreur sur un appareil
+  // resté longtemps hors ligne (voir sync.ts, cloudFixesCredit) - effacer
+  // le nom d'un vrai crédit casserait le suivi de dette dans le Carnet.
   async function retirerClientComptant(venteIds: string[]) {
     await db.transaction('rw', db.ventes, async () => {
       for (const id of venteIds) {
         const v = await db.ventes.get(id);
-        if (v && v.modeReglement !== 'credit') {
+        if (v && v.modeReglement !== 'credit' && v.montantRecu === undefined) {
           await db.ventes.update(id, { clientNom: undefined, clientTel: undefined, updatedAt: Date.now() });
         }
       }
