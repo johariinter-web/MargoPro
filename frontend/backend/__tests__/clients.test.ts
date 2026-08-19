@@ -103,4 +103,37 @@ describe('clientsFideles', () => {
   it('retourne un tableau vide pour aucune vente', () => {
     expect(clientsFideles([])).toEqual([]);
   });
+
+  it('fusionne une vente à crédit (avec téléphone) et une vente comptant du même client (sans téléphone)', () => {
+    const ventes = [
+      venteTest({ clientNom: 'Amira', clientTel: '77123456', total: 2000, modeReglement: 'credit' }),
+      venteTest({ clientNom: 'Amira', clientTel: undefined, total: 1000, modeReglement: 'comptant' }),
+    ];
+    const resultat = clientsFideles(ventes);
+    expect(resultat).toHaveLength(1);
+    expect(resultat[0].nombreAchats).toBe(2);
+    expect(resultat[0].totalDepense).toBe(3000);
+    expect(resultat[0].tel).toBe('77123456');
+  });
+
+  it('ne devine pas à qui rattacher une vente sans téléphone quand le nom a déjà 2 téléphones différents', () => {
+    const ventes = [
+      venteTest({ clientNom: 'Amira', clientTel: '111', total: 1000 }),
+      venteTest({ clientNom: 'Amira', clientTel: '222', total: 1000 }),
+      venteTest({ clientNom: 'Amira', clientTel: undefined, total: 500 }),
+    ];
+    const resultat = clientsFideles(ventes);
+    expect(resultat).toHaveLength(3);
+  });
+
+  it('regroupe le même téléphone écrit avec ou sans espaces', () => {
+    const ventes = [
+      venteTest({ clientNom: 'Amira', clientTel: '77 123 45 67', total: 1000 }),
+      venteTest({ clientNom: 'Amira', clientTel: '771234567', total: 500 }),
+    ];
+    const resultat = clientsFideles(ventes);
+    expect(resultat).toHaveLength(1);
+    expect(resultat[0].totalDepense).toBe(1500);
+    expect(resultat[0].tel).toBe('77 123 45 67');
+  });
 });

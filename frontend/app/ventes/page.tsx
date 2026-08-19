@@ -501,7 +501,12 @@ export default function VentesPage() {
           onClick={() => setOnglet('facture')}
           style={{ flex: 1, height: 36, borderRadius: 10, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', background: onglet === 'facture' ? T.accent : T.bgSubtle, color: onglet === 'facture' ? 'white' : T.textSub, position: 'relative' }}
         >
-          Facture{facture.lignes.length > 0 ? ` (${facture.lignes.length})` : ''}
+          Facture
+          {facture.lignes.length > 0 && (
+            <span style={{ position: 'absolute', top: -6, right: -6, background: '#EF4444', color: 'white', borderRadius: '50%', width: 18, height: 18, fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {facture.lignes.length}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setOnglet('clients')}
@@ -733,7 +738,10 @@ export default function VentesPage() {
             <div style={{ marginBottom: 12 }}>
               <button
                 type="button"
-                onClick={() => setShowClientOptionnel(v => !v)}
+                onClick={() => setShowClientOptionnel(v => {
+                  if (v) { setClientNom(''); setClientTel(''); }
+                  return !v;
+                })}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: T.accent, padding: '4px 0' }}
               >
                 {showClientOptionnel ? 'Masquer' : '+ Ajouter un client'}
