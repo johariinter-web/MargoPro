@@ -51,6 +51,7 @@ export default function MargesPage() {
   const [tab, setTab] = useState<TabMode>('%Marge');
   const [periodeVendeurs, setPeriodeVendeurs] = useState<Periode>('semaine');
   const [triVendeurs, setTriVendeurs] = useState<'quantite' | 'benefice'>('quantite');
+  const [voirTousVendeurs, setVoirTousVendeurs] = useState(false);
   const { ventes } = useVentes();
   const [prixAchat, setPrixAchat] = useState('');
   const [margePctStr, setMargePctStr] = useState('30');
@@ -520,7 +521,7 @@ export default function MargesPage() {
                   {PERIODES.map(p => (
                     <button
                       key={p.value}
-                      onClick={() => setPeriodeVendeurs(p.value)}
+                      onClick={() => { setPeriodeVendeurs(p.value); setVoirTousVendeurs(false); }}
                       style={{
                         height: 30, borderRadius: 20, padding: '0 12px', fontSize: 12, fontWeight: 600,
                         border: 'none', cursor: 'pointer', flexShrink: 0,
@@ -541,33 +542,47 @@ export default function MargesPage() {
                   <>
                     <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                       <button
-                        onClick={() => setTriVendeurs('quantite')}
+                        onClick={() => { setTriVendeurs('quantite'); setVoirTousVendeurs(false); }}
                         style={{ height: 30, borderRadius: 20, padding: '0 12px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', background: triVendeurs === 'quantite' ? T.accent : T.bgSubtle, color: triVendeurs === 'quantite' ? 'white' : T.textSub }}
                       >
                         Quantité vendue
                       </button>
                       <button
-                        onClick={() => setTriVendeurs('benefice')}
+                        onClick={() => { setTriVendeurs('benefice'); setVoirTousVendeurs(false); }}
                         style={{ height: 30, borderRadius: 20, padding: '0 12px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', background: triVendeurs === 'benefice' ? T.accent : T.bgSubtle, color: triVendeurs === 'benefice' ? 'white' : T.textSub }}
                       >
                         Bénéfice généré
                       </button>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {liste.map(p => (
-                        <div key={p.nom} style={{ background: T.surface, borderRadius: 14, padding: '12px 14px', border: `1px solid ${T.border}`, boxShadow: T.shadow, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <div style={{ fontSize: 15, fontWeight: 800, color: T.text, marginBottom: 3 }}>{p.nom}</div>
-                            <div style={{ fontSize: 11, color: T.textMuted }}>
-                              {p.quantiteVendue} vendu{p.quantiteVendue > 1 ? 's' : ''} · {fmtF(p.chiffreAffaires)} {symbole} de chiffre d&apos;affaires
+                    {(() => {
+                      const TOP_N = 10;
+                      const visibles = voirTousVendeurs ? liste : liste.slice(0, TOP_N);
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {visibles.map(p => (
+                            <div key={p.nom} style={{ background: T.surface, borderRadius: 14, padding: '12px 14px', border: `1px solid ${T.border}`, boxShadow: T.shadow, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div>
+                                <div style={{ fontSize: 15, fontWeight: 800, color: T.text, marginBottom: 3 }}>{p.nom}</div>
+                                <div style={{ fontSize: 11, color: T.textMuted }}>
+                                  {p.quantiteVendue} vendu{p.quantiteVendue > 1 ? 's' : ''} · {fmtF(p.chiffreAffaires)} {symbole} de chiffre d&apos;affaires
+                                </div>
+                              </div>
+                              <div style={{ fontSize: 17, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>
+                                {fmtF(p.benefice)} {symbole}
+                              </div>
                             </div>
-                          </div>
-                          <div style={{ fontSize: 17, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>
-                            {fmtF(p.benefice)} {symbole}
-                          </div>
+                          ))}
+                          {liste.length > TOP_N && (
+                            <button
+                              onClick={() => setVoirTousVendeurs(v => !v)}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: T.textMuted, padding: '8px 0', fontFamily: 'Manrope, sans-serif' }}
+                            >
+                              {voirTousVendeurs ? 'Masquer' : `Voir les ${liste.length - TOP_N} autres produits`}
+                            </button>
+                          )}
                         </div>
-                      ))}
-                    </div>
+                      );
+                    })()}
                   </>
                 )}
               </>
