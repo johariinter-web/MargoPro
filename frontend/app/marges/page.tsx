@@ -511,14 +511,6 @@ export default function MargesPage() {
           ) : (() => {
             const ventesPeriode = filtrerParPeriode(ventes, periodeVendeurs);
             const parQuantite = meilleursProduits(ventesPeriode);
-            if (parQuantite.length === 0) {
-              return (
-                <div style={{ textAlign: 'center', padding: '60px 0' }}>
-                  <div style={{ fontSize: 40, marginBottom: 12 }}>📦</div>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: T.textSub }}>Aucune vente sur cette période</div>
-                </div>
-              );
-            }
             const liste = triVendeurs === 'benefice'
               ? [...parQuantite].sort((a, b) => b.benefice - a.benefice)
               : parQuantite;
@@ -540,35 +532,44 @@ export default function MargesPage() {
                     </button>
                   ))}
                 </div>
-                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                  <button
-                    onClick={() => setTriVendeurs('quantite')}
-                    style={{ height: 30, borderRadius: 20, padding: '0 12px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', background: triVendeurs === 'quantite' ? T.accent : T.bgSubtle, color: triVendeurs === 'quantite' ? 'white' : T.textSub }}
-                  >
-                    Quantité vendue
-                  </button>
-                  <button
-                    onClick={() => setTriVendeurs('benefice')}
-                    style={{ height: 30, borderRadius: 20, padding: '0 12px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', background: triVendeurs === 'benefice' ? T.accent : T.bgSubtle, color: triVendeurs === 'benefice' ? 'white' : T.textSub }}
-                  >
-                    Bénéfice généré
-                  </button>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {liste.map(p => (
-                    <div key={p.nom} style={{ background: T.surface, borderRadius: 14, padding: '12px 14px', border: `1px solid ${T.border}`, boxShadow: T.shadow, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontSize: 15, fontWeight: 800, color: T.text, marginBottom: 3 }}>{p.nom}</div>
-                        <div style={{ fontSize: 11, color: T.textMuted }}>
-                          {p.quantiteVendue} vendu{p.quantiteVendue > 1 ? 's' : ''} · {fmtF(p.chiffreAffaires)} {symbole} de chiffre d&apos;affaires
-                        </div>
-                      </div>
-                      <div style={{ fontSize: 17, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>
-                        {fmtF(p.benefice)} {symbole}
-                      </div>
+                {liste.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '60px 0' }}>
+                    <div style={{ fontSize: 40, marginBottom: 12 }}>📦</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: T.textSub }}>Aucune vente sur cette période</div>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                      <button
+                        onClick={() => setTriVendeurs('quantite')}
+                        style={{ height: 30, borderRadius: 20, padding: '0 12px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', background: triVendeurs === 'quantite' ? T.accent : T.bgSubtle, color: triVendeurs === 'quantite' ? 'white' : T.textSub }}
+                      >
+                        Quantité vendue
+                      </button>
+                      <button
+                        onClick={() => setTriVendeurs('benefice')}
+                        style={{ height: 30, borderRadius: 20, padding: '0 12px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', background: triVendeurs === 'benefice' ? T.accent : T.bgSubtle, color: triVendeurs === 'benefice' ? 'white' : T.textSub }}
+                      >
+                        Bénéfice généré
+                      </button>
                     </div>
-                  ))}
-                </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {liste.map(p => (
+                        <div key={p.nom} style={{ background: T.surface, borderRadius: 14, padding: '12px 14px', border: `1px solid ${T.border}`, boxShadow: T.shadow, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <div style={{ fontSize: 15, fontWeight: 800, color: T.text, marginBottom: 3 }}>{p.nom}</div>
+                            <div style={{ fontSize: 11, color: T.textMuted }}>
+                              {p.quantiteVendue} vendu{p.quantiteVendue > 1 ? 's' : ''} · {fmtF(p.chiffreAffaires)} {symbole} de chiffre d&apos;affaires
+                            </div>
+                          </div>
+                          <div style={{ fontSize: 17, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>
+                            {fmtF(p.benefice)} {symbole}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </>
             );
           })()}
