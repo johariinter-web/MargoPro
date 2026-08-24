@@ -567,8 +567,15 @@ export default function MargesPage() {
                                   {p.quantiteVendue} vendu{p.quantiteVendue > 1 ? 's' : ''} · {fmtF(p.chiffreAffaires)} {symbole} de chiffre d&apos;affaires
                                 </div>
                               </div>
-                              <div style={{ fontSize: 17, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>
-                                {fmtF(p.benefice)} {symbole}
+                              <div style={{ textAlign: 'right' }}>
+                                <div style={{ fontSize: 17, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>
+                                  {fmtF(p.benefice)} {symbole}
+                                </div>
+                                {p.chiffreAffaires > 0 && (
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: T.green }}>
+                                    {Math.round(p.benefice / p.chiffreAffaires * 100)}% de marge
+                                  </div>
+                                )}
                               </div>
                             </div>
                           ))}
