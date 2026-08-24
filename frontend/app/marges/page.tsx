@@ -4,6 +4,11 @@ import { useState } from 'react';
 import { useStock } from '@/lib/hooks/useStock';
 import { useConfig } from '@/lib/hooks/useConfig';
 import { useColors } from '@/lib/hooks/useColors';
+import { useVentes } from '@/lib/hooks/useVentes';
+import { usePlan } from '@/lib/hooks/usePlan';
+import { meilleursProduits, filtrerParPeriode } from '@backend/ventes';
+import type { Periode } from '@backend/types';
+import { AccesPremiumRequis } from '@/components/AccesPremiumRequis';
 
 function fmtF(n: number) {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -29,13 +34,24 @@ function dessinerCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, dx:
   ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
 }
 
-type TabMode = '%Marge' | 'Pluriels' | 'Catalogue';
+type TabMode = '%Marge' | 'Pluriels' | 'Catalogue' | 'Meilleurs vendeurs';
+
+const PERIODES: { value: Periode; label: string }[] = [
+  { value: 'jour', label: "Aujourd'hui" },
+  { value: 'semaine', label: 'Semaine' },
+  { value: 'mois', label: 'Mois' },
+  { value: 'tout', label: 'Tout' },
+];
 
 export default function MargesPage() {
   const T = useColors();
   const { produits } = useStock();
   const { config } = useConfig();
+  const { accesFonctionnalitesPremium } = usePlan();
   const [tab, setTab] = useState<TabMode>('%Marge');
+  const [periodeVendeurs, setPeriodeVendeurs] = useState<Periode>('semaine');
+  const [triVendeurs, setTriVendeurs] = useState<'quantite' | 'benefice'>('quantite');
+  const { ventes } = useVentes();
   const [prixAchat, setPrixAchat] = useState('');
   const [margePctStr, setMargePctStr] = useState('30');
   const margePct = Math.min(1000, Math.max(0, Number(margePctStr) || 0));
@@ -199,7 +215,7 @@ export default function MargesPage() {
     : 0;
   const beneficeCalc = prixVenteCalc - prixAchatNum;
 
-  const tabs: TabMode[] = ['%Marge', 'Catalogue'];
+  const tabs: TabMode[] = ['%Marge', 'Meilleurs vendeurs', 'Catalogue'];
 
   return (
     <div style={{ minHeight: '100dvh', background: T.bg, paddingBottom: 90, fontFamily: 'Manrope, sans-serif' }}>
@@ -487,6 +503,77 @@ export default function MargesPage() {
           </div>
         );
       })()}
+
+      {tab === 'Meilleurs vendeurs' && (
+        <div style={{ padding: '0 16px' }}>
+          {!accesFonctionnalitesPremium ? (
+            <AccesPremiumRequis titre="Meilleurs vendeurs" description="Vois quels produits se vendent le plus, ou rapportent le plus." />
+          ) : (() => {
+            const ventesPeriode = filtrerParPeriode(ventes, periodeVendeurs);
+            const parQuantite = meilleursProduits(ventesPeriode);
+            if (parQuantite.length === 0) {
+              return (
+                <div style={{ textAlign: 'center', padding: '60px 0' }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>📦</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: T.textSub }}>Aucune vente sur cette période</div>
+                </div>
+              );
+            }
+            const liste = triVendeurs === 'benefice'
+              ? [...parQuantite].sort((a, b) => b.benefice - a.benefice)
+              : parQuantite;
+            return (
+              <>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 10, overflowX: 'auto', scrollbarWidth: 'none' }}>
+                  {PERIODES.map(p => (
+                    <button
+                      key={p.value}
+                      onClick={() => setPeriodeVendeurs(p.value)}
+                      style={{
+                        height: 30, borderRadius: 20, padding: '0 12px', fontSize: 12, fontWeight: 600,
+                        border: 'none', cursor: 'pointer', flexShrink: 0,
+                        background: periodeVendeurs === p.value ? T.accent : T.bgSubtle,
+                        color: periodeVendeurs === p.value ? 'white' : T.textSub,
+                      }}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                  <button
+                    onClick={() => setTriVendeurs('quantite')}
+                    style={{ height: 30, borderRadius: 20, padding: '0 12px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', background: triVendeurs === 'quantite' ? T.accent : T.bgSubtle, color: triVendeurs === 'quantite' ? 'white' : T.textSub }}
+                  >
+                    Quantité vendue
+                  </button>
+                  <button
+                    onClick={() => setTriVendeurs('benefice')}
+                    style={{ height: 30, borderRadius: 20, padding: '0 12px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', background: triVendeurs === 'benefice' ? T.accent : T.bgSubtle, color: triVendeurs === 'benefice' ? 'white' : T.textSub }}
+                  >
+                    Bénéfice généré
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {liste.map(p => (
+                    <div key={p.nom} style={{ background: T.surface, borderRadius: 14, padding: '12px 14px', border: `1px solid ${T.border}`, boxShadow: T.shadow, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: T.text, marginBottom: 3 }}>{p.nom}</div>
+                        <div style={{ fontSize: 11, color: T.textMuted }}>
+                          {p.quantiteVendue} vendu{p.quantiteVendue > 1 ? 's' : ''} · {fmtF(p.chiffreAffaires)} {symbole} de chiffre d&apos;affaires
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 17, fontWeight: 800, color: T.accent, fontFamily: '"Space Grotesk", sans-serif' }}>
+                        {fmtF(p.benefice)} {symbole}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      )}
 
       {tab === 'Catalogue' && (() => {
         const dispo = produits.filter(p => p.prixVente > 0);

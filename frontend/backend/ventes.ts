@@ -52,6 +52,31 @@ export function topProduits(ventes: Vente[], n: number = 3): Array<{ nom: string
     .slice(0, n);
 }
 
+export interface ProduitVendu {
+  nom: string;
+  quantiteVendue: number;
+  chiffreAffaires: number;
+  benefice: number;
+}
+
+/** Regroupe les ventes par produit pour reperer les meilleurs vendeurs -
+ *  quantite vendue et benefice genere, cote a cote. Un produit peut se
+ *  vendre beaucoup sans rapporter grand-chose, ou l'inverse. Trie par
+ *  quantite vendue par defaut (l'appelant peut retrier par benefice). */
+export function meilleursProduits(ventes: Vente[]): ProduitVendu[] {
+  const map = new Map<string, ProduitVendu>();
+  for (const v of ventes) {
+    const existing = map.get(v.produitId) ?? { nom: v.produitNom, quantiteVendue: 0, chiffreAffaires: 0, benefice: 0 };
+    map.set(v.produitId, {
+      nom: v.produitNom,
+      quantiteVendue: existing.quantiteVendue + v.quantite,
+      chiffreAffaires: existing.chiffreAffaires + v.total,
+      benefice: existing.benefice + v.benefice,
+    });
+  }
+  return Array.from(map.values()).sort((a, b) => b.quantiteVendue - a.quantiteVendue);
+}
+
 export function creerVente(
   produitId: string,
   produitNom: string,
