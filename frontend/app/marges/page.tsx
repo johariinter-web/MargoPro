@@ -573,7 +573,7 @@ export default function MargesPage() {
                                 </div>
                                 {p.chiffreAffaires > 0 && (
                                   <div style={{ fontSize: 11, fontWeight: 700, color: T.green }}>
-                                    {Math.round(p.benefice / p.chiffreAffaires * 100)}% de marge
+                                    {Math.round(p.benefice / p.chiffreAffaires * 100)}%
                                   </div>
                                 )}
                               </div>
