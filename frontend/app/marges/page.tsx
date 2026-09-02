@@ -217,7 +217,7 @@ export default function MargesPage() {
     : 0;
   const beneficeCalc = prixVenteCalc - prixAchatNum;
 
-  const tabs: TabMode[] = ['Prix de vente', 'Marge', 'Seuil de rentabilité', 'Meilleurs vendeurs', 'Catalogue'];
+  const tabs: TabMode[] = ['Prix de vente', 'Seuil de rentabilité', 'Marge', 'Meilleurs vendeurs', 'Catalogue'];
 
   return (
     <div style={{ minHeight: '100dvh', background: T.bg, paddingBottom: 90, fontFamily: 'Manrope, sans-serif' }}>
