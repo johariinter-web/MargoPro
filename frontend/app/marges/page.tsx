@@ -232,14 +232,14 @@ export default function MargesPage() {
 
       {/* TABS */}
       <div style={{ padding: '0 16px 10px' }}>
-        <div style={{ display: 'flex', background: T.bgSubtle, borderRadius: 12, padding: 3, gap: 2 }}>
+        <div style={{ display: 'flex', background: T.bgSubtle, borderRadius: 12, padding: 3, gap: 2, overflowX: 'auto', scrollbarWidth: 'none' }}>
           {tabs.map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
               style={{
-                flex: 1, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: 'none', cursor: 'pointer', borderRadius: 10,
+                flexShrink: 0, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: 'none', cursor: 'pointer', borderRadius: 10, padding: '0 14px',
                 fontSize: 11,
                 whiteSpace: 'nowrap',
                 fontWeight: tab === t ? 700 : 500,
