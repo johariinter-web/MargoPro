@@ -21,19 +21,23 @@ Nouvelle entité **Dépense**, même style que `Produit`/`Vente` (id, updatedAt,
 
 **Explicitement exclu :** l'achat de marchandise à revendre. C'est déjà compté via le `prixAchat` de chaque produit dans le calcul du bénéfice par vente (`Vente.benefice`) — l'inclure dans les dépenses compterait le même coût deux fois.
 
-### Emplacement
+### Emplacement et réorganisation des onglets
 
-Le sélecteur d'onglets de `frontend/app/marges/page.tsx` gagne un nouvel onglet **"Seuil de rentabilité"**, à côté de `%Marge` / `Pluriels` / `Catalogue`. Le journal de dépenses se gère depuis cet onglet (liste + formulaire d'ajout/édition/suppression, 3 champs).
+Le sélecteur d'onglets de `frontend/app/marges/page.tsx` passe de `%Marge` / `Pluriels` / `Catalogue` à **`Prix de vente`** / **`Marge`** / **`Seuil de rentabilité`** / `Pluriels` / `Catalogue` :
 
-Accès réservé Premium (`accesFonctionnalitesPremium` de `usePlan()`), cohérent avec Fournisseurs / Stock mort / Carnet / Packs / historique / Alertes.
+- **"Prix de vente"** (renommé depuis `%Marge`) : garde uniquement le calculateur existant (prix d'achat + marge souhaitée → prix de vente conseillé + bénéfice par unité), inchangé dans son fonctionnement — voir ajustement du plancher ci-dessous.
+- **"Marge"** (nouvel onglet) : la marge plancher, le repère de marché, et la liste des produits groupée par catégorie avec leur % (déplacée depuis l'ancien `%Marge`, inchangée sinon).
+- **"Seuil de rentabilité"** (nouvel onglet) : voir plus bas.
+
+`Pluriels` et `Catalogue` ne bougent pas.
+
+Accès réservé Premium (`accesFonctionnalitesPremium` de `usePlan()`) pour les onglets `Marge` et `Seuil de rentabilité`, cohérent avec Fournisseurs / Stock mort / Carnet / Packs / historique / Alertes. `Prix de vente`, `Pluriels` et `Catalogue` restent accessibles à tous (comme aujourd'hui).
 
 ### Période de référence
 
 Mois calendaire en cours (1er du mois à aujourd'hui), cohérent avec le "jour/semaine/mois" déjà utilisé ailleurs dans l'app (tableau de bord, ventes).
 
-### Onglet "%Marge" — ajouts
-
-Le calculateur existant (prix d'achat → prix de vente conseillé + bénéfice par unité) ne change pas dans son fonctionnement. Deux ajouts au-dessus :
+### Onglet "Marge" — contenu
 
 **Marge plancher.** Calculée à partir des vraies données du mois en cours :
 ```
@@ -41,11 +45,19 @@ marge plancher (%) = (charges du mois / CA du mois) × 100
 ```
 Affichée en rouge/orange, avec un message explicite : *"En dessous de X%, tu ne gagnes rien une fois tes charges payées."* Ce n'est pas un objectif, c'est un seuil de survie — le message doit le dire clairement pour ne pas laisser croire que l'atteindre suffit.
 
-Si le produit/la marge saisie dans le calculateur est en dessous du plancher, le résultat (bloc "Prix de vente conseillé / Bénéfice par unité") affiche l'alerte. Dans la liste des produits groupée par catégorie, les produits dont le `pct` est sous le plancher sont mis en évidence avec le même code couleur rouge déjà utilisé (actuellement basé sur un seuil fixe de 25% — à remplacer par le plancher calculé).
+Dans la liste des produits groupée par catégorie (déplacée ici depuis l'ancien `%Marge`), les produits dont le `pct` est sous le plancher sont mis en évidence avec le même code couleur rouge déjà utilisé (actuellement basé sur un seuil fixe de 25% — à remplacer par le plancher calculé).
 
 **Repère de marché (secondaire, informatif).** Un petit texte fixe, sans calcul, pour aider à juger sans imposer un chiffre : *"💡 Repère : produits courants x1,3 à x2 le prix d'achat, produits à forte valeur (cosmétique, habillement...) x3 à x5."* Affiché en dessous du plancher, plus discret — le plancher (propre aux vraies charges de la boutique) reste l'info principale.
 
-**Pas assez de données.** Si le CA du mois en cours est à 0 (aucune vente ce mois), le plancher ne peut pas être calculé : afficher *"Pas encore assez de ventes ce mois pour calculer ta marge plancher."* à la place, calculateur et repère de marché restent utilisables normalement.
+**Pas assez de données.** Si le CA du mois en cours est à 0 (aucune vente ce mois), le plancher ne peut pas être calculé : afficher *"Pas encore assez de ventes ce mois pour calculer ta marge plancher."* à la place, le repère de marché et la liste des produits restent visibles.
+
+### Onglet "Prix de vente" — ajustement lié au plancher
+
+Le calculateur reste gratuit et fonctionne comme aujourd'hui, mais se connecte au plancher calculé dans l'onglet "Marge" (même si le plancher lui-même est une info Premium, l'utiliser ici pour guider un prix reste accessible à tous — cohérent avec le fait que ce calculateur est déjà en accès libre) :
+
+- Le champ "Marge souhaitée" se **pré-remplit avec le plancher** au lieu du 30% fixe actuel dès qu'un plancher est disponible (sinon le défaut 30% actuel reste utilisé — utilisateur gratuit, ou pas encore assez de données de ventes)
+- Si la marge saisie descend sous le plancher, le bloc résultat affiche l'alerte rouge déjà définie ci-dessus, directement là où l'utilisateur fixe son prix
+- Reste modifiable librement — c'est un point de départ informé, pas une valeur imposée
 
 ### Onglet "Seuil de rentabilité" — contenu
 
@@ -69,7 +81,8 @@ Si le produit/la marge saisie dans le calculateur est en dessous du plancher, le
 - Nouvelle table Supabase `depenses` avec RLS `user_id = auth.uid()`, migration SQL à exécuter par Juanita
 - Extension de `lib/sync.ts` (mappers + push/pull, non-fatal try/catch) pour cette table, suivant exactement le pattern de `packs`/`fournisseurs`
 - `clearLocalData()` (`frontend/lib/db.ts`) doit aussi vider `depenses`
-- Le seuil "produit en dessous du plancher" dans la liste `%Marge` remplace le seuil fixe actuel de 25% (`catOk`/`isGood` dans `marges/page.tsx`) par le plancher calculé — pas de nouveau composant, juste la valeur de comparaison qui change
+- Le seuil "produit en dessous du plancher" dans la liste de l'onglet `Marge` remplace le seuil fixe actuel de 25% (`catOk`/`isGood` dans `marges/page.tsx`) par le plancher calculé — pas de nouveau composant, juste la valeur de comparaison qui change
+- Accès Premium géré par onglet, pas par la page entière : `Prix de vente` reste ouvert à tous (comme le `%Marge` actuel), `Marge` et `Seuil de rentabilité` vérifient `accesFonctionnalitesPremium`
 
 ## Hors scope (pour l'instant)
 
