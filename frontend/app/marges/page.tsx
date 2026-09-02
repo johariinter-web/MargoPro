@@ -6,9 +6,13 @@ import { useConfig } from '@/lib/hooks/useConfig';
 import { useColors } from '@/lib/hooks/useColors';
 import { useVentes } from '@/lib/hooks/useVentes';
 import { usePlan } from '@/lib/hooks/usePlan';
-import { meilleursProduits, filtrerParPeriode } from '@backend/ventes';
+import { useDepenses } from '@/lib/hooks/useDepenses';
+import { meilleursProduits, filtrerParPeriode, calculerStats } from '@backend/ventes';
+import { depensesDuMois, totalDepenses, margePlancher, coefficientDepuisPlancher } from '@backend/depenses';
 import type { Periode } from '@backend/types';
 import { AccesPremiumRequis } from '@/components/AccesPremiumRequis';
+import { MargeTab } from '@/components/MargeTab';
+import { SeuilRentabilite } from '@/components/SeuilRentabilite';
 
 function fmtF(n: number) {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -34,7 +38,7 @@ function dessinerCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, dx:
   ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
 }
 
-type TabMode = '%Marge' | 'Pluriels' | 'Catalogue' | 'Meilleurs vendeurs';
+type TabMode = 'Prix de vente' | 'Marge' | 'Seuil de rentabilité' | 'Pluriels' | 'Catalogue' | 'Meilleurs vendeurs';
 
 const PERIODES: { value: Periode; label: string }[] = [
   { value: 'jour', label: "Aujourd'hui" },
@@ -48,21 +52,27 @@ export default function MargesPage() {
   const { produits } = useStock();
   const { config } = useConfig();
   const { accesFonctionnalitesPremium } = usePlan();
-  const [tab, setTab] = useState<TabMode>('%Marge');
+  const { depenses } = useDepenses();
+  const [tab, setTab] = useState<TabMode>('Prix de vente');
   const [periodeVendeurs, setPeriodeVendeurs] = useState<Periode>('semaine');
   const [triVendeurs, setTriVendeurs] = useState<'quantite' | 'benefice'>('quantite');
   const [voirTousVendeurs, setVoirTousVendeurs] = useState(false);
   const { ventes } = useVentes();
   const [prixAchat, setPrixAchat] = useState('');
-  const [margePctStr, setMargePctStr] = useState('30');
-  const margePct = Math.min(1000, Math.max(0, Number(margePctStr) || 0));
+  const [margePctOverride, setMargePctOverride] = useState<string | null>(null);
   const [simProduitId, setSimProduitId] = useState('');
   const [simQte, setSimQte] = useState('');
   const [simPrixGros, setSimPrixGros] = useState('');
-  const [catsOuvertes, setCatsOuvertes] = useState<Record<string, boolean>>({});
   const [catalogueMsg, setCatalogueMsg] = useState('');
   const [genEnCours, setGenEnCours] = useState(false);
   const [produitVitrine, setProduitVitrine] = useState<typeof produits[number] | null>(null);
+
+  const statsMoisCourant = calculerStats(ventes, 'mois');
+  const chargesDuMoisCourant = totalDepenses(depensesDuMois(depenses));
+  const plancherPct = margePlancher(chargesDuMoisCourant, statsMoisCourant.chiffreAffaires);
+  const plancherCoefficient = plancherPct !== null ? coefficientDepuisPlancher(plancherPct) : null;
+  const margePctStr = margePctOverride ?? (plancherCoefficient !== null ? String(plancherCoefficient) : '30');
+  const margePct = Math.min(1000, Math.max(0, Number(margePctStr) || 0));
 
   const symbole = config?.symboleDevise ?? 'FCFA';
 
@@ -201,22 +211,13 @@ export default function MargesPage() {
     setGenEnCours(false);
   }
 
-  const produitsAvecMarges = produits.map(p => ({
-    ...p,
-    pct: p.prixVente > 0 ? Math.round((p.prixVente - p.prixAchat) / p.prixVente * 100) : 0,
-  })).sort((a, b) => b.pct - a.pct);
-
-  const avgPct = produitsAvecMarges.length > 0
-    ? Math.round(produitsAvecMarges.reduce((s, p) => s + p.pct, 0) / produitsAvecMarges.length)
-    : 0;
-
   const prixAchatNum = parseFloat(prixAchat) || 0;
   const prixVenteCalc = prixAchatNum > 0
     ? Math.round(prixAchatNum * (1 + margePct / 100))
     : 0;
   const beneficeCalc = prixVenteCalc - prixAchatNum;
 
-  const tabs: TabMode[] = ['%Marge', 'Meilleurs vendeurs', 'Catalogue'];
+  const tabs: TabMode[] = ['Prix de vente', 'Marge', 'Seuil de rentabilité', 'Meilleurs vendeurs', 'Catalogue'];
 
   return (
     <div style={{ minHeight: '100dvh', background: T.bg, paddingBottom: 90, fontFamily: 'Manrope, sans-serif' }}>
@@ -254,78 +255,77 @@ export default function MargesPage() {
         </div>
       </div>
 
-      {tab === '%Marge' && (
-        <>
-          {/* CALCULATOR (en premier) */}
-          <div style={{ margin: '0 16px 16px', background: T.surface, borderRadius: 20, padding: 16, boxShadow: T.shadow }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, letterSpacing: '0.6px', textTransform: 'uppercase', marginBottom: 12 }}>
-              Calculateur
-            </div>
+      {tab === 'Prix de vente' && (
+        <div style={{ margin: '0 16px 16px', background: T.surface, borderRadius: 20, padding: 16, boxShadow: T.shadow }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, letterSpacing: '0.6px', textTransform: 'uppercase', marginBottom: 12 }}>
+            Calculateur
+          </div>
 
-            {/* Prix d'achat */}
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: T.textSub, marginBottom: 8 }}>
-                Prix d&apos;achat ({symbole})
-              </div>
-              <div style={{ background: T.bgSubtle, borderRadius: 12, padding: '12px 16px' }}>
+          {/* Prix d'achat */}
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: T.textSub, marginBottom: 8 }}>
+              Prix d&apos;achat ({symbole})
+            </div>
+            <div style={{ background: T.bgSubtle, borderRadius: 12, padding: '12px 16px' }}>
+              <input
+                type="number" onWheel={e => e.currentTarget.blur()} onFocus={e => e.target.select()}
+                value={prixAchat}
+                onChange={e => setPrixAchat(e.target.value)}
+                placeholder="0"
+                min="0"
+                style={{
+                  width: '100%', border: 'none', background: 'transparent',
+                  fontSize: 28, fontWeight: 800, color: T.text,
+                  outline: 'none', fontFamily: '"Space Grotesk", sans-serif',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Marge souhaitée */}
+          <div style={{ marginBottom: prixVenteCalc > 0 ? 14 : 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: T.textSub }}>Marge souhaitée</div>
+              <div style={{
+                background: T.bgSubtle, borderRadius: 10, padding: '6px 12px',
+                display: 'flex', alignItems: 'center', gap: 3,
+              }}>
                 <input
                   type="number" onWheel={e => e.currentTarget.blur()} onFocus={e => e.target.select()}
-                  value={prixAchat}
-                  onChange={e => setPrixAchat(e.target.value)}
-                  placeholder="0"
-                  min="0"
+                  min={0}
+                  max={1000}
+                  value={margePctStr}
+                  onChange={e => setMargePctOverride(e.target.value)}
                   style={{
-                    width: '100%', border: 'none', background: 'transparent',
-                    fontSize: 28, fontWeight: 800, color: T.text,
-                    outline: 'none', fontFamily: '"Space Grotesk", sans-serif',
-                    boxSizing: 'border-box',
+                    width: 52, border: 'none', background: 'transparent',
+                    fontSize: 16, fontWeight: 800, color: T.accent,
+                    fontFamily: '"Space Grotesk", sans-serif',
+                    outline: 'none', textAlign: 'right',
                   }}
                 />
+                <span style={{ fontSize: 13, fontWeight: 700, color: T.accent }}>%</span>
               </div>
             </div>
-
-            {/* Marge souhaitée */}
-            <div style={{ marginBottom: prixVenteCalc > 0 ? 14 : 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: T.textSub }}>Marge souhaitée</div>
-                <div style={{
-                  background: T.bgSubtle, borderRadius: 10, padding: '6px 12px',
-                  display: 'flex', alignItems: 'center', gap: 3,
-                }}>
-                  <input
-                    type="number" onWheel={e => e.currentTarget.blur()} onFocus={e => e.target.select()}
-                    min={0}
-                    max={1000}
-                    value={margePctStr}
-                    onChange={e => setMargePctStr(e.target.value)}
-                    style={{
-                      width: 52, border: 'none', background: 'transparent',
-                      fontSize: 16, fontWeight: 800, color: T.accent,
-                      fontFamily: '"Space Grotesk", sans-serif',
-                      outline: 'none', textAlign: 'right',
-                    }}
-                  />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: T.accent }}>%</span>
-                </div>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={1000}
-                value={margePct}
-                onChange={e => setMargePctStr(e.target.value)}
-                style={{ width: '100%', accentColor: T.accent }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: T.textMuted, marginTop: 4 }}>
-                <span>0%</span>
-                <span>250%</span>
-                <span>500%</span>
-                <span>1000%+</span>
-              </div>
+            <input
+              type="range"
+              min={0}
+              max={1000}
+              value={margePct}
+              onChange={e => setMargePctOverride(e.target.value)}
+              style={{ width: '100%', accentColor: T.accent }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: T.textMuted, marginTop: 4 }}>
+              <span>0%</span>
+              <span>250%</span>
+              <span>500%</span>
+              <span>1000%+</span>
             </div>
+          </div>
 
-            {/* Résultat */}
-            {prixVenteCalc > 0 && (
+          {/* Résultat */}
+          {prixVenteCalc > 0 && (
+            <>
               <div style={{ background: T.accentLight, borderRadius: 14, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: T.textSub }}>Prix de vente conseillé</div>
@@ -340,89 +340,19 @@ export default function MargesPage() {
                   </div>
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* LISTE GROUPÉE PAR CATÉGORIE */}
-          {produitsAvecMarges.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 0' }}>
-              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" style={{ margin: '0 auto 12px', display: 'block' }}>
-                <path d="M3 3v18h18" stroke={T.textMuted} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M7 14l3-3 3 3 4-5" stroke={T.accent} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <div style={{ fontSize: 16, fontWeight: 600, color: T.textSub }}>Aucun produit à analyser</div>
-              <div style={{ fontSize: 13, color: T.textMuted, marginTop: 6 }}>Ajoutez des produits dans l&apos;onglet Stock</div>
-            </div>
-          ) : (() => {
-            // Regroupement des produits par catégorie (un seul niveau)
-            const groupes = new Map<string, typeof produitsAvecMarges>();
-            for (const p of produitsAvecMarges) {
-              const cle = p.categorie?.trim() || 'Sans catégorie';
-              if (!groupes.has(cle)) groupes.set(cle, []);
-              groupes.get(cle)!.push(p);
-            }
-            const listeGroupes = Array.from(groupes.entries()).sort((a, b) => {
-              if (a[0] === 'Sans catégorie') return 1;
-              if (b[0] === 'Sans catégorie') return -1;
-              return a[0].localeCompare(b[0]);
-            });
-            return (
-              <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {listeGroupes.map(([cat, items]) => {
-                  const ouvert = catsOuvertes[cat] ?? false;
-                  const moyenneCat = Math.round(items.reduce((s, p) => s + p.pct, 0) / items.length);
-                  const catOk = moyenneCat >= 25;
-                  return (
-                    <div key={cat} style={{ background: T.surface, borderRadius: 16, boxShadow: T.shadow, overflow: 'hidden' }}>
-                      {/* En-tête repliable */}
-                      <button onClick={() => setCatsOuvertes(o => ({ ...o, [cat]: !ouvert }))}
-                        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'Manrope, sans-serif' }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, transform: ouvert ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>
-                          <path d="M9 6l6 6-6 6" stroke={T.textSub} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                        <span style={{ flex: 1, textAlign: 'left', fontSize: 15, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cat}</span>
-                        <span style={{ fontSize: 12, color: T.textMuted }}>{items.length} produit{items.length > 1 ? 's' : ''}</span>
-                        <span style={{ background: catOk ? T.greenBg : T.redBg, color: catOk ? T.green : T.red, fontSize: 12, fontWeight: 700, borderRadius: 20, padding: '3px 8px', fontFamily: '"Space Grotesk", sans-serif', flexShrink: 0 }}>
-                          {moyenneCat}%
-                        </span>
-                      </button>
-
-                      {/* Produits de la catégorie */}
-                      {ouvert && (
-                        <div style={{ padding: '0 14px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          {items.map(p => {
-                            const isGood = p.pct >= 25;
-                            const delta = p.pct - avgPct;
-                            return (
-                              <div key={p.id} style={{ background: T.bgSubtle, borderRadius: 12, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <div style={{ width: 46, height: 46, borderRadius: 12, flexShrink: 0, background: isGood ? T.greenBg : T.redBg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                  <span style={{ fontSize: 18, fontWeight: 800, color: isGood ? T.green : T.red, fontFamily: '"Space Grotesk", sans-serif', lineHeight: 1 }}>{p.pct}</span>
-                                  <span style={{ fontSize: 9, fontWeight: 700, color: isGood ? T.green : T.red }}>%</span>
-                                </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ fontSize: 14, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nom}</div>
-                                  <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2, fontFamily: '"Space Grotesk", sans-serif' }}>
-                                    {fmtF(p.prixVente)} {symbole} · {p.quantite} unités
-                                  </div>
-                                </div>
-                                {delta !== 0 && (
-                                  <span style={{ fontSize: 12, fontWeight: 700, color: delta > 0 ? T.green : T.red, fontFamily: '"Space Grotesk", sans-serif', flexShrink: 0 }}>
-                                    {delta > 0 ? '+' : ''}{delta}%
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
-        </>
+              {plancherPct !== null && plancherCoefficient !== null && margePct < plancherCoefficient && (
+                <div style={{ marginTop: 10, background: T.redBg, borderRadius: 12, padding: '10px 14px', fontSize: 12, fontWeight: 600, color: T.red, lineHeight: 1.5 }}>
+                  En dessous de {plancherPct}%, tu ne gagnes rien une fois tes charges payées.
+                </div>
+              )}
+            </>
+          )}
+        </div>
       )}
+
+      {tab === 'Marge' && <MargeTab />}
+
+      {tab === 'Seuil de rentabilité' && <SeuilRentabilite />}
 
       {tab === 'Pluriels' && (() => {
         const simProduit = produits.find(p => p.id === simProduitId);
