@@ -58,6 +58,13 @@ describe('depensesDuMois', () => {
     const moisDernier = creerDepense({ id: 'd3', date: new Date(2026, 7, 31).getTime() });
     expect(depensesDuMois([cetteMois, cetteMoisAussi, moisDernier], now)).toEqual([cetteMois, cetteMoisAussi]);
   });
+
+  it('exclut une dépense datée du mois suivant', () => {
+    const now = new Date(2026, 8, 15).getTime(); // 15 septembre 2026
+    const cetteMois = creerDepense({ id: 'd1', date: now });
+    const moisSuivant = creerDepense({ id: 'd2', date: new Date(2026, 9, 1).getTime() });
+    expect(depensesDuMois([cetteMois, moisSuivant], now)).toEqual([cetteMois]);
+  });
 });
 
 describe('totalDepenses', () => {
@@ -90,6 +97,10 @@ describe('margePlancher', () => {
 
   it('retourne null si le CA du mois est à 0', () => {
     expect(margePlancher(70000, 0)).toBeNull();
+  });
+
+  it('retourne null si les charges du mois sont à 0, même avec du CA', () => {
+    expect(margePlancher(0, 500000)).toBeNull();
   });
 });
 

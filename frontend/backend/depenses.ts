@@ -12,9 +12,15 @@ function debutMois(now: number): number {
   return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
 }
 
+function debutMoisSuivant(now: number): number {
+  const d = new Date(now);
+  return new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
+}
+
 export function depensesDuMois(depenses: Depense[], now: number = Date.now()): Depense[] {
   const debut = debutMois(now);
-  return depenses.filter((d) => d.date >= debut);
+  const finExclusive = debutMoisSuivant(now);
+  return depenses.filter((d) => d.date >= debut && d.date < finExclusive);
 }
 
 export function totalDepenses(depenses: Depense[]): number {
@@ -28,7 +34,7 @@ export function joursRestantsDansLeMois(now: number = Date.now()): number {
 }
 
 export function margePlancher(chargesDuMois: number, caDuMois: number): number | null {
-  if (caDuMois <= 0) return null;
+  if (caDuMois <= 0 || chargesDuMois <= 0) return null;
   return Math.round((chargesDuMois / caDuMois) * 1000) / 10;
 }
 

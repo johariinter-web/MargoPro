@@ -342,7 +342,7 @@ export default function MargesPage() {
               </div>
               {plancherPct !== null && plancherCoefficient !== null && margePct < plancherCoefficient && (
                 <div style={{ marginTop: 10, background: T.redBg, borderRadius: 12, padding: '10px 14px', fontSize: 12, fontWeight: 600, color: T.red, lineHeight: 1.5 }}>
-                  En dessous de {plancherPct}%, tu ne gagnes rien une fois tes charges payées.
+                  En dessous de {plancherCoefficient}% de marge sur le prix d&apos;achat, tu ne gagnes rien une fois tes charges payées.
                 </div>
               )}
             </>

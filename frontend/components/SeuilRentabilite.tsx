@@ -40,6 +40,7 @@ export function SeuilRentabilite() {
   const [champs, setChamps] = useState(champsVides());
   const [erreur, setErreur] = useState('');
   const [depenseEnEdition, setDepenseEnEdition] = useState<Depense | null>(null);
+  const [confirmerSuppression, setConfirmerSuppression] = useState(false);
 
   if (!accesFonctionnalitesPremium) {
     return (
@@ -71,6 +72,7 @@ export function SeuilRentabilite() {
     setErreur('');
     setDepenseEnEdition(d);
     setChamps({ nom: d.nom, montant: String(d.montant), date: dateInputValue(d.date) });
+    setConfirmerSuppression(false);
   }
 
   async function handleModifier() {
@@ -84,6 +86,7 @@ export function SeuilRentabilite() {
     if (err) { setErreur(err); return; }
     setDepenseEnEdition(null);
     setChamps(champsVides());
+    setConfirmerSuppression(false);
   }
 
   const inputStyle = {
@@ -101,7 +104,7 @@ export function SeuilRentabilite() {
             Charges du mois
           </div>
           <button
-            onClick={() => { setDepenseEnEdition(null); setChamps(champsVides()); setShowForm(true); }}
+            onClick={() => { setDepenseEnEdition(null); setChamps(champsVides()); setShowForm(true); setConfirmerSuppression(false); }}
             style={{ height: 32, padding: '0 12px', borderRadius: 8, background: T.accentLight, color: T.accent, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'Manrope, sans-serif' }}
           >
             + Dépense
@@ -128,11 +131,11 @@ export function SeuilRentabilite() {
             </div>
             <div style={{ marginBottom: 12 }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Date</label>
-              <input type="date" value={champs.date} onChange={e => setChamps(c => ({ ...c, date: e.target.value }))} style={inputStyle} />
+              <input type="date" value={champs.date} onChange={e => setChamps(c => ({ ...c, date: e.target.value }))} max={dateInputValue(Date.now())} style={inputStyle} />
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button
-                onClick={() => { setShowForm(false); setDepenseEnEdition(null); setErreur(''); }}
+                onClick={() => { setShowForm(false); setDepenseEnEdition(null); setErreur(''); setConfirmerSuppression(false); }}
                 style={{ flex: 1, height: 44, borderRadius: 12, background: T.surface, border: `1.5px solid ${T.border}`, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: T.textSub, fontFamily: 'Manrope, sans-serif' }}
               >
                 Annuler
@@ -145,12 +148,29 @@ export function SeuilRentabilite() {
               </button>
             </div>
             {depenseEnEdition && (
-              <button
-                onClick={() => { supprimerDepense(depenseEnEdition.id); setDepenseEnEdition(null); setChamps(champsVides()); }}
-                style={{ width: '100%', height: 40, marginTop: 8, borderRadius: 12, background: 'none', border: `1.5px solid ${T.border}`, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: T.textMuted, fontFamily: 'Manrope, sans-serif' }}
-              >
-                Supprimer cette dépense
-              </button>
+              confirmerSuppression ? (
+                <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+                  <button
+                    onClick={() => setConfirmerSuppression(false)}
+                    style={{ flex: 1, height: 40, borderRadius: 12, background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: T.textSub, fontFamily: 'Manrope, sans-serif' }}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={() => { supprimerDepense(depenseEnEdition.id); setDepenseEnEdition(null); setChamps(champsVides()); setConfirmerSuppression(false); }}
+                    style={{ flex: 2, height: 40, borderRadius: 12, background: T.redBg, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: T.red, fontFamily: 'Manrope, sans-serif' }}
+                  >
+                    Confirmer la suppression
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmerSuppression(true)}
+                  style={{ width: '100%', height: 40, marginTop: 8, borderRadius: 12, background: 'none', border: `1.5px solid ${T.border}`, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: T.textMuted, fontFamily: 'Manrope, sans-serif' }}
+                >
+                  Supprimer cette dépense
+                </button>
+              )
             )}
           </div>
         )}

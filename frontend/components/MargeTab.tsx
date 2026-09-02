@@ -57,7 +57,9 @@ export function MargeTab() {
         </div>
         {plancherPct === null ? (
           <div style={{ fontSize: 13, color: T.textMuted }}>
-            Pas encore assez de ventes ce mois pour calculer ta marge plancher.
+            {stats.chiffreAffaires > 0 && chargesDuMois === 0
+              ? 'Ajoute tes charges pour connaître ta marge plancher.'
+              : 'Pas encore assez de ventes ce mois pour calculer ta marge plancher.'}
           </div>
         ) : (
           <>
