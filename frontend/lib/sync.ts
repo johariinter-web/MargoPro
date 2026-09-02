@@ -2,7 +2,7 @@
 
 import { db } from './db';
 import { createClient } from './supabase/client';
-import type { Produit, Vente, Config, Pack, Fournisseur, Commande } from '@backend/types';
+import type { Produit, Vente, Config, Pack, Fournisseur, Commande, Depense } from '@backend/types';
 import { uploadPhoto, supprimerPhoto, downloadPhoto, peutSyncerPhotos } from './photoSync';
 
 // =====================================================================
@@ -319,6 +319,42 @@ function rowToCommande(r: CommandeRow): Commande {
   };
 }
 
+type DepenseRow = {
+  id: string;
+  user_id: string;
+  nom: string;
+  montant: number;
+  date: number;
+  created_at: number;
+  updated_at: number;
+  deleted: boolean;
+};
+
+function depenseToRow(d: Depense, userId: string): DepenseRow {
+  return {
+    id: d.id,
+    user_id: userId,
+    nom: d.nom,
+    montant: d.montant,
+    date: d.date,
+    created_at: d.createdAt ?? Date.now(),
+    updated_at: d.updatedAt ?? Date.now(),
+    deleted: d.deleted ?? false,
+  };
+}
+
+function rowToDepense(r: DepenseRow): Depense {
+  return {
+    id: r.id,
+    nom: r.nom,
+    montant: Number(r.montant),
+    date: Number(r.date),
+    createdAt: Number(r.created_at),
+    updatedAt: Number(r.updated_at),
+    deleted: r.deleted ?? false,
+  };
+}
+
 // ---------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------
@@ -496,6 +532,25 @@ async function pull(userId: string): Promise<void> {
   } catch (err) {
     console.warn('[sync] pull commandes ignoré :', err);
   }
+
+  // --- depenses (non-fatal : si la table n'existe pas encore, on continue) ---
+  try {
+    const { data: depensesRows, error: depErr } = await supabase
+      .from('depenses')
+      .select('*')
+      .eq('user_id', userId);
+    if (depErr) throw depErr;
+
+    for (const row of (depensesRows ?? []) as DepenseRow[]) {
+      const remote = rowToDepense(row);
+      const local = await db.depenses.get(remote.id);
+      if (!local || remote.updatedAt > (local.updatedAt ?? 0)) {
+        await db.depenses.put(remote);
+      }
+    }
+  } catch (err) {
+    console.warn('[sync] pull depenses ignoré :', err);
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -596,6 +651,18 @@ async function push(userId: string): Promise<void> {
     }
   } catch (err) {
     console.warn('[sync] push commandes ignoré :', err);
+  }
+
+  // --- depenses (non-fatal : si la table n'existe pas encore, on continue) ---
+  try {
+    const depenses = await db.depenses.toArray();
+    if (depenses.length > 0) {
+      const rows = depenses.map((d) => depenseToRow(d, userId));
+      const { error } = await supabase.from('depenses').upsert(rows, { onConflict: 'id' });
+      if (error) throw error;
+    }
+  } catch (err) {
+    console.warn('[sync] push depenses ignoré :', err);
   }
 }
 
