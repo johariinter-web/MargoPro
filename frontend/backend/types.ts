@@ -92,3 +92,13 @@ export interface Commande {
   updatedAt: number;
   deleted?: boolean;
 }
+
+export interface Depense {
+  id: string;
+  nom: string;
+  montant: number;
+  date: number;
+  createdAt: number;
+  updatedAt: number;
+  deleted?: boolean;
+}
