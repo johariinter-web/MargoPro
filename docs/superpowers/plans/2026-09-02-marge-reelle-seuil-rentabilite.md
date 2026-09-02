@@ -1048,44 +1048,71 @@ Note : ce composant n'est pas encore monté nulle part (Task 6) — le test manu
 **Files:**
 - Modify: `frontend/app/marges/page.tsx`
 
+**Note de mise à jour (constat pré-vol) :** ce fichier a évolué depuis l'écriture initiale de ce plan — l'onglet "Meilleurs vendeurs" (avec `useVentes`, `usePlan`, `PERIODES`, etc.) a été ajouté entre-temps sur la branche réelle. Les étapes ci-dessous ont été corrigées pour refléter le fichier tel qu'il existe réellement (vérifié dans le worktree avant dispatch). Ne pas re-déduire ces blocs depuis une version plus ancienne du fichier.
+
 **Interfaces:**
-- Consumes: `MargeTab` de `@/components/MargeTab` (Task 4) ; `SeuilRentabilite` de `@/components/SeuilRentabilite` (Task 5) ; `useDepenses` de `@/lib/hooks/useDepenses` (Task 3) ; `useVentes` de `@/lib/hooks/useVentes` (déjà existant) ; `depensesDuMois`, `totalDepenses`, `margePlancher`, `coefficientDepuisPlancher` de `@backend/depenses` (Task 1)
+- Consumes: `MargeTab` de `@/components/MargeTab` (Task 4) ; `SeuilRentabilite` de `@/components/SeuilRentabilite` (Task 5) ; `useDepenses` de `@/lib/hooks/useDepenses` (Task 3) ; `calculerStats` de `@backend/ventes` (déjà existant, déjà utilisé pour les stats jour/semaine/mois ailleurs dans l'app) ; `depensesDuMois`, `totalDepenses`, `margePlancher`, `coefficientDepuisPlancher` de `@backend/depenses` (Task 1)
 
 - [ ] **Step 1 : Ajouter les imports**
 
 En haut de `frontend/app/marges/page.tsx`, repérer :
 
 ```typescript
+import { useState } from 'react';
 import { useStock } from '@/lib/hooks/useStock';
 import { useConfig } from '@/lib/hooks/useConfig';
 import { useColors } from '@/lib/hooks/useColors';
+import { useVentes } from '@/lib/hooks/useVentes';
+import { usePlan } from '@/lib/hooks/usePlan';
+import { meilleursProduits, filtrerParPeriode } from '@backend/ventes';
+import type { Periode } from '@backend/types';
+import { AccesPremiumRequis } from '@/components/AccesPremiumRequis';
 ```
 
 Remplacer par :
 
 ```typescript
+import { useState } from 'react';
 import { useStock } from '@/lib/hooks/useStock';
 import { useConfig } from '@/lib/hooks/useConfig';
 import { useColors } from '@/lib/hooks/useColors';
-import { useDepenses } from '@/lib/hooks/useDepenses';
 import { useVentes } from '@/lib/hooks/useVentes';
+import { usePlan } from '@/lib/hooks/usePlan';
+import { useDepenses } from '@/lib/hooks/useDepenses';
+import { meilleursProduits, filtrerParPeriode, calculerStats } from '@backend/ventes';
 import { depensesDuMois, totalDepenses, margePlancher, coefficientDepuisPlancher } from '@backend/depenses';
+import type { Periode } from '@backend/types';
+import { AccesPremiumRequis } from '@/components/AccesPremiumRequis';
 import { MargeTab } from '@/components/MargeTab';
 import { SeuilRentabilite } from '@/components/SeuilRentabilite';
 ```
 
-- [ ] **Step 2 : Renommer le type d'onglets et l'état initial, retirer `catsOuvertes`, ajouter le calcul du plancher**
+Ne pas ajouter un second import de `useVentes` — il est déjà importé et déjà appelé plus bas dans le fichier (`const { ventes } = useVentes();`) pour l'onglet "Meilleurs vendeurs". On réutilise ce même tableau `ventes` avec `calculerStats(ventes, 'mois')` plutôt que d'appeler `useVentes('mois')` une seconde fois (évite un deuxième abonnement Dexie redondant).
 
-Repérer ce bloc (lignes 32-48 environ) :
+- [ ] **Step 2 : Renommer le type d'onglets et l'état initial, ajouter le calcul du plancher**
+
+Repérer ce bloc (le tout début du composant, avant `PERIODES`) :
 
 ```typescript
-type TabMode = '%Marge' | 'Pluriels' | 'Catalogue';
+type TabMode = '%Marge' | 'Pluriels' | 'Catalogue' | 'Meilleurs vendeurs';
+
+const PERIODES: { value: Periode; label: string }[] = [
+  { value: 'jour', label: "Aujourd'hui" },
+  { value: 'semaine', label: 'Semaine' },
+  { value: 'mois', label: 'Mois' },
+  { value: 'tout', label: 'Tout' },
+];
 
 export default function MargesPage() {
   const T = useColors();
   const { produits } = useStock();
   const { config } = useConfig();
+  const { accesFonctionnalitesPremium } = usePlan();
   const [tab, setTab] = useState<TabMode>('%Marge');
+  const [periodeVendeurs, setPeriodeVendeurs] = useState<Periode>('semaine');
+  const [triVendeurs, setTriVendeurs] = useState<'quantite' | 'benefice'>('quantite');
+  const [voirTousVendeurs, setVoirTousVendeurs] = useState(false);
+  const { ventes } = useVentes();
   const [prixAchat, setPrixAchat] = useState('');
   const [margePctStr, setMargePctStr] = useState('30');
   const margePct = Math.min(1000, Math.max(0, Number(margePctStr) || 0));
@@ -1101,15 +1128,26 @@ export default function MargesPage() {
 Remplacer par :
 
 ```typescript
-type TabMode = 'Prix de vente' | 'Marge' | 'Seuil de rentabilité' | 'Pluriels' | 'Catalogue';
+type TabMode = 'Prix de vente' | 'Marge' | 'Seuil de rentabilité' | 'Pluriels' | 'Catalogue' | 'Meilleurs vendeurs';
+
+const PERIODES: { value: Periode; label: string }[] = [
+  { value: 'jour', label: "Aujourd'hui" },
+  { value: 'semaine', label: 'Semaine' },
+  { value: 'mois', label: 'Mois' },
+  { value: 'tout', label: 'Tout' },
+];
 
 export default function MargesPage() {
   const T = useColors();
   const { produits } = useStock();
   const { config } = useConfig();
+  const { accesFonctionnalitesPremium } = usePlan();
   const { depenses } = useDepenses();
-  const { stats: statsMoisCourant } = useVentes('mois');
   const [tab, setTab] = useState<TabMode>('Prix de vente');
+  const [periodeVendeurs, setPeriodeVendeurs] = useState<Periode>('semaine');
+  const [triVendeurs, setTriVendeurs] = useState<'quantite' | 'benefice'>('quantite');
+  const [voirTousVendeurs, setVoirTousVendeurs] = useState(false);
+  const { ventes } = useVentes();
   const [prixAchat, setPrixAchat] = useState('');
   const [margePctOverride, setMargePctOverride] = useState<string | null>(null);
   const [simProduitId, setSimProduitId] = useState('');
@@ -1119,12 +1157,15 @@ export default function MargesPage() {
   const [genEnCours, setGenEnCours] = useState(false);
   const [produitVitrine, setProduitVitrine] = useState<typeof produits[number] | null>(null);
 
+  const statsMoisCourant = calculerStats(ventes, 'mois');
   const chargesDuMoisCourant = totalDepenses(depensesDuMois(depenses));
   const plancherPct = margePlancher(chargesDuMoisCourant, statsMoisCourant.chiffreAffaires);
   const plancherCoefficient = plancherPct !== null ? coefficientDepuisPlancher(plancherPct) : null;
   const margePctStr = margePctOverride ?? (plancherCoefficient !== null ? String(plancherCoefficient) : '30');
   const margePct = Math.min(1000, Math.max(0, Number(margePctStr) || 0));
 ```
+
+Note : l'état `catsOuvertes` (juste après `produitVitrine` dans le bloc d'origine) a été retiré ici volontairement — il ne sert plus dans `page.tsx`, sa seule utilisation (liste par catégorie) est déplacée dans `MargeTab` (Task 4), qui déclare son propre état `catsOuvertes` local.
 
 - [ ] **Step 3 : Retirer la liste `produitsAvecMarges`/`avgPct` devenue inutile ici (déplacée dans `MargeTab`)**
 
@@ -1154,16 +1195,16 @@ Remplacer par :
 Repérer :
 
 ```typescript
-  const tabs: TabMode[] = ['%Marge', 'Catalogue'];
+  const tabs: TabMode[] = ['%Marge', 'Meilleurs vendeurs', 'Catalogue'];
 ```
 
 Remplacer par :
 
 ```typescript
-  const tabs: TabMode[] = ['Prix de vente', 'Marge', 'Seuil de rentabilité', 'Catalogue'];
+  const tabs: TabMode[] = ['Prix de vente', 'Marge', 'Seuil de rentabilité', 'Meilleurs vendeurs', 'Catalogue'];
 ```
 
-(`'Pluriels'` reste volontairement absent de ce tableau — comportement préexistant inchangé.)
+(`'Pluriels'` reste volontairement absent de ce tableau — comportement préexistant inchangé. `'Meilleurs vendeurs'` reste à sa place, fonctionnalité déjà en production, non concernée par ce plan.)
 
 - [ ] **Step 5 : Remplacer le bloc `{tab === '%Marge' && (...)}` — calculateur seul + alerte, plus montage des 2 nouveaux onglets**
 
@@ -1285,14 +1326,15 @@ Expected: 0 erreur
 Run: `cd frontend && npm run dev`
 
 1. Ouvrir `http://localhost:3000/marges`
-2. Vérifier que le sélecteur affiche : Prix de vente / Marge / Seuil de rentabilité / Catalogue (4 onglets, "Pluriels" absent comme avant)
+2. Vérifier que le sélecteur affiche 5 onglets : Prix de vente / Marge / Seuil de rentabilité / Meilleurs vendeurs / Catalogue ("Pluriels" absent comme avant)
 3. Sur "Prix de vente" : le calculateur fonctionne comme avant (accessible sans Premium). Taper un prix d'achat, vérifier que le résultat s'affiche
-4. Sur "Marge" et "Seuil de rentabilité" sans compte Premium : le message "fonctionnalité Premium" s'affiche
-5. Passer le compte de test en Premium (ou utiliser un compte déjà Premium)
-6. Sur "Seuil de rentabilité" : ajouter une dépense test (ex. "Loyer", 50000, aujourd'hui), vérifier qu'elle apparaît dans la liste et dans "Charges du mois", vérifier la barre de progression et l'objectif si des ventes existent ce mois-ci
-7. Sur "Marge" : vérifier que la marge plancher s'affiche (ou le message "pas assez de ventes" si aucune vente ce mois), que le repère de marché s'affiche, et que la liste de produits par catégorie (déplacée depuis l'ancien onglet) fonctionne comme avant
-8. Retourner sur "Prix de vente" : vérifier que le champ "Marge souhaitée" est maintenant pré-rempli avec une valeur cohérente avec le plancher (pas 30% par défaut), et que taper une marge en dessous du plancher affiche l'alerte rouge
-9. Arrêter le serveur dev (Ctrl+C)
+4. Sur "Meilleurs vendeurs" : vérifier que cet onglet existant fonctionne toujours exactement comme avant (filtres de période, tri quantité/bénéfice) — non concerné par ce plan, juste vérifier l'absence de régression
+5. Sur "Marge" et "Seuil de rentabilité" sans compte Premium : le message "fonctionnalité Premium" s'affiche
+6. Passer le compte de test en Premium (ou utiliser un compte déjà Premium)
+7. Sur "Seuil de rentabilité" : ajouter une dépense test (ex. "Loyer", 50000, aujourd'hui), vérifier qu'elle apparaît dans la liste et dans "Charges du mois", vérifier la barre de progression et l'objectif si des ventes existent ce mois-ci
+8. Sur "Marge" : vérifier que la marge plancher s'affiche (ou le message "pas assez de ventes" si aucune vente ce mois), que le repère de marché s'affiche, et que la liste de produits par catégorie (déplacée depuis l'ancien onglet) fonctionne comme avant
+9. Retourner sur "Prix de vente" : vérifier que le champ "Marge souhaitée" est maintenant pré-rempli avec une valeur cohérente avec le plancher (pas 30% par défaut), et que taper une marge en dessous du plancher affiche l'alerte rouge
+10. Arrêter le serveur dev (Ctrl+C)
 
 - [ ] **Step 8 : Commit**
 
