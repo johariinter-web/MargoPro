@@ -3,12 +3,14 @@
 import { useState, useEffect, useRef, type ChangeEvent } from 'react';
 import { useStock } from '@/lib/hooks/useStock';
 import { useVentes } from '@/lib/hooks/useVentes';
+import { usePertes } from '@/lib/hooks/usePertes';
 import { useConfig } from '@/lib/hooks/useConfig';
 import { useColors } from '@/lib/hooks/useColors';
 import { useCategories } from '@/lib/hooks/useCategories';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import { usePlan } from '@/lib/hooks/usePlan';
 import { ModalUpgrade } from '@/components/ModalUpgrade';
+import { db } from '@/lib/db';
 import type { Produit } from '@backend/types';
 import { usePacks } from '@/lib/hooks/usePacks';
 import { prixAchatPack, prixVenteSepares } from '@backend/packs';
@@ -115,6 +117,7 @@ export default function StockPage() {
   const { config } = useConfig();
   const { produits, alertes, ajouterProduit, supprimerProduit, restaurerProduit, modifierProduit } = useStock();
   const { ventes } = useVentes('tout');
+  const { declarerPerte } = usePertes();
   const { categories, ajouterCategorie, supprimerCategorie } = useCategories();
 
   const [showForm, setShowForm] = useState(false);
@@ -130,6 +133,10 @@ export default function StockPage() {
   const [reapproMode, setReapproMode] = useState<'paquets' | 'unites'>('unites');
   const [reapproMsg, setReapproMsg] = useState('');
   const [showReappro, setShowReappro] = useState(false);
+  const [champsPerte, setChampsPerte] = useState({ quantite: '' });
+  const [erreurPerte, setErreurPerte] = useState('');
+  const [perteMsg, setPerteMsg] = useState('');
+  const [showPerte, setShowPerte] = useState(false);
   const [produitASupprimer, setProduitASupprimer] = useState<Produit | null>(null);
   const [produitSupprime, setProduitSupprime] = useState<Produit | null>(null);
   const [catsOuvertes, setCatsOuvertes] = useState<Record<string, boolean>>({});
@@ -263,6 +270,10 @@ export default function StockPage() {
     setReapproMode(produit.tailleConditionnement && produit.tailleConditionnement > 0 ? 'paquets' : 'unites');
     setReapproMsg('');
     setShowReappro(false);
+    setChampsPerte({ quantite: '' });
+    setErreurPerte('');
+    setPerteMsg('');
+    setShowPerte(false);
   }
 
   function handleAjouterAuStock() {
@@ -281,6 +292,26 @@ export default function StockPage() {
     setReapproMsg(`+${unites} unité${unites > 1 ? 's' : ''} → ${nouveauTotal} unités en stock`);
     setChampsReappro({ quantite: '', prixAchat: '' });
     setShowReappro(false);
+  }
+
+  async function handleConfirmerPerte() {
+    if (!produitEnEdition) return;
+    setErreurPerte('');
+    const perdu = Number(champsPerte.quantite);
+    if (!perdu || perdu <= 0) return;
+    if (Number(champsEdition.quantite) !== produitEnEdition.quantite) {
+      setErreurPerte('Enregistre d\'abord tes changements en cours avant de déclarer une perte.');
+      return;
+    }
+    const err = await declarerPerte(produitEnEdition.id, produitEnEdition.nom, perdu, produitEnEdition.prixAchat);
+    if (err) { setErreurPerte(err); return; }
+    const produitFrais = await db.produits.get(produitEnEdition.id);
+    const nouveauTotal = produitFrais?.quantite ?? Math.max(0, Number(champsEdition.quantite || 0) - perdu);
+    setChampsEdition(c => ({ ...c, quantite: String(nouveauTotal) }));
+    setProduitEnEdition(p => (p ? { ...p, quantite: produitFrais?.quantite ?? p.quantite } : p));
+    setPerteMsg(`-${perdu} unité${perdu > 1 ? 's' : ''} → ${nouveauTotal} unités en stock`);
+    setChampsPerte({ quantite: '' });
+    setShowPerte(false);
   }
 
   async function handleEditer() {
@@ -551,6 +582,20 @@ export default function StockPage() {
               <div style={{ fontSize: 12, color: T.accent, fontWeight: 700, marginBottom: 14, textAlign: 'center' }}>{reapproMsg}</div>
             )}
 
+            {/* PERTE - bouton qui ouvre une fenêtre */}
+            <button
+              onClick={() => { setChampsPerte({ quantite: '' }); setErreurPerte(''); setShowPerte(true); }}
+              style={{ width: '100%', marginBottom: perteMsg ? 6 : 14, height: 46, borderRadius: 12, border: `1.5px solid ${T.red}`, background: T.redBg, cursor: 'pointer', fontSize: 14, fontWeight: 700, color: T.red, fontFamily: 'Manrope, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                <path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z" stroke={T.red} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              J&apos;ai perdu de la marchandise
+            </button>
+            {perteMsg && (
+              <div style={{ fontSize: 12, color: T.red, fontWeight: 700, marginBottom: 14, textAlign: 'center' }}>{perteMsg}</div>
+            )}
+
             {/* Autres champs numériques */}
             {[
               { key: 'prixAchat', label: `Prix d'achat (${symbole})`, placeholder: '0' },
@@ -686,6 +731,56 @@ export default function StockPage() {
               <button onClick={handleAjouterAuStock} disabled={!(Number(champsReappro.quantite) > 0)}
                 style={{ flex: 2, height: 46, borderRadius: 12, background: T.accent, border: 'none', cursor: Number(champsReappro.quantite) > 0 ? 'pointer' : 'default', fontSize: 14, fontWeight: 700, color: 'white', opacity: Number(champsReappro.quantite) > 0 ? 1 : 0.5, fontFamily: 'Manrope, sans-serif' }}>
                 Ajouter au stock
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FENÊTRE PERTE */}
+      {showPerte && produitEnEdition && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 280, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={() => setShowPerte(false)}
+        >
+          <div
+            style={{ background: T.surface, borderRadius: 20, width: '100%', maxWidth: 360, padding: 20 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                <path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z" stroke={T.red} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              J&apos;ai perdu de la marchandise
+            </div>
+            <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 14 }}>{produitEnEdition.nom}</div>
+
+            {erreurPerte && (
+              <div style={{ fontSize: 13, color: T.red, fontWeight: 600, marginBottom: 10, padding: '8px 12px', background: T.redBg, borderRadius: 8 }}>
+                {erreurPerte}
+              </div>
+            )}
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>
+                Unités perdues
+              </label>
+              <input type="number" onWheel={e => e.currentTarget.blur()} onFocus={e => e.target.select()} autoFocus value={champsPerte.quantite} onChange={e => setChampsPerte({ quantite: e.target.value })} placeholder="0" min="0"
+                style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '12px 14px', fontSize: 18, fontWeight: 700, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }} />
+              {Number(champsPerte.quantite) > 0 && (
+                <div style={{ fontSize: 12, color: T.red, fontWeight: 600, marginTop: 4 }}>
+                  → -{Number(champsPerte.quantite)} unités → {Math.max(0, Number(champsEdition.quantite || 0) - Number(champsPerte.quantite))} unités restants
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setShowPerte(false)} style={{ flex: 1, height: 46, borderRadius: 12, background: T.bgSubtle, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: T.textSub, fontFamily: 'Manrope, sans-serif' }}>
+                Annuler
+              </button>
+              <button onClick={handleConfirmerPerte} disabled={!(Number(champsPerte.quantite) > 0)}
+                style={{ flex: 2, height: 46, borderRadius: 12, background: T.red, border: 'none', cursor: Number(champsPerte.quantite) > 0 ? 'pointer' : 'default', fontSize: 14, fontWeight: 700, color: 'white', opacity: Number(champsPerte.quantite) > 0 ? 1 : 0.5, fontFamily: 'Manrope, sans-serif' }}>
+                Confirmer la perte
               </button>
             </div>
           </div>

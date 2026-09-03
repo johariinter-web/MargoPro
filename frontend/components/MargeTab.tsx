@@ -7,7 +7,9 @@ import { useColors } from '@/lib/hooks/useColors';
 import { useDepenses } from '@/lib/hooks/useDepenses';
 import { useVentes } from '@/lib/hooks/useVentes';
 import { usePlan } from '@/lib/hooks/usePlan';
+import { usePertes } from '@/lib/hooks/usePertes';
 import { depensesDuMois, totalDepenses, margePlancher } from '@backend/depenses';
+import { pertesDuMois, totalPertes } from '@backend/pertes';
 import { AccesPremiumRequis } from './AccesPremiumRequis';
 
 function fmtF(n: number) {
@@ -21,6 +23,7 @@ export function MargeTab() {
   const { produits } = useStock();
   const { config } = useConfig();
   const { depenses } = useDepenses();
+  const { pertes } = usePertes();
   const { stats } = useVentes('mois');
   const { accesFonctionnalitesPremium } = usePlan();
   const [catsOuvertes, setCatsOuvertes] = useState<Record<string, boolean>>({});
@@ -35,7 +38,7 @@ export function MargeTab() {
     );
   }
 
-  const chargesDuMois = totalDepenses(depensesDuMois(depenses));
+  const chargesDuMois = totalDepenses(depensesDuMois(depenses)) + totalPertes(pertesDuMois(pertes));
   const plancherPct = margePlancher(chargesDuMois, stats.chiffreAffaires);
   const seuilAffichage = plancherPct ?? PLANCHER_DEFAUT;
 
