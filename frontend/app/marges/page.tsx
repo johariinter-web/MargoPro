@@ -7,8 +7,10 @@ import { useColors } from '@/lib/hooks/useColors';
 import { useVentes } from '@/lib/hooks/useVentes';
 import { usePlan } from '@/lib/hooks/usePlan';
 import { useDepenses } from '@/lib/hooks/useDepenses';
+import { usePertes } from '@/lib/hooks/usePertes';
 import { meilleursProduits, filtrerParPeriode, calculerStats } from '@backend/ventes';
 import { depensesDuMois, totalDepenses, margePlancher, coefficientDepuisPlancher } from '@backend/depenses';
+import { pertesDuMois, totalPertes } from '@backend/pertes';
 import type { Periode } from '@backend/types';
 import { AccesPremiumRequis } from '@/components/AccesPremiumRequis';
 import { MargeTab } from '@/components/MargeTab';
@@ -53,6 +55,7 @@ export default function MargesPage() {
   const { config } = useConfig();
   const { accesFonctionnalitesPremium } = usePlan();
   const { depenses } = useDepenses();
+  const { pertes } = usePertes();
   const [tab, setTab] = useState<TabMode>('Prix de vente');
   const [periodeVendeurs, setPeriodeVendeurs] = useState<Periode>('semaine');
   const [triVendeurs, setTriVendeurs] = useState<'quantite' | 'benefice'>('quantite');
@@ -68,7 +71,7 @@ export default function MargesPage() {
   const [produitVitrine, setProduitVitrine] = useState<typeof produits[number] | null>(null);
 
   const statsMoisCourant = calculerStats(ventes, 'mois');
-  const chargesDuMoisCourant = totalDepenses(depensesDuMois(depenses));
+  const chargesDuMoisCourant = totalDepenses(depensesDuMois(depenses)) + totalPertes(pertesDuMois(pertes));
   const plancherPct = margePlancher(chargesDuMoisCourant, statsMoisCourant.chiffreAffaires);
   const plancherCoefficient = plancherPct !== null ? coefficientDepuisPlancher(plancherPct) : null;
   const margePctStr = margePctOverride ?? (plancherCoefficient !== null ? String(plancherCoefficient) : '30');

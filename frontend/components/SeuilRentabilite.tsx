@@ -6,7 +6,9 @@ import { useConfig } from '@/lib/hooks/useConfig';
 import { useDepenses } from '@/lib/hooks/useDepenses';
 import { useVentes } from '@/lib/hooks/useVentes';
 import { usePlan } from '@/lib/hooks/usePlan';
+import { usePertes } from '@/lib/hooks/usePertes';
 import { depensesDuMois, totalDepenses, objectifVenteParJour } from '@backend/depenses';
+import { pertesDuMois, totalPertes } from '@backend/pertes';
 import { AccesPremiumRequis } from './AccesPremiumRequis';
 import type { Depense } from '@backend/types';
 
@@ -32,6 +34,7 @@ export function SeuilRentabilite() {
   const T = useColors();
   const { config } = useConfig();
   const { depenses, ajouterDepense, modifierDepense, supprimerDepense } = useDepenses();
+  const { pertes } = usePertes();
   const { stats } = useVentes('mois');
   const { accesFonctionnalitesPremium } = usePlan();
   const symbole = config?.symboleDevise ?? 'FCFA';
@@ -51,7 +54,9 @@ export function SeuilRentabilite() {
   }
 
   const depensesMois = depensesDuMois(depenses);
-  const chargesDuMois = totalDepenses(depensesMois);
+  const totalDepensesMois = totalDepenses(depensesMois);
+  const totalPertesMois = totalPertes(pertesDuMois(pertes));
+  const chargesDuMois = totalDepensesMois + totalPertesMois;
   const objectif = objectifVenteParJour(chargesDuMois, stats.benefice, stats.nombreVentes);
   const progression = chargesDuMois > 0 ? Math.min(100, Math.round((stats.benefice / chargesDuMois) * 100)) : 0;
 
@@ -113,6 +118,11 @@ export function SeuilRentabilite() {
         <div style={{ fontSize: 28, fontWeight: 800, color: T.text, fontFamily: '"Space Grotesk", sans-serif', marginBottom: 4 }}>
           {fmtF(chargesDuMois)} <span style={{ fontSize: 15 }}>{symbole}</span>
         </div>
+        {totalPertesMois > 0 && (
+          <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 8 }}>
+            Dépenses {fmtF(totalDepensesMois)} {symbole} + Pertes de stock {fmtF(totalPertesMois)} {symbole}
+          </div>
+        )}
 
         {(showForm || depenseEnEdition) && (
           <div style={{ background: T.bgSubtle, borderRadius: 14, padding: 14, marginTop: 12 }}>
