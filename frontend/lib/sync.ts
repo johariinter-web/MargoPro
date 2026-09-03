@@ -2,7 +2,7 @@
 
 import { db } from './db';
 import { createClient } from './supabase/client';
-import type { Produit, Vente, Config, Pack, Fournisseur, Commande, Depense } from '@backend/types';
+import type { Produit, Vente, Config, Pack, Fournisseur, Commande, Depense, Perte } from '@backend/types';
 import { uploadPhoto, supprimerPhoto, downloadPhoto, peutSyncerPhotos } from './photoSync';
 
 // =====================================================================
@@ -355,6 +355,48 @@ function rowToDepense(r: DepenseRow): Depense {
   };
 }
 
+type PerteRow = {
+  id: string;
+  user_id: string;
+  produit_id: string;
+  produit_nom: string;
+  quantite: number;
+  prix_achat: number;
+  date: number;
+  created_at: number;
+  updated_at: number;
+  deleted: boolean;
+};
+
+function perteToRow(p: Perte, userId: string): PerteRow {
+  return {
+    id: p.id,
+    user_id: userId,
+    produit_id: p.produitId,
+    produit_nom: p.produitNom,
+    quantite: p.quantite,
+    prix_achat: p.prixAchat,
+    date: p.date,
+    created_at: p.createdAt ?? Date.now(),
+    updated_at: p.updatedAt ?? Date.now(),
+    deleted: p.deleted ?? false,
+  };
+}
+
+function rowToPerte(r: PerteRow): Perte {
+  return {
+    id: r.id,
+    produitId: r.produit_id,
+    produitNom: r.produit_nom,
+    quantite: Number(r.quantite),
+    prixAchat: Number(r.prix_achat),
+    date: Number(r.date),
+    createdAt: Number(r.created_at),
+    updatedAt: Number(r.updated_at),
+    deleted: r.deleted ?? false,
+  };
+}
+
 // ---------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------
@@ -551,6 +593,25 @@ async function pull(userId: string): Promise<void> {
   } catch (err) {
     console.warn('[sync] pull depenses ignoré :', err);
   }
+
+  // --- pertes (non-fatal : si la table n'existe pas encore, on continue) ---
+  try {
+    const { data: pertesRows, error: perErr } = await supabase
+      .from('pertes')
+      .select('*')
+      .eq('user_id', userId);
+    if (perErr) throw perErr;
+
+    for (const row of (pertesRows ?? []) as PerteRow[]) {
+      const remote = rowToPerte(row);
+      const local = await db.pertes.get(remote.id);
+      if (!local || remote.updatedAt > (local.updatedAt ?? 0)) {
+        await db.pertes.put(remote);
+      }
+    }
+  } catch (err) {
+    console.warn('[sync] pull pertes ignoré :', err);
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -663,6 +724,18 @@ async function push(userId: string): Promise<void> {
     }
   } catch (err) {
     console.warn('[sync] push depenses ignoré :', err);
+  }
+
+  // --- pertes (non-fatal : si la table n'existe pas encore, on continue) ---
+  try {
+    const pertes = await db.pertes.toArray();
+    if (pertes.length > 0) {
+      const rows = pertes.map((p) => perteToRow(p, userId));
+      const { error } = await supabase.from('pertes').upsert(rows, { onConflict: 'id' });
+      if (error) throw error;
+    }
+  } catch (err) {
+    console.warn('[sync] push pertes ignoré :', err);
   }
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import Dexie, { type EntityTable } from 'dexie';
-import type { Produit, Vente, Config, Pack, Fournisseur, Commande, Depense } from '@backend/types';
+import type { Produit, Vente, Config, Pack, Fournisseur, Commande, Depense, Perte } from '@backend/types';
 
 class MargoDB extends Dexie {
   produits!: EntityTable<Produit, 'id'>;
@@ -11,6 +11,7 @@ class MargoDB extends Dexie {
   fournisseurs!: EntityTable<Fournisseur, 'id'>;
   commandes!: EntityTable<Commande, 'id'>;
   depenses!: EntityTable<Depense, 'id'>;
+  pertes!: EntityTable<Perte, 'id'>;
 
   constructor() {
     super('MargoPro');
@@ -88,6 +89,17 @@ class MargoDB extends Dexie {
       depenses: 'id, date, updatedAt, deleted',
       config: 'id',
     });
+    // v8 - pertes de stock (produits abimes ou casses) pour le seuil de rentabilite
+    this.version(8).stores({
+      produits: 'id, nom, quantite, updatedAt, deleted, archived',
+      ventes: 'id, produitId, date, updatedAt, deleted, modeReglement',
+      packs: 'id, nom, updatedAt, deleted',
+      fournisseurs: 'id, nom, updatedAt, deleted',
+      commandes: 'id, fournisseurId, dateCommande, updatedAt, deleted',
+      depenses: 'id, date, updatedAt, deleted',
+      pertes: 'id, produitId, date, updatedAt, deleted',
+      config: 'id',
+    });
   }
 }
 
@@ -102,13 +114,14 @@ export function genId(): string {
 // se connecte sur le même appareil (le push envoie tout ce qui est en local,
 // peu importe quel compte l'a créé).
 export async function clearLocalData(): Promise<void> {
-  await db.transaction('rw', [db.produits, db.ventes, db.packs, db.fournisseurs, db.commandes, db.depenses, db.config], async () => {
+  await db.transaction('rw', [db.produits, db.ventes, db.packs, db.fournisseurs, db.commandes, db.depenses, db.pertes, db.config], async () => {
     await db.produits.clear();
     await db.ventes.clear();
     await db.packs.clear();
     await db.fournisseurs.clear();
     await db.commandes.clear();
     await db.depenses.clear();
+    await db.pertes.clear();
     await db.config.clear();
   });
 }
