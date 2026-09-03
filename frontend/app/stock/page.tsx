@@ -10,6 +10,7 @@ import { useCategories } from '@/lib/hooks/useCategories';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import { usePlan } from '@/lib/hooks/usePlan';
 import { ModalUpgrade } from '@/components/ModalUpgrade';
+import { db } from '@/lib/db';
 import type { Produit } from '@backend/types';
 import { usePacks } from '@/lib/hooks/usePacks';
 import { prixAchatPack, prixVenteSepares } from '@backend/packs';
@@ -298,9 +299,14 @@ export default function StockPage() {
     setErreurPerte('');
     const perdu = Number(champsPerte.quantite);
     if (!perdu || perdu <= 0) return;
+    if (Number(champsEdition.quantite) !== produitEnEdition.quantite) {
+      setErreurPerte('Enregistre d\'abord tes changements en cours avant de déclarer une perte.');
+      return;
+    }
     const err = await declarerPerte(produitEnEdition.id, produitEnEdition.nom, perdu, produitEnEdition.prixAchat);
     if (err) { setErreurPerte(err); return; }
-    const nouveauTotal = Math.max(0, Number(champsEdition.quantite || 0) - perdu);
+    const produitFrais = await db.produits.get(produitEnEdition.id);
+    const nouveauTotal = produitFrais?.quantite ?? Math.max(0, Number(champsEdition.quantite || 0) - perdu);
     setChampsEdition(c => ({ ...c, quantite: String(nouveauTotal) }));
     setPerteMsg(`-${perdu} unité${perdu > 1 ? 's' : ''} → ${nouveauTotal} unités en stock`);
     setChampsPerte({ quantite: '' });
