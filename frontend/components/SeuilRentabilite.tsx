@@ -8,7 +8,7 @@ import { useVentes } from '@/lib/hooks/useVentes';
 import { usePlan } from '@/lib/hooks/usePlan';
 import { usePertes } from '@/lib/hooks/usePertes';
 import { depensesDuMois, totalDepenses, objectifVenteParJour } from '@backend/depenses';
-import { pertesDuMois, totalPertes } from '@backend/pertes';
+import { pertesDuMois, totalPertes, valeurPerte } from '@backend/pertes';
 import { AccesPremiumRequis } from './AccesPremiumRequis';
 import type { Depense } from '@backend/types';
 
@@ -55,7 +55,8 @@ export function SeuilRentabilite() {
 
   const depensesMois = depensesDuMois(depenses);
   const totalDepensesMois = totalDepenses(depensesMois);
-  const totalPertesMois = totalPertes(pertesDuMois(pertes));
+  const pertesMois = pertesDuMois(pertes);
+  const totalPertesMois = totalPertes(pertesMois);
   const chargesDuMois = totalDepensesMois + totalPertesMois;
   const objectif = objectifVenteParJour(chargesDuMois, stats.benefice, stats.nombreVentes);
   const progression = chargesDuMois > 0 ? Math.min(100, Math.round((stats.benefice / chargesDuMois) * 100)) : 0;
@@ -185,7 +186,7 @@ export function SeuilRentabilite() {
           </div>
         )}
 
-        {depensesMois.length > 0 && !showForm && !depenseEnEdition && (
+        {(depensesMois.length > 0 || pertesMois.length > 0) && !showForm && !depenseEnEdition && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 12 }}>
             {depensesMois.map(d => (
               <button
@@ -196,6 +197,15 @@ export function SeuilRentabilite() {
                 <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{d.nom}</span>
                 <span style={{ fontSize: 13, fontWeight: 700, color: T.textSub, fontFamily: '"Space Grotesk", sans-serif' }}>{fmtF(d.montant)} {symbole}</span>
               </button>
+            ))}
+            {pertesMois.map(p => (
+              <div
+                key={p.id}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: T.redBg, borderRadius: 10, padding: '8px 12px' }}
+              >
+                <span style={{ fontSize: 13, fontWeight: 600, color: T.red }}>Perte : {p.produitNom}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: T.red, fontFamily: '"Space Grotesk", sans-serif' }}>{fmtF(valeurPerte(p))} {symbole}</span>
+              </div>
             ))}
           </div>
         )}
