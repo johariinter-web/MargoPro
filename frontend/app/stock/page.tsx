@@ -308,6 +308,7 @@ export default function StockPage() {
     const produitFrais = await db.produits.get(produitEnEdition.id);
     const nouveauTotal = produitFrais?.quantite ?? Math.max(0, Number(champsEdition.quantite || 0) - perdu);
     setChampsEdition(c => ({ ...c, quantite: String(nouveauTotal) }));
+    setProduitEnEdition(p => (p ? { ...p, quantite: produitFrais?.quantite ?? p.quantite } : p));
     setPerteMsg(`-${perdu} unité${perdu > 1 ? 's' : ''} → ${nouveauTotal} unités en stock`);
     setChampsPerte({ quantite: '' });
     setShowPerte(false);
