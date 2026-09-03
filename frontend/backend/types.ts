@@ -102,3 +102,15 @@ export interface Depense {
   updatedAt: number;
   deleted?: boolean;
 }
+
+export interface Perte {
+  id: string;
+  produitId: string;
+  produitNom: string;
+  quantite: number;
+  prixAchat: number;
+  date: number;
+  createdAt: number;
+  updatedAt: number;
+  deleted?: boolean;
+}
