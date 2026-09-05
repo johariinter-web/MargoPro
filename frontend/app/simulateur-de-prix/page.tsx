@@ -134,7 +134,7 @@ export default function SimulateurDePrixPage() {
         {/* LIMITE + APPEL A L'ACTION */}
         <div style={{ background: T.surface, borderRadius: 20, padding: 18, boxShadow: '0 1px 3px rgba(28,24,17,0.06), 0 4px 14px rgba(28,24,17,0.05)', textAlign: 'center' }}>
           <p style={{ fontSize: 13, color: T.textSub, lineHeight: 1.6, margin: '0 0 14px' }}>
-            Ce calcul ne tient pas compte de tes vraies charges (loyer, transport...). <strong style={{ color: T.text }}>MargoPro</strong> calcule ta vraie marge plancher automatiquement, à partir de tes vraies ventes — et suit ton stock au quotidien.
+            Ce calcul ne tient pas compte de tes vraies charges (loyer, transport...). <strong style={{ color: T.text }}>MargoPro</strong> calcule ta vraie marge plancher automatiquement, à partir de tes vraies ventes, et suit ton stock au quotidien.
           </p>
           <a
             href="/auth"
