@@ -479,6 +479,13 @@ export default function AuthPage() {
                   >
                     Conditions Générales d&apos;Utilisation
                   </a>{' '}
+                  et la{' '}
+                  <a
+                    href="/politique-de-confidentialite"
+                    style={{ color: T.accent, textDecoration: 'underline' }}
+                  >
+                    Politique de confidentialité
+                  </a>{' '}
                   de MargoPro.
                 </span>
               </label>
@@ -500,6 +507,13 @@ export default function AuthPage() {
                   style={{ color: T.accent, textDecoration: 'underline' }}
                 >
                   Conditions Générales d&apos;Utilisation
+                </a>{' '}
+                et la{' '}
+                <a
+                  href="/politique-de-confidentialite"
+                  style={{ color: T.accent, textDecoration: 'underline' }}
+                >
+                  Politique de confidentialité
                 </a>{' '}
                 de MargoPro.
               </span>
