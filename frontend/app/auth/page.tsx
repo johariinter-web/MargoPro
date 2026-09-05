@@ -117,6 +117,16 @@ export default function AuthPage() {
     setRenvoiMessage('');
   }
 
+  async function connexionGoogle() {
+    setErreur('');
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (error) setErreur('Impossible de démarrer la connexion Google. Réessaie.');
+  }
+
   async function envoyerReinitialisation(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!email.trim()) return;
@@ -290,6 +300,37 @@ export default function AuthPage() {
         {mode !== 'oubli' && !confirmationEmailRequise && !confirmationTelephoneRequise && (
         <form onSubmit={soumettre} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
+          <button
+            type="button"
+            onClick={connexionGoogle}
+            disabled={!cguAccepte}
+            style={{
+              width: '100%', height: 52, borderRadius: 14,
+              background: '#fff', color: T.text,
+              fontSize: 15, fontWeight: 700,
+              border: `2px solid ${T.border}`,
+              cursor: cguAccepte ? 'pointer' : 'not-allowed',
+              opacity: cguAccepte ? 1 : 0.5,
+              transition: 'opacity 0.2s',
+              fontFamily: 'Manrope, sans-serif',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
+              <path fill="#FFC107" d="M43.6 20.5h-1.9V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34.6 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.4-.1-2.7-.4-3.5z"/>
+              <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.3 18.9 12 24 12c3.1 0 5.8 1.1 8 3l6-6C34.6 5.1 29.6 3 24 3 15.9 3 8.9 7.7 6.3 14.7z"/>
+              <path fill="#4CAF50" d="M24 45c5.5 0 10.4-1.9 14.2-5.1l-6.6-5.4C29.6 36.5 27 37.5 24 37.5c-5.3 0-9.7-3.4-11.3-8.1l-6.6 5.1C8.9 40.3 15.9 45 24 45z"/>
+              <path fill="#1976D2" d="M43.6 20.5H24v8h11.3c-.8 2.3-2.3 4.3-4.3 5.7l6.6 5.4C41.9 36 44 30.4 44 24c0-1.4-.1-2.7-.4-3.5z"/>
+            </svg>
+            Continuer avec Google
+          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ flex: 1, height: 1, background: T.border }} />
+            <span style={{ fontSize: 12, color: T.textMuted, fontFamily: 'Manrope, sans-serif' }}>ou</span>
+            <div style={{ flex: 1, height: 1, background: T.border }} />
+          </div>
+
           <div style={{ display: 'flex', gap: 8, background: T.bg, borderRadius: 12, padding: 4 }}>
             {(['email', 'telephone'] as const).map(opt => (
               <button
@@ -438,6 +479,13 @@ export default function AuthPage() {
                   >
                     Conditions Générales d&apos;Utilisation
                   </a>{' '}
+                  et la{' '}
+                  <a
+                    href="/politique-de-confidentialite"
+                    style={{ color: T.accent, textDecoration: 'underline' }}
+                  >
+                    Politique de confidentialité
+                  </a>{' '}
                   de MargoPro.
                 </span>
               </label>
@@ -459,6 +507,13 @@ export default function AuthPage() {
                   style={{ color: T.accent, textDecoration: 'underline' }}
                 >
                   Conditions Générales d&apos;Utilisation
+                </a>{' '}
+                et la{' '}
+                <a
+                  href="/politique-de-confidentialite"
+                  style={{ color: T.accent, textDecoration: 'underline' }}
+                >
+                  Politique de confidentialité
                 </a>{' '}
                 de MargoPro.
               </span>

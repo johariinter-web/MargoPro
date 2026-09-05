@@ -1,5 +1,5 @@
 const WILDCARD_PUBLIC_PATHS = ['/auth', '/api/webhooks'];
-const EXACT_PUBLIC_PATHS = ['/cgu'];
+const EXACT_PUBLIC_PATHS = ['/cgu', '/politique-de-confidentialite'];
 
 export function isPublicPath(pathname: string): boolean {
   if (EXACT_PUBLIC_PATHS.includes(pathname)) return true;
