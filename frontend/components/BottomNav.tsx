@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useColors } from '@/lib/hooks/useColors';
 
-const HIDDEN_PATHS = ['/onboarding', '/auth', '/alertes', '/parametres', '/abonnement', '/sauvegarde', '/aide'];
+const HIDDEN_PATHS = ['/onboarding', '/auth', '/alertes', '/parametres', '/abonnement', '/sauvegarde', '/aide', '/simulateur-de-prix'];
 
 const tabs = [
   {
