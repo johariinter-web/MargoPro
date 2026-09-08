@@ -15,6 +15,7 @@ import type { Periode } from '@backend/types';
 import { AccesPremiumRequis } from '@/components/AccesPremiumRequis';
 import { MargeTab } from '@/components/MargeTab';
 import { SeuilRentabilite } from '@/components/SeuilRentabilite';
+import { RentabiliteExportTab } from '@/components/RentabiliteExportTab';
 
 function fmtF(n: number) {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -40,7 +41,7 @@ function dessinerCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, dx:
   ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
 }
 
-type TabMode = 'Prix de vente' | 'Marge' | 'Seuil de rentabilité' | 'Pluriels' | 'Catalogue' | 'Meilleurs vendeurs';
+type TabMode = 'Prix de vente' | 'Marge' | 'Seuil de rentabilité' | 'Rentabilité export' | 'Pluriels' | 'Catalogue' | 'Meilleurs vendeurs';
 
 const PERIODES: { value: Periode; label: string }[] = [
   { value: 'jour', label: "Aujourd'hui" },
@@ -220,7 +221,7 @@ export default function MargesPage() {
     : 0;
   const beneficeCalc = prixVenteCalc - prixAchatNum;
 
-  const tabs: TabMode[] = ['Prix de vente', 'Seuil de rentabilité', 'Marge', 'Meilleurs vendeurs', 'Catalogue'];
+  const tabs: TabMode[] = ['Prix de vente', 'Seuil de rentabilité', 'Marge', 'Rentabilité export', 'Meilleurs vendeurs', 'Catalogue'];
 
   return (
     <div style={{ minHeight: '100dvh', background: T.bg, paddingBottom: 90, fontFamily: 'Manrope, sans-serif' }}>
@@ -356,6 +357,14 @@ export default function MargesPage() {
       {tab === 'Marge' && <MargeTab />}
 
       {tab === 'Seuil de rentabilité' && <SeuilRentabilite />}
+
+      {tab === 'Rentabilité export' && (
+        accesFonctionnalitesPremium
+          ? <RentabiliteExportTab />
+          : <div style={{ padding: '0 16px' }}>
+              <AccesPremiumRequis titre="Rentabilité export" description="Connais ton vrai prix de vente avec transport, douane, change, plateforme et retours inclus." />
+            </div>
+      )}
 
       {tab === 'Pluriels' && (() => {
         const simProduit = produits.find(p => p.id === simProduitId);
