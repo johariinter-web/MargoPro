@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useStock } from '@/lib/hooks/useStock';
 import { useVentes } from '@/lib/hooks/useVentes';
 import { useConfig } from '@/lib/hooks/useConfig';
 import { usePacks } from '@/lib/hooks/usePacks';
 import BarcodeScanner from '@/components/BarcodeScanner';
-import { useColors } from '@/lib/hooks/useColors';
+import { useColors, type Colors } from '@/lib/hooks/useColors';
 import { usePlan } from '@/lib/hooks/usePlan';
 import { useFactureEnCours } from '@/lib/hooks/useFactureEnCours';
 import { genererImageFacture } from '@/lib/facture';
@@ -22,6 +22,63 @@ function fmtF(n: number) {
 
 function formatHeure(ts: number) {
   return new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function ClientNomAutocomplete({
+  T, value, onChange, onSelect, clients, borderColor, placeholder,
+}: {
+  T: Colors;
+  value: string;
+  onChange: (v: string) => void;
+  onSelect: (c: ClientFidele) => void;
+  clients: ClientFidele[];
+  borderColor: string;
+  placeholder: string;
+}) {
+  const [focus, setFocus] = useState(false);
+  const q = value.trim().toLowerCase();
+  const suggestions = q.length > 0
+    ? clients.filter(c => c.nom.toLowerCase().includes(q)).slice(0, 5)
+    : [];
+  const showDropdown = focus && suggestions.length > 0;
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <input
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setFocus(true)}
+        onBlur={() => setTimeout(() => setFocus(false), 150)}
+        placeholder={placeholder}
+        style={{ width: '100%', border: `1.5px solid ${borderColor}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }}
+      />
+      {showDropdown && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, zIndex: 20,
+          background: T.surface, border: `1px solid ${T.border}`, borderRadius: 10,
+          boxShadow: T.shadow, maxHeight: 180, overflowY: 'auto',
+        }}>
+          {suggestions.map((c, i) => (
+            <div
+              key={`${c.nom}-${c.tel ?? i}`}
+              onMouseDown={() => { onSelect(c); setFocus(false); }}
+              style={{
+                padding: '10px 12px', cursor: 'pointer',
+                borderBottom: i === suggestions.length - 1 ? 'none' : `1px solid ${T.border}`,
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
+              }}
+            >
+              <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{c.nom}</span>
+              <span style={{ fontSize: 11, color: T.textMuted, flexShrink: 0 }}>
+                {c.tel ?? `${c.nombreAchats} achat${c.nombreAchats > 1 ? 's' : ''}`}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 const PERIODES: { value: Periode; label: string }[] = [
@@ -45,6 +102,7 @@ export default function VentesPage() {
   const [nouvLignePrix, setNouvLignePrix] = useState('');
   const [periode, setPeriode] = useState<Periode>('jour');
   const { ventes, ventesSupprimees, stats, credits, soldes, totalDu, enregistrerVente, enregistrerVentePack, enregistrerPaiementCredit, supprimerVente, restaurerVente, supprimerVenteDefinitivement, modifierTelephoneClient, retirerClientComptant } = useVentes(periode);
+  const clientsExistants = useMemo(() => clientsFideles(ventes), [ventes]);
   const [voirSoldes, setVoirSoldes] = useState(false);
   const [voirNormaux, setVoirNormaux] = useState(false);
   const [onglet, setOnglet] = useState<'ventes' | 'carnet' | 'facture' | 'clients'>('ventes');
@@ -809,12 +867,14 @@ export default function VentesPage() {
             <>
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Nom du client *</label>
-                <input
-                  type="text"
+                <ClientNomAutocomplete
+                  T={T}
                   value={clientNom}
-                  onChange={e => setClientNom(e.target.value)}
+                  onChange={setClientNom}
+                  onSelect={c => { setClientNom(c.nom); setClientTel(c.tel ?? ''); }}
+                  clients={clientsExistants}
+                  borderColor="#F97316"
                   placeholder="Ex : Aminata Koné"
-                  style={{ width: '100%', border: `1.5px solid #F97316`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }}
                 />
               </div>
               <div style={{ marginBottom: 12 }}>
@@ -859,12 +919,14 @@ export default function VentesPage() {
                 <>
                   <div style={{ marginBottom: 12, marginTop: 6 }}>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: T.textSub, marginBottom: 5 }}>Nom du client</label>
-                    <input
-                      type="text"
+                    <ClientNomAutocomplete
+                      T={T}
                       value={clientNom}
-                      onChange={e => setClientNom(e.target.value)}
+                      onChange={setClientNom}
+                      onSelect={c => { setClientNom(c.nom); setClientTel(c.tel ?? ''); }}
+                      clients={clientsExistants}
+                      borderColor={T.border}
                       placeholder="Ex : Aminata Koné"
-                      style={{ width: '100%', border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '10px 12px', fontSize: 14, color: T.text, background: T.bg, outline: 'none', fontFamily: 'Manrope, sans-serif', boxSizing: 'border-box' }}
                     />
                   </div>
                   <div style={{ marginBottom: 12 }}>
