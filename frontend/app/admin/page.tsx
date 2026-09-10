@@ -23,6 +23,7 @@ function formatDate(ts: number | null): string {
 export default function AdminPage() {
   const router = useRouter();
   const [comptes, setComptes] = useState<CompteAdmin[] | null>(null);
+  const [nbVisitesSimulateur, setNbVisitesSimulateur] = useState<number | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [ouvert, setOuvert] = useState<string | null>(null);
 
@@ -39,6 +40,7 @@ export default function AdminPage() {
         }
         const data = await res.json();
         setComptes(data.comptes);
+        setNbVisitesSimulateur(data.nbVisitesSimulateur);
       })
       .catch(() => setErreur('Impossible de charger les données.'));
   }, [router]);
@@ -48,6 +50,13 @@ export default function AdminPage() {
       <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-50">Comptes inscrits</h1>
 
       {erreur && <p className="text-orange-alert">{erreur}</p>}
+
+      {nbVisitesSimulateur !== null && (
+        <div className="rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 px-3 py-2 flex items-center justify-between">
+          <span className="text-sm text-stone-500 dark:text-stone-400">Visites du simulateur de prix</span>
+          <span className="font-semibold text-stone-800 dark:text-stone-50">{nbVisitesSimulateur}</span>
+        </div>
+      )}
 
       {!erreur && !comptes && (
         <p className="text-stone-500 dark:text-stone-400">Chargement…</p>

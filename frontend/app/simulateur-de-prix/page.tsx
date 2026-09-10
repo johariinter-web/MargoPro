@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { calculerPrixVente } from '@backend/marge';
 
 const T = {
@@ -23,6 +23,10 @@ function fmtF(n: number) {
 export default function SimulateurDePrixPage() {
   const [prixAchat, setPrixAchat] = useState('');
   const [margePctStr, setMargePctStr] = useState('30');
+
+  useEffect(() => {
+    fetch('/api/simulateur/visite', { method: 'POST' }).catch(() => {});
+  }, []);
   const margePct = Math.min(1000, Math.max(0, Number(margePctStr) || 0));
 
   const prixAchatNum = parseFloat(prixAchat) || 0;

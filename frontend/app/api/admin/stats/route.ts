@@ -19,11 +19,12 @@ export async function GET() {
 
   const service = createServiceClient();
 
-  const [{ data: authUsers }, { data: configs }, { data: produits }, { data: ventes }] = await Promise.all([
+  const [{ data: authUsers }, { data: configs }, { data: produits }, { data: ventes }, { count: nbVisitesSimulateur }] = await Promise.all([
     service.auth.admin.listUsers({ perPage: 1000 }),
     service.from('config').select('user_id, nom_commerce, is_premium, premium_expires_at, trial_start, date_abonnement'),
     service.from('produits').select('user_id').eq('deleted', false),
     service.from('ventes').select('user_id').eq('deleted', false),
+    service.from('simulateur_visites').select('*', { count: 'exact', head: true }),
   ]);
 
   const emailParId = new Map((authUsers?.users ?? []).map((u) => [u.id, u.email ?? '']));
@@ -53,5 +54,5 @@ export async function GET() {
 
   comptes.sort((a, b) => (b.inscritLe ?? 0) - (a.inscritLe ?? 0));
 
-  return NextResponse.json({ comptes });
+  return NextResponse.json({ comptes, nbVisitesSimulateur: nbVisitesSimulateur ?? 0 });
 }
