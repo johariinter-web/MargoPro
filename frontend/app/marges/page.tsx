@@ -331,6 +331,9 @@ export default function MargesPage() {
               <span>500%</span>
               <span>1000%+</span>
             </div>
+            <div style={{ marginTop: 10, fontSize: 12, color: T.textMuted, lineHeight: 1.5 }}>
+              💡 Repère : produits courants x1,3 à x2 le prix d&apos;achat, produits à forte valeur (cosmétique, habillement...) x3 à x5.
+            </div>
           </div>
 
           {/* Résultat */}
