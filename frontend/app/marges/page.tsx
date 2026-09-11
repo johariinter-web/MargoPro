@@ -42,6 +42,13 @@ function dessinerCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, dx:
 
 type TabMode = 'Prix de vente' | 'Marge' | 'Seuil de rentabilité' | 'Pluriels' | 'Catalogue' | 'Meilleurs vendeurs';
 
+// Libellés courts pour que les 5 onglets tiennent sur une seule ligne a 13px
+// (meme taille que Ventes) ; le nom complet reste utilise partout ailleurs.
+const TAB_LABELS_COURTS: Partial<Record<TabMode, string>> = {
+  'Seuil de rentabilité': 'Seuil',
+  'Meilleurs vendeurs': 'Vendeurs',
+};
+
 const PERIODES: { value: Periode; label: string }[] = [
   { value: 'jour', label: "Aujourd'hui" },
   { value: 'semaine', label: 'Semaine' },
@@ -241,10 +248,10 @@ export default function MargesPage() {
               key={t}
               onClick={() => setTab(t)}
               style={{
-                flex: '1 0 0', minWidth: 0, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flex: '1 0 0', minWidth: 0, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 border: 'none', cursor: 'pointer', borderRadius: 10, padding: '0 4px',
-                fontSize: 13, lineHeight: 1.15, textAlign: 'center',
-                whiteSpace: 'normal', overflow: 'hidden', wordBreak: 'break-word',
+                fontSize: 13,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                 fontWeight: tab === t ? 700 : 500,
                 color: tab === t ? T.text : T.textMuted,
                 background: tab === t ? T.surface : 'transparent',
@@ -252,7 +259,7 @@ export default function MargesPage() {
                 transition: 'all 0.15s ease',
               }}
             >
-              {t}
+              {TAB_LABELS_COURTS[t] ?? t}
             </button>
           ))}
         </div>
