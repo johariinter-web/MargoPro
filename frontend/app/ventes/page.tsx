@@ -127,7 +127,7 @@ export default function VentesPage() {
   const [venteSelectionnee, setVenteSelectionnee] = useState<typeof ventes[number] | null>(null);
   const [venteSupprimee, setVenteSupprimee] = useState<typeof ventes[number] | null>(null);
   const [showHistorique, setShowHistorique] = useState(false);
-  const [venteHistoriqueSelectionneeId, setVenteHistoriqueSelectionneeId] = useState<string | null>(null);
+  const [ventesHistoriqueSelectionnees, setVentesHistoriqueSelectionnees] = useState<Set<string>>(new Set());
   const [confirmerSuppressionDefinitive, setConfirmerSuppressionDefinitive] = useState(false);
   const [erreurSuppressionDefinitive, setErreurSuppressionDefinitive] = useState('');
   const [ventePaiement, setVentePaiement] = useState<typeof ventes[number] | null>(null);
@@ -158,11 +158,19 @@ export default function VentesPage() {
   }
 
   async function handleSuppressionDefinitive() {
-    if (!venteHistoriqueSelectionneeId) return;
+    if (ventesHistoriqueSelectionnees.size === 0) return;
     setErreurSuppressionDefinitive('');
-    const err = await supprimerVenteDefinitivement(venteHistoriqueSelectionneeId);
-    if (err) { setErreurSuppressionDefinitive(err); return; }
-    setVenteHistoriqueSelectionneeId(null);
+    const restantes = new Set(ventesHistoriqueSelectionnees);
+    for (const id of ventesHistoriqueSelectionnees) {
+      const err = await supprimerVenteDefinitivement(id);
+      if (err) {
+        setErreurSuppressionDefinitive(err);
+        setVentesHistoriqueSelectionnees(restantes);
+        return;
+      }
+      restantes.delete(id);
+    }
+    setVentesHistoriqueSelectionnees(restantes);
     setConfirmerSuppressionDefinitive(false);
   }
 
@@ -389,7 +397,7 @@ export default function VentesPage() {
       {showHistorique && (
         <div
           style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(28,24,17,0.7)', display: 'flex', alignItems: 'flex-end' }}
-          onClick={() => { setShowHistorique(false); setVenteHistoriqueSelectionneeId(null); setConfirmerSuppressionDefinitive(false); setErreurSuppressionDefinitive(''); }}
+          onClick={() => { setShowHistorique(false); setVentesHistoriqueSelectionnees(new Set()); setConfirmerSuppressionDefinitive(false); setErreurSuppressionDefinitive(''); }}
         >
           <div
             style={{ background: T.surface, borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, margin: '0 auto', padding: '20px 20px 36px', maxHeight: '80dvh', overflowY: 'auto' }}
@@ -398,7 +406,7 @@ export default function VentesPage() {
             <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border, margin: '0 auto 16px' }} />
             <div style={{ fontSize: 18, fontWeight: 800, color: T.text, marginBottom: 4 }}>Historique des suppressions</div>
             <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 16 }}>
-              Toutes les ventes supprimées restent visibles ici, avec leur date. Tape une vente pour la supprimer définitivement.
+              Toutes les ventes supprimées restent visibles ici, avec leur date. Tape une ou plusieurs ventes pour les supprimer définitivement.
             </div>
             {erreurSuppressionDefinitive && (
               <div style={{ fontSize: 13, color: T.red, fontWeight: 600, marginBottom: 12, padding: '8px 12px', background: T.redBg, borderRadius: 8 }}>
@@ -410,19 +418,39 @@ export default function VentesPage() {
                 Aucune vente supprimée
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: venteHistoriqueSelectionneeId ? 12 : 0 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: ventesHistoriqueSelectionnees.size > 0 ? 12 : 0 }}>
                 {ventesSupprimees.map(v => {
-                  const selectionnee = venteHistoriqueSelectionneeId === v.id;
+                  const selectionnee = ventesHistoriqueSelectionnees.has(v.id);
                   return (
                     <div
                       key={v.id}
-                      onClick={() => { setVenteHistoriqueSelectionneeId(id => id === v.id ? null : v.id); setConfirmerSuppressionDefinitive(false); setErreurSuppressionDefinitive(''); }}
+                      onClick={() => {
+                        setVentesHistoriqueSelectionnees(prev => {
+                          const suivant = new Set(prev);
+                          if (suivant.has(v.id)) suivant.delete(v.id); else suivant.add(v.id);
+                          return suivant;
+                        });
+                        setConfirmerSuppressionDefinitive(false);
+                        setErreurSuppressionDefinitive('');
+                      }}
                       style={{
                         background: selectionnee ? T.accentLight : T.bgSubtle, borderRadius: 12, padding: '10px 12px',
                         display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
                         border: selectionnee ? `1.5px solid ${T.accent}` : '1.5px solid transparent',
                       }}
                     >
+                      <div style={{
+                        width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                        border: selectionnee ? 'none' : `1.5px solid ${T.border}`,
+                        background: selectionnee ? T.accent : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {selectionnee && (
+                          <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                            <path d="M2.5 7l3.5 3.5L11.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.produitNom}</div>
                         <div style={{ fontSize: 11, color: T.textMuted, marginTop: 1 }}>
@@ -439,7 +467,7 @@ export default function VentesPage() {
               </div>
             )}
 
-            {venteHistoriqueSelectionneeId && (
+            {ventesHistoriqueSelectionnees.size > 0 && (
               confirmerSuppressionDefinitive ? (
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button
@@ -452,7 +480,7 @@ export default function VentesPage() {
                     onClick={handleSuppressionDefinitive}
                     style={{ flex: 2, height: 44, borderRadius: 12, background: T.redBg, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: T.red }}
                   >
-                    Confirmer la suppression
+                    Confirmer la suppression ({ventesHistoriqueSelectionnees.size})
                   </button>
                 </div>
               ) : (
@@ -461,7 +489,7 @@ export default function VentesPage() {
                   disabled={!accesFonctionnalitesPremium}
                   style={{ width: '100%', height: 44, borderRadius: 12, background: T.redBg, border: 'none', cursor: accesFonctionnalitesPremium ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 700, color: T.red, opacity: accesFonctionnalitesPremium ? 1 : 0.5 }}
                 >
-                  Supprimer définitivement
+                  Supprimer définitivement ({ventesHistoriqueSelectionnees.size})
                 </button>
               )
             )}
