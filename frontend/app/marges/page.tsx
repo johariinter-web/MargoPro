@@ -42,6 +42,13 @@ function dessinerCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, dx:
 
 type TabMode = 'Prix de vente' | 'Marge' | 'Seuil de rentabilité' | 'Pluriels' | 'Catalogue' | 'Meilleurs vendeurs';
 
+// Libellés courts pour que les 5 onglets tiennent sans avoir a glisser sur un
+// petit ecran ; le nom complet reste utilise partout ailleurs (state, logique).
+const TAB_LABELS_COURTS: Partial<Record<TabMode, string>> = {
+  'Seuil de rentabilité': 'Seuil',
+  'Meilleurs vendeurs': 'Vendeurs',
+};
+
 const PERIODES: { value: Periode; label: string }[] = [
   { value: 'jour', label: "Aujourd'hui" },
   { value: 'semaine', label: 'Semaine' },
@@ -56,7 +63,7 @@ export default function MargesPage() {
   const { accesFonctionnalitesPremium } = usePlan();
   const { depenses } = useDepenses();
   const { pertes } = usePertes();
-  const [tab, setTab] = useState<TabMode>('Prix de vente');
+  const [tab, setTab] = useState<TabMode>('Seuil de rentabilité');
   const [periodeVendeurs, setPeriodeVendeurs] = useState<Periode>('semaine');
   const [triVendeurs, setTriVendeurs] = useState<'quantite' | 'benefice'>('quantite');
   const [voirTousVendeurs, setVoirTousVendeurs] = useState(false);
@@ -220,7 +227,7 @@ export default function MargesPage() {
     : 0;
   const beneficeCalc = prixVenteCalc - prixAchatNum;
 
-  const tabs: TabMode[] = ['Prix de vente', 'Seuil de rentabilité', 'Marge', 'Meilleurs vendeurs', 'Catalogue'];
+  const tabs: TabMode[] = ['Seuil de rentabilité', 'Marge', 'Prix de vente', 'Meilleurs vendeurs', 'Catalogue'];
 
   return (
     <div style={{ minHeight: '100dvh', background: T.bg, paddingBottom: 90, fontFamily: 'Manrope, sans-serif' }}>
@@ -241,10 +248,10 @@ export default function MargesPage() {
               key={t}
               onClick={() => setTab(t)}
               style={{
-                flexShrink: 0, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: 'none', cursor: 'pointer', borderRadius: 10, padding: '0 14px',
+                flex: '1 0 0', minWidth: 0, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: 'none', cursor: 'pointer', borderRadius: 10, padding: '0 4px',
                 fontSize: 11,
-                whiteSpace: 'nowrap',
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                 fontWeight: tab === t ? 700 : 500,
                 color: tab === t ? T.text : T.textMuted,
                 background: tab === t ? T.surface : 'transparent',
@@ -252,7 +259,7 @@ export default function MargesPage() {
                 transition: 'all 0.15s ease',
               }}
             >
-              {t}
+              {TAB_LABELS_COURTS[t] ?? t}
             </button>
           ))}
         </div>
