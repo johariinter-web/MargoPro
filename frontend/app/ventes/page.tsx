@@ -114,6 +114,7 @@ export default function VentesPage() {
   const [erreur, setErreur] = useState('');
   const [prixGros, setPrixGros] = useState('');
   const [isCredit, setIsCredit] = useState(false);
+  const [ajouterFacture, setAjouterFacture] = useState(false);
   const [clientNom, setClientNom] = useState('');
   const [clientTel, setClientTel] = useState('');
   const [showClientOptionnel, setShowClientOptionnel] = useState(false);
@@ -205,7 +206,7 @@ export default function VentesPage() {
         : undefined;
       const erreurPack = await enregistrerVentePack(pack, creditParams, clientParams);
       if (erreurPack) { setErreur(erreurPack); return; }
-      facture.ajouter(pack.nom, 1, pack.prixVente);
+      if (ajouterFacture) facture.ajouter(pack.nom, 1, pack.prixVente);
       setProduitId('');
       setQuantite('1');
       setPrixGros('');
@@ -216,6 +217,7 @@ export default function VentesPage() {
       setAcompteCredit('0');
       setPackSelectionne('');
       setModeProduit('produit');
+      setAjouterFacture(false);
       setShowForm(false);
       if (isCredit) setOnglet('carnet');
       return;
@@ -236,7 +238,7 @@ export default function VentesPage() {
       : undefined;
     await enregistrerVente(produit.id, produit.nom, qte, prixFinal, produit.prixAchat, creditParams, clientParams);
     await deduireStock(produit.id, qte);
-    facture.ajouter(produit.nom, qte, prixFinal);
+    if (ajouterFacture) facture.ajouter(produit.nom, qte, prixFinal);
     setProduitId('');
     setQuantite('1');
     setPrixGros('');
@@ -245,6 +247,7 @@ export default function VentesPage() {
     setClientTel('');
     setShowClientOptionnel(false);
     setAcompteCredit('0');
+    setAjouterFacture(false);
     setShowForm(false);
     if (isCredit) setOnglet('carnet');
   }
@@ -943,9 +946,22 @@ export default function VentesPage() {
               )}
             </div>
           )}
+          {/* TOGGLE FACTURE */}
+          <div
+            onClick={() => { if (!accesFonctionnalitesPremium) return; setAjouterFacture(v => !v); }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, cursor: accesFonctionnalitesPremium ? 'pointer' : 'not-allowed', padding: '10px 12px', background: ajouterFacture ? T.accentLight : T.bgSubtle, borderRadius: 10, border: ajouterFacture ? `1.5px solid ${T.accent}` : `1.5px solid ${T.border}`, opacity: accesFonctionnalitesPremium ? 1 : 0.5 }}
+          >
+            <span style={{ fontSize: 13, fontWeight: 600, color: ajouterFacture ? T.accent : T.textSub }}>Ajouter à la facture</span>
+            <div style={{ width: 36, height: 20, borderRadius: 10, background: ajouterFacture ? T.accent : T.border, position: 'relative', transition: 'background .2s' }}>
+              <div style={{ position: 'absolute', top: 2, left: ajouterFacture ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: 'white', transition: 'left .2s', boxShadow: '0 1px 4px rgba(0,0,0,.2)' }} />
+            </div>
+          </div>
+          {!accesFonctionnalitesPremium && (
+            <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 12, marginTop: -6 }}>Passe au Premium pour générer des factures.</div>
+          )}
           <div style={{ display: 'flex', gap: 10 }}>
             <button
-              onClick={() => { setShowForm(false); setErreur(''); setPrixGros(''); setIsCredit(false); setClientNom(''); setClientTel(''); setAcompteCredit('0'); setShowClientOptionnel(false); setModeProduit('produit'); setPackSelectionne(''); }}
+              onClick={() => { setShowForm(false); setErreur(''); setPrixGros(''); setIsCredit(false); setClientNom(''); setClientTel(''); setAcompteCredit('0'); setShowClientOptionnel(false); setModeProduit('produit'); setPackSelectionne(''); setAjouterFacture(false); }}
               style={{
                 flex: 1, height: 44, borderRadius: 12, background: T.bgSubtle,
                 border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: T.textSub,
@@ -1219,7 +1235,7 @@ export default function VentesPage() {
 
           {facture.lignes.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '30px 0', color: T.textMuted, fontSize: 14 }}>
-              Aucun article pour l&apos;instant. Enregistre une vente, ou ajoute un article à la main ci-dessous.
+              Aucun article pour l&apos;instant. Coche &quot;Ajouter à la facture&quot; lors d&apos;une vente, ou ajoute un article à la main ci-dessous.
             </div>
           ) : (
             <div style={{ background: T.surface, borderRadius: 16, boxShadow: T.shadow, padding: '10px 14px', marginBottom: 14 }}>
