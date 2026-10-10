@@ -77,7 +77,7 @@ export function Parrainage() {
 
   function partagerWhatsApp() {
     if (!affiliate) return;
-    const texte = `Je gère mon commerce avec MargoPro, l'appli qui suit stock, ventes et marges. Inscris-toi avec mon code ${affiliate.code} : https://eidma.co/?ref=${affiliate.code}`;
+    const texte = `Je gère mon commerce avec MargoPro, l'appli qui suit stock, ventes et marges. Inscris-toi avec mon code ${affiliate.code} : https://info.eidma.co/?ref=${affiliate.code}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(texte)}`, '_blank');
   }
 
@@ -204,7 +204,7 @@ export function Parrainage() {
             )}
 
             <a
-              href={`https://eidma.co/parrainage.html?code=${affiliate.code}`}
+              href={`https://info.eidma.co/parrainage.html?code=${affiliate.code}`}
               target="_blank"
               rel="noopener noreferrer"
               style={{ fontSize: 13, color: T.accent, fontWeight: 600, fontFamily: 'Manrope, sans-serif', textDecoration: 'underline' }}
